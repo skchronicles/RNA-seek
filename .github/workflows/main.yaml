@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches_ignore: []
+
+jobs:
+  Linting:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Lint workflow
+      uses: snakemake/snakemake-github-action@v1.5.3
+      with:
+        directory: .
+        snakefile: workflow/Snakefile
+        args: "--lint -s workflow/Snakefile"
+
+  Testing:
+    runs-on: ubuntu-latest
+    needs: Linting
+    steps:
+    - uses: actions/checkout@v1
+    - name: Dry-run workflow
+      uses: snakemake/snakemake-github-action@v1.5.3
+      with:
+        directory: .
+        snakefile: workflow/Snakefile
+        args: "-npr -s workflow/Snakefile"
