@@ -1,0 +1,95 @@
+{
+	"__default__": {
+		"gres": "lscratch:256",
+		"mem": "48g",
+		"partition": "norm",
+		"threads": "4",
+		"time": "4-00:00:00"
+	},
+	"bam2bw_rnaseq_pe": {
+		"mem": "40g",
+		"threads": "4"
+	},
+	"bam2bw_rnaseq_se": {
+		"mem": "40g",
+		"threads": "2"
+	},
+	"fastqc": {
+		"mem": "24g",
+		"threads": "32",
+		"time": "1-00:00:00"
+	},
+	"fastq_screen": {
+		"mem": "24g",
+		"threads": "24",
+		"time": "2-00:00:00"
+	},
+	"kraken_pe": {
+		"cpus-per-task": "24",
+		"gres": "lscratch:256",
+		"mem": "110g"
+	},
+	"kraken_se": {
+		"cpus-per-task": "24",
+		"gres": "lscratch:256",
+		"mem": "110g"
+	},
+	"pca": {
+		"mem": "88g",
+		"threads": "2"
+	},
+	"picard": {
+		"gres": "lscratch:256",
+		"mem": "110g",
+		"threads": "6"
+	},
+	"preseq": {
+		"mem": "24g"
+	},
+	"qualibam": {
+		"threads": "8",
+		"mem": "12g",
+		"time": "1-00:00:00"
+	},
+	"rawfastqc": {
+		"threads": "8"
+	},
+	"rsem": {
+		"gres": "lscratch:500",
+		"threads": "16",
+		"time": "4-00:00:00"
+	},
+	"star1p": {
+		"mem": "110g",
+		"threads": "32",
+		"time": "4-00:00:00"
+	},
+	"star2p": {
+		"mem": "110g",
+		"threads": "32",
+		"time": "4-00:00:00"
+	},
+	"stats": {
+		"gres": "lscratch:256",
+		"mem": "110g",
+		"threads": "4"
+	},
+	"subread": {
+		"gres": "lscratch:500",
+		"threads": "16",
+		"time": "1-00:00:00"
+	},
+	"subreadoverlap": {
+		"gres": "lscratch:500",
+		"threads": "16",
+		"time": "1-00:00:00"
+	},
+	"trim_pe": {
+		"mem": "24g",
+		"threads": "32"
+	},
+	"trim_se": {
+		"mem": "24g",
+		"threads": "32"
+	}
+}
