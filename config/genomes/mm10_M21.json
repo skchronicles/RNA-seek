@@ -1,0 +1,27 @@
+{
+    "references": {
+        "rnaseq": {
+            "RRNALIST": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/mm10.rRNA_interval_list",
+            "ORGANISM": "MOUSE",
+            "KARYOBEDS": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/karyobeds/",
+            "QUALIMAP_INFO": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/qualimap_info.txt",
+            "KARYOPLOTER": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/karyoplot_gene_coordinates.txt",
+            "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+            "FASTAWITHADAPTERSETC": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters_new.fa",
+            "GTFFILE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/genes.gtf",
+            "RSEMREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/rsemref/mm10",
+            "BEDREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/genes.ref.bed",
+            "fastqc.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/fastqc.adapters",
+            "ANNOTATE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/annotate.genes.txt",
+            "REFFLAT": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/refFlat.txt",
+            "adapter.file": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.ngsqc.dat",
+            "GENOME": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/ref.fa",
+            "GENEINFO": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/geneinfo.bed",
+            "STARREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/STAR/2.7.0f/genes-",
+            "STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/STAR/2.7.0f/genes-",
+            "ANNOTATEISOFORMS": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/annotate.isoforms.txt",
+            "trimmomatic.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/adapters2.fa",
+            "GENOMEFILE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/ref.fa"
+        }
+    }
+}
