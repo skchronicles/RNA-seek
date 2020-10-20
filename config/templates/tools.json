@@ -1,0 +1,57 @@
+{
+	"bin": {
+		"rnaseq": {
+			"tool_versions": {
+				"BOWTIE2VER": "bowtie/2-2.3.4",
+				"BWAVER": "bwa/0.7.17",
+				"CUTADAPTVER": "cutadapt/1.18",
+				"FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
+				"FASTQCVER": "fastqc/0.11.5",
+				"KRAKENVER": "kraken/1.1",
+				"KRONATOOLSVER": "kronatools/2.7",
+				"MULTIQCVER": "multiqc/1.4",
+				"PERLVER": "perl/5.24.3",
+				"PICARDVER": "picard/2.17.11",
+				"PRESEQVER": "preseq/2.0.3",
+				"PYTHONVER": "python/3.5",
+				"RSEMVER": "rsem/1.3.0",
+				"RSEQCVER": "rseqc/2.6.4",
+				"RVER": "R/3.5",
+				"SAMTOOLSVER": "samtools/1.6",
+				"STARVER": "STAR/2.7.0f",
+				"SUBREADVER": "subread/1.5.2"
+			},
+			"tool_parameters": {
+				"FASTAWITHADAPTERSETD": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.consolidated.fa",
+				"FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+				"FASTQ_SCREEN_CONFIG2": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen_2.conf",
+				"KRAKENBACDB": "/fdb/kraken/20170202_bacteria",
+				"Trimsettings": "---------------------------- TRIMMOMATIC parameters ----------------------------------------------------------",
+				"LEADINGQUALITY": 10,
+				"TRAILINGQUALITY": 10,
+				"MINLEN": 35
+			},
+			"ADAPTER1": "-",
+			"ADAPTER2": "",
+			"ALIGNINTRONMAX": 1000000,
+			"ALIGNINTRONMIN": 20,
+			"ALIGNMATESGAPMAX": 1000000,
+			"ALIGNSJDBOVERHANGMIN": 1,
+			"ALIGNSJOVERHANGMIN": 8,
+			"CONFMULTIQC": "/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/multiqc/multiqc_config.yaml",
+			"FILTERINTRONMOTIFS": "RemoveNoncanonicalUnannotated",
+			"FILTERMISMATCHNMAX": 999,
+			"FILTERMISMATCHNOVERLMAX": 0.3,
+			"FILTERMULTIMAPNMAX": 20,
+			"FILTERTYPE": "BySJout",
+			"NBJUNCS": 4000000,
+			"OUTSAMUNMAPPED": "Within",
+			"PICARDSTRAND": "SECOND_READ_TRANSCRIPTION_STRAND",
+			"RNASEQCJAR": "/usr/local/apps/rnaseqc/1.1.8/RNA-SeQC_v1.1.8.jar",
+			"SAMSTRANDFIELD": "None",
+			"STARSTRANDCOL": 4,
+			"WIGSTRAND": "Stranded",
+			"WIGTYPE": "None"
+		}
+	}
+}
