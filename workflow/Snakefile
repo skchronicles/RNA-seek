@@ -1,18 +1,142 @@
-# The main entry point of your workflow.
-# After configuring, running snakemake -n in a clone of this repository should successfully execute a dry-run of the workflow.
+from snakemake.utils import R
+from os.path import join
+from os import listdir
+import os, sys
+
+# Global workflow variables
+configfile: 'config/config.yaml'              # config dictionary
+samples=config['project']['groups']['rsamps'] # sample basenames
+pfamily=config['project']['pfamily']          # rnaseq
+workpath = config['project']['workpath']      # Parent Output directory
+
+# Check for SE or PE FastQ files:
+convert = {1: False, 2: True}                     # 1 = SE, 2 = PE, -1 = Unknown
+try:
+    paired_end = convert[config['project']['nends']]  # True if PE else false
+except KeyError:
+    # Catching case when value is -1 or unknown
+    sys.exit("Fatal: Raw data could not be classified as single-end or paired-end data!")
+
+# Child output directory aliases
+trim_dir='trim'
+star_dir='STAR_files'
+bams_dir='bams'
+log_dir='logfiles'
+rseqc_dir='RSeQC'
+kraken_dir='kraken'
+preseq_dir='preseq'
+degall_dir='DEG_ALL'
+dtypes=['RSEM_genes']
 
 
-report: "report/workflow.rst"
+if paired_end:
+    # Paired-end Target files
+    rule all:
+        params:
+            batch='--time=168:00:00',
+        input:
+            # FastQC (before and after trimming)
+            join(workpath,"rawQC"),
+            join(workpath,"QC"),
 
-# Allow users to fix the underlying OS via singularity.
-container: "docker://continuumio/miniconda3"
+            # FastScreen (Using two sets of reference databases)
+            expand(join(workpath,"FQscreen","{name}.R1.trim_screen.txt"),name=samples),
+            expand(join(workpath,"FQscreen","{name}.R1.trim_screen.png"),name=samples),
+            expand(join(workpath,"FQscreen","{name}.R2.trim_screen.txt"),name=samples),
+            expand(join(workpath,"FQscreen","{name}.R2.trim_screen.png"),name=samples),
+            expand(join(workpath,"FQscreen2","{name}.R1.trim_screen.txt"),name=samples),
+            expand(join(workpath,"FQscreen2","{name}.R1.trim_screen.png"),name=samples),
+            expand(join(workpath,"FQscreen2","{name}.R2.trim_screen.txt"),name=samples),
+            expand(join(workpath,"FQscreen2","{name}.R2.trim_screen.png"),name=samples),
+
+            # Kraken + Krona
+            expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),name=samples),
+            expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),name=samples),
+
+            # STAR
+            expand(join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),name=samples),
+
+            # Bam to stranded bigwigs
+            expand(join(workpath,bams_dir,"{name}.fwd.bw"),name=samples),
+            expand(join(workpath,bams_dir,"{name}.rev.bw"),name=samples),
+
+            # Picard
+            expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
+            expand(join(workpath,log_dir,"{name}.star.duplic"),name=samples),
+
+            # Preseq
+            expand(join(workpath,preseq_dir,"{name}.ccurve"),name=samples),
+
+            # Infer Library Strandedness
+            join(workpath,log_dir,"strandness.txt"),
+
+            # QualiMap (bamQC and counts)
+            expand(join(workpath,"QualiMap","{name}","qualimapReport.html"),name=samples),
+            # join(workpath,"QualiMap","GlobalReport.html"),
+
+            # RSEM merge and counts
+            join(workpath,degall_dir,"RSEM.genes.FPKM.all_samples.txt"),
+            join(workpath,degall_dir,"RSEM.isoforms.FPKM.all_samples.txt"),
+            join(workpath,degall_dir,"RawCountFile_RSEM_genes_filtered.txt"),
+            join(workpath,star_dir,"sampletable.txt"),
+
+            # PCA Reports
+            expand(join(workpath,degall_dir,"PcaReport_{dtype}.html"),dtype=dtypes),
+
+            # MultiQC
+            join(workpath,"Reports/multiqc_report.html"),
 
 
-rule all:
-    input:
-        # The first rule should define the default target files
-        # Subsequent target rules can be specified below. They should start with all_*.
+elif not paired_end:
+    # Single-end Target files
+    rule all:
+        params: batch='--time=168:00:00'
+        input:
+            # FastQC (before and after trimming)
+            join(workpath,"rawQC"),
+            join(workpath,"QC"),
+
+            # FastQ Screen
+            expand(join(workpath,"FQscreen","{name}.R1.trim_screen.txt"),name=samples),
+            expand(join(workpath,"FQscreen","{name}.R1.trim_screen.png"),name=samples),
+            expand(join(workpath,"FQscreen2","{name}.R1.trim_screen.txt"),name=samples),
+            expand(join(workpath,"FQscreen2","{name}.R1.trim_screen.png"),name=samples),
+
+            # Kraken + Krona
+            expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),name=samples),
+            expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),name=samples),
+
+            # Infer Library Strandedness
+            join(workpath,log_dir,"strandness.txt"),
+
+            # Picard
+            expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
+
+            # QualiMap
+            # join(workpath,"QualiMap","GlobalReport.html"),
+
+            # Bam to stranded bigwigs
+            expand(join(workpath,bams_dir,"{name}.fwd.bw"),name=samples),
+            expand(join(workpath,bams_dir,"{name}.rev.bw"),name=samples),
+
+            # RSEM
+            join(workpath,degall_dir,"RSEM.genes.FPKM.all_samples.txt"),
+            join(workpath,degall_dir,"RSEM.isoforms.FPKM.all_samples.txt"),
+            join(workpath,degall_dir,"RawCountFile_RSEM_genes_filtered.txt"),
+            join(workpath,star_dir,"sampletable.txt"),
+
+            # PCA Report
+            expand(join(workpath,degall_dir,"PcaReport_{dtype}.html"),dtype=dtypes),
+
+            # MultiQC
+            join(workpath,"Reports/multiqc_report.html"),
 
 
-include: "rules/common.smk"
-include: "rules/other.smk"
+# Include single-end and paired-specific rules
+include: "rules/common.smk"  # rules common to single-end or paired-end data
+if paired_end:
+    # rules common to paired-end data
+    include: "rules/paired-end.smk"
+elif not paired_end:
+    # rules common to paired-end data
+    include: "rules/single-end.smk"
