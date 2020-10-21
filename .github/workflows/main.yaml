@@ -14,11 +14,12 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Lint workflow
+      continue-on-error: true
       uses: snakemake/snakemake-github-action@v1.5.3
       with:
         directory: .
         snakefile: workflow/Snakefile
-        args: "--lint -s workflow/Snakefile --configfile=.tests/run.json || echo 'There may have been a few warnings or errors. Please read through the log to determine if they're harmless.'"
+        args: "--lint -s workflow/Snakefile --configfile=.tests/run.json || echo 'There may have been a few warnings or errors. Please read through the log to determine if its harmless.'"
 
   Testing:
     runs-on: ubuntu-latest
