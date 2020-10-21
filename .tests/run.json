@@ -481,7 +481,7 @@
             "rcontrasts": "na"
         },
         "custom": [],
-        "datapath": "/data/kuhnsa/RNA-seek/.tests",
+        "datapath": ".tests",
         "description": "Enter CCBR Project Description and Notes here.\n",
         "efiletype": "fastq",
         "filetype": "fastq.gz",
@@ -561,7 +561,7 @@
         },
         "username": "sk@nih.gov",
         "version": "4.0",
-        "workpath": "/data/kuhnsa/RNA-seek/workflow/tmp"
+        "workpath": ".tests"
     },
     "references": {
         "ChIPseq": {
