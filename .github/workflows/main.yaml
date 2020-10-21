@@ -18,7 +18,7 @@ jobs:
       with:
         directory: .
         snakefile: workflow/Snakefile
-        args: "--lint -s workflow/Snakefile --configfile=.tests/config.yaml"
+        args: "--lint -s workflow/Snakefile --configfile=.tests/run.json || echo 'There may have been a few warnings or errors. Please read through the log to determine if they're harmless.'"
 
   Testing:
     runs-on: ubuntu-latest
@@ -30,4 +30,4 @@ jobs:
       with:
         directory: .
         snakefile: workflow/Snakefile
-        args: "-npr -s workflow/Snakefile --configfile=.tests/config.yaml"
+        args: "-npr -s workflow/Snakefile --configfile=.tests/run.json"
