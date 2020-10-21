@@ -1,0 +1,1445 @@
+{
+    "bin": {
+        "ChIPseq": {
+            "CONFMULTIQC": "/data/CCBR_Pipeliner/db/PipeDB/ChIPseq/multiqc_config.yaml",
+            "FASTAWITHADAPTERSETD": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.consolidated.fa",
+            "FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
+            "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+            "FASTQ_SCREEN_CONFIG2": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen_2.conf",
+            "GEMREADDIST": "/usr/local/apps/gem/3.0/Read_Distribution_default.txt",
+            "KRAKENBACDB": "/fdb/kraken/20170202_bacteria",
+            "NGSQC": "/data/CCBR_Pipeliner/db/PipeDB/ChIPseq/NGSQC_linux_x86_64",
+            "tool_versions": {
+                "BEDTOOLSVER": "bedtools/2.27.1",
+                "BOWTIE2VER": "bowtie/2-2.3.4",
+                "BWAVER": "bwa/0.7.17",
+                "CUTADAPTVER": "cutadapt/1.18",
+                "DEEPTOOLSVER": "deeptools/3.0.1",
+                "FASTQCVER": "fastqc/0.11.5",
+                "GEMVER": "gem/3.0",
+                "HOMERVER": "homer/4.10.1",
+                "IDRVER": "idr/2.0.3",
+                "KRAKENVER": "kraken/1.1",
+                "KRONATOOLSVER": "kronatools/2.7",
+                "MACSVER": "macs/2.1.1.20160309",
+                "MULTIQCVER": "multiqc/1.7",
+                "PERLVER": "perl/5.24.3",
+                "PICARDVER": "picard/2.17.11",
+                "PRESEQVER": "preseq/2.0.3",
+                "RVER": "R/3.5",
+                "SAMTOOLSVER": "samtools/1.6",
+                "SICERVER": "sicer/1.1",
+                "UCSCVER": "ucsc/384",
+                "UROPAVER": "uropa/2.0.3"
+            }
+        },
+        "exomeseq": {
+            "ANNOVAR1": "/usr/local/apps/ANNOVAR/2015-03-22/convert2annovar.pl",
+            "ANNOVAR2": "/usr/local/apps/ANNOVAR/2015-03-22/table_annovar.pl",
+            "BAMTOOLS": "/usr/local/apps/bamtools/2.3.0/bin/bamtools",
+            "BEDTOOLS": "/usr/local/apps/bedtools/2.19.0/bin/bedtools",
+            "BWA": "/usr/local/apps/bwa/0.7.15/bwa",
+            "FASTQC": "/usr/local/apps/fastqc/0.11.5/fastqc",
+            "FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
+            "FIRSTANNO": "Scripts/vcfAnnFirst_snpEff.py",
+            "GATK": "java -Xmx64g -jar /usr/local/apps/GATK/3.5-0/GenomeAnalysisTK.jar",
+            "INDEXBAM": "java -jar /usr/local/apps/picard/1.129/picard.jar BuildBamIndex",
+            "MARKDUPS": "module load picard/2.1.1; java -Xmx16g -XX:ParallelGCThreads=12 -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar MarkDuplicates",
+            "MUTECT": "module load java/1.7.0_25; java -Xmx16g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/muTect/2014-12-15/muTect-1.1.7.jar",
+            "NGSQCTOOLKIT": "/usr/local/apps/ngsqctoolkit/2.3.3/QC/IlluQC.pl",
+            "NOVOALIGN": "/usr/local/apps/novocraft/3.04.04/novoalign",
+            "NOVOSORT": "/usr/local/apps/novocraft/3.04.04/novosort",
+            "PICARD1": "module load picard/2.1.1; java -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar AddOrReplaceReadGroups",
+            "PICARD2": "module load picard/2.1.1; java -Xmx4G -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar CollectInsertSizeMetrics",
+            "PICARD3": "/ngs/bin/jdk1.8.0_25/bin/java -jar /ngs/bin/picard-tools-1.119/CreateSequenceDictionary.jar",
+            "QUALIMAP": "export JAVA_OPTS='-Djava.awt.headless=true -Djava.io.tmpdir=/lscratch/$SLURM_JOBID'; /usr/local/apps/qualimap/qualimap_v2.2.1/qualimap --java-mem-size=96G",
+            "SAMTOOLS": "/usr/local/apps/samtools/1.3.1/bin/samtools",
+            "SNPEFF": "java -Xmx24g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/snpEff/4.2/snpEff.jar",
+            "SNPSIFT": "java -Xmx24g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/snpEff/4.2/SnpSift.jar",
+            "STAR": "/usr/local/apps/STAR/2.4.0h/bin/Linux_x86_64/STAR",
+            "TRIMMOMATIC": "java -Xmx2g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/trimmomatic/Trimmomatic-0.33/trimmomatic-0.33.jar",
+            "VARSCAN": "java -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/varscan/2.3.6/VarScan.v2.3.6.jar"
+        },
+        "genomeseq": {
+            "ANNOVAR1": "/usr/local/apps/ANNOVAR/2015-03-22/convert2annovar.pl",
+            "ANNOVAR2": "/usr/local/apps/ANNOVAR/2015-03-22/table_annovar.pl",
+            "BAMTOOLS": "/usr/local/apps/bamtools/2.3.0/bin/bamtools",
+            "BEDTOOLS": "/usr/local/apps/bedtools/2.19.0/bin/bedtools",
+            "BWA": "/usr/local/apps/bwa/0.7.15/bwa",
+            "FASTQC": "/usr/local/apps/fastqc/0.11.5/fastqc",
+            "FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
+            "FIRSTANNO": "Scripts/vcfAnnFirst_snpEff.py",
+            "GATK": "java -Xmx64g -jar /usr/local/apps/GATK/3.5-0/GenomeAnalysisTK.jar",
+            "INDEXBAM": "java -jar /usr/local/apps/picard/1.129/picard.jar BuildBamIndex",
+            "MARKDUPS": "module load picard/2.1.1; java -Xmx16g -XX:ParallelGCThreads=12 -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar MarkDuplicates",
+            "MUTECT": "module load java/1.7.0_25; java -Xmx16g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/muTect/2014-12-15/muTect-1.1.7.jar",
+            "NGSQCTOOLKIT": "/usr/local/apps/ngsqctoolkit/2.3.3/QC/IlluQC.pl",
+            "NOVOALIGN": "/usr/local/apps/novocraft/3.04.04/novoalign",
+            "NOVOSORT": "/usr/local/apps/novocraft/3.04.04/novosort",
+            "PICARD1": "module load picard/2.1.1; java -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar AddOrReplaceReadGroups",
+            "PICARD2": "module load picard/2.1.1; java -Xmx4G -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar CollectInsertSizeMetrics",
+            "PICARD3": "/ngs/bin/jdk1.8.0_25/bin/java -jar /ngs/bin/picard-tools-1.119/CreateSequenceDictionary.jar",
+            "QUALIMAP": "export JAVA_OPTS='-Djava.awt.headless=true -Djava.io.tmpdir=/lscratch/$SLURM_JOBID'; /usr/local/apps/qualimap/qualimap_v2.2/qualimap --java-mem-size=64G",
+            "SAMTOOLS": "/usr/local/apps/samtools/1.3.1/bin/samtools",
+            "SNPEFF": "java -Xmx24g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/snpEff/4.2/snpEff.jar",
+            "SNPSIFT": "java -Xmx24g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/snpEff/4.2/SnpSift.jar",
+            "STAR": "/usr/local/apps/STAR/2.4.0h/bin/Linux_x86_64/STAR",
+            "TRIMMOMATIC": "java -Xmx2g  -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/trimmomatic/Trimmomatic-0.33/trimmomatic-0.33.jar",
+            "VARSCAN": "java -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/varscan/2.3.6/VarScan.v2.3.6.jar"
+        },
+        "mirseq": {
+            "java_parameters": {
+                "ADDORREPLACEREADGROUPS_JVM_MEM": "-Xmx1g -Xms1g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID",
+                "CREATEDICTIONARY_JVM_MEM": "-Xmx1g -Xms1g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID",
+                "SORTSAM_JVM_MEM": "-Xmx8g -Xms1g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID",
+                "UNIFIEDGENOTYPER_JVM_MEM": "-Xmx1g -Xms1g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID"
+            },
+            "memory_parameters": {
+                "BAMS_MEM": "-l h_vmem=750M -l h_stack=10M",
+                "CUTADAPT_MEM": "-l h_vmem=8G -l h_stack=100M",
+                "DIFF_EXPRESSION_MEM": "-l h_vmem=2G -l h_stack=10M",
+                "EXPRESSION_REPORTS_MEM": "-l h_vmem=1G -l h_stack=10M",
+                "FASTQC_MEM": "-l h_vmem=8G -l h_stack=500M",
+                "GENCODE_CLASSIFICATION_MEM": "-l h_vmem=3G -l h_stack=10M",
+                "MAIN_DOC_MEM": "-l h_vmem=1G -l h_stack=10M",
+                "MIRDEEP2_MAPPER_MEM": "-l h_vmem=512M -l h_stack=10M",
+                "MIRDEEP2_MEM": "-l h_vmem=2G -l h_stack=10M",
+                "REFERENCE_INDEXES_MEM": "-l h_vmem=3G -l h_stack=10M",
+                "SAMPLE_SUMMARY_MEM": "-l h_vmem=1G -l h_stack=10M",
+                "VARIANTS_MEM": "-l h_vmem=3G -l h_stack=10M"
+            },
+            "tool_parameters": {
+                "ADDORREPLACEREADGROUPS_PARAMS": "MAX_RECORDS_IN_RAM=100000 VALIDATION_STRINGENCY=SILENT RGLB=GRCh38 RGCN=NCI RGPL=Illumina ",
+                "BOWTIE_PARAMS": "-p 4 -S -q -n 1 -e 80 -l 30 -a -m 5 --best --strata",
+                "CONFMULTIQC": "/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/multiqc_config.yaml",
+                "CUTADAPT_PARAMS": "-b  CAAGCAGAAGACGGCATACGAGAT -b TGGAATTCTCGGGTGCCAAGGAACTCCAGTCAC  -O 3 -m 17 -f fastq",
+                "FASTAWITHADAPTERSETD": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.consolidated.fa",
+                "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+                "FASTQ_SCREEN_CONFIG2": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen_2.conf",
+                "HTSEQ_PARAMS": "-m intersection-nonempty -q -t exon -s no",
+                "KRAKENBACDB": "/fdb/kraken/20170202_bacteria",
+                "LEADINGQUALITY": 10,
+                "MAPPER_PARAMS": "-e -h -q -m -r 5 -u -v -o 4",
+                "MINLEN": 17,
+                "MIRDEEP2_CLOSE_SPECIES": "none",
+                "MIRDEEP2_PARAMS": "-P -t Human",
+                "PRINTREADS_PARAMS": "-rf ReassignOneMappingQuality -RMQF 255 -RMQT 60",
+                "QUANTIFIER_PARAMS": "-P -W",
+                "QUEUE": "1-day",
+                "SORTSAM_PARAMS": "MAX_RECORDS_IN_RAM=1800000 VALIDATION_STRINGENCY=SILENT",
+                "TRAILINGQUALITY": 10,
+                "TRIMMOMATIC": "java -Xmx8g -Djava.io.tmpdir=/scratch -jar /usr/local/apps/trimmomatic/Trimmomatic-0.33/trimmomatic-0.33.jar",
+                "TRIMMOMATIC.ADAPTERS": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/References/adapters2.fa",
+                "UNIFIEDGENOTYPER_PARAMS": "-glm SNP -dcov 1000"
+            },
+            "tool_paths": {
+                "BEDTOOLS_PATH": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/bin",
+                "BOWTIE_PATH": "/usr/local/apps/bowtie/1.1.1",
+                "CUTADAPT_PATH": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/bin",
+                "FASTQC_PATH": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/bin",
+                "GATK_JAR": "/usr/local/apps/GATK/3.3-0/GenomeAnalysisTK.jar",
+                "HTSEQ_LIB_PATH": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/HTSeq-0.5.4p5-py2.7-linux-x86_64.egg",
+                "HTSEQ_PATH": "/usr/local/apps/htseq/0.6.1p1/bin",
+                "JAVA_PATH": "/usr/bin",
+                "MIRDEEP2_PATH": "/usr/local/apps/mirdeep/2.0.0.7/bin",
+                "NGS_PORTAL_PATH": "/projects/bsi/bictools/apps/misc/ngs_dashboard/2.0",
+                "PDFAPI2_PM_PATH": "/usr/share/perl5",
+                "PICARD_PATH": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/bin/picard-tools-1.96",
+                "PYTHON_PATH": "/usr/local/Anaconda/envs/py2.7.9/bin",
+                "RANDFOLD_PATH": "/usr/local/apps/randfold/2.0/bin",
+                "RSCRIPT_PATH": "/usr/local/apps/R/gcc_4.9.1/3.2.2/bin",
+                "SAMTOOLS_PATH": "/usr/local/apps/samtools/samtools-0.1.19",
+                "SCRIPT_PATH": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/scripts",
+                "SQUID_PATH": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/bin",
+                "VCFTOOLS_PATH": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/bin",
+                "VCFTOOLS_PERLLIB": "/usr/local/apps/vcftools/0.1.12b/perl/",
+                "VIENNA_PATH": "/usr/local/apps/viennarna/2.1.9/bin"
+            },
+            "tool_versions": {
+                "BOWTIE2VER": "bowtie/2-2.3.4",
+                "CUTADAPTVER": "cutadapt/1.18",
+                "FASTQCVER": "fastqc/0.11.5",
+                "FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
+                "FASTXTOOLKITVER": "fastxtoolkit/0.0.14",
+                "KRAKENVER": "kraken/1.1",
+                "KRONATOOLSVER": "kronatools/2.7",
+                "MIRDEEP2VER": "mirdeep/2.0.0.8",
+                "MULTIQCVER": "multiqc/1.4",
+                "PERLVER": "perl/5.24.3"
+            }
+        },
+        "rnaseq": {
+            "A1": "CTGTCTCTTATACACATCTCCGAGCCCACGAGAC",
+            "A2": "CTGTCTCTTATACACATCTGACGCTGCCGACGA",
+            "ADAPTER1": "-",
+            "ADAPTER2": "",
+            "ALIGNINTRONMAX": 1000000,
+            "ALIGNINTRONMIN": 20,
+            "ALIGNMATESGAPMAX": 1000000,
+            "ALIGNSJDBOVERHANGMIN": 1,
+            "ALIGNSJOVERHANGMIN": 8,
+            "BWAVER": "bwa/0.7.17",
+            "CHKQCVER": " /data/CCBR_Pipeliner/dev/RNA-Seq-pipeline/ver2/summarizeFastQCver2",
+            "CONFMULTIQC": "/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/multiqc/multiqc_config.yaml",
+            "CONTRASTS": [
+                "Normal",
+                "Tumor"
+            ],
+            "CROPLENGTH": 0,
+            "DEG": "yes",
+            "Encode": "-----------------------Encode options (for now we have defaults except first) --------------------------------------",
+            "FASTQC": "/usr/local/apps/fastqc/0.11.5/fastqc",
+            "FASTQCVER": "fastqc",
+            "FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
+            "FILTERINTRONMOTIFS": "RemoveNoncanonicalUnannotated",
+            "FILTERMISMATCHNMAX": 999,
+            "FILTERMISMATCHNOVERLMAX": 0.3,
+            "FILTERMULTIMAPNMAX": 20,
+            "FILTERTYPE": "BySJout",
+            "GATK": "java -Xmx64g -jar /usr/local/apps/GATK/3.5-0/GenomeAnalysisTK.jar",
+            "GROUPS": [
+                "Normal",
+                "Tumor",
+                "Normal",
+                "Tumor",
+                "Normal",
+                "Tumor"
+            ],
+            "HEADCROPLENGTH": 0,
+            "INPUTDIR": "/scratch/nikhil/731/fastq/",
+            "IOoptions": "--------------------------- Output and input locations ---------------------------------------------------------",
+            "LEADINGQUALITY": 10,
+            "MARKDUPS": "module load picard/2.17.11; java -Xmx16g -XX:ParallelGCThreads=12 -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar MarkDuplicates",
+            "MINCOUNTGENEJUNCTIONS": 5,
+            "MINCOUNTGENES": 5,
+            "MINCOUNTJUNCTIONS": 5,
+            "MINLEN": 35,
+            "MINSAMPLES": 1,
+            "MULTIQC": "multiqc/1.1",
+            "MYFOLDER": "/scratch/nikhil/731/",
+            "MYSAMPLES": [
+                "12284_N_S38",
+                "12284_T_S37",
+                "21238_N_S42",
+                "21238_T_S41",
+                "23709_N_S40",
+                "23709_T_S39"
+            ],
+            "NBJUNCS": 4000000,
+            "NGSQCTOOLKIT": "/usr/local/apps/ngsqctoolkit/2.3.3/QC/IlluQC.pl",
+            "NOVOSORT": "/usr/local/apps/novocraft/3.08.02/novosort",
+            "ONCOFUSE": "java -Xmx24g -jar /data/CCBR_Pipeliner/db/PipeDB/bin/oncofuse-1.1.1/Oncofuse.jar",
+            "OUTSAMUNMAPPED": "Within",
+            "Options": "---------------------------------- Branching options --------------------------------------------------------------",
+            "PALINDROMECLIPTHRESHOLD": 36,
+            "PICARD1": "module load picard/2.17.11; java -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar AddOrReplaceReadGroups",
+            "PICARD3": "/ngs/bin/jdk1.8.0_25/bin/java -jar /ngs/bin/picard-tools-1.119/CreateSequenceDictionary.jar",
+            "PICARDSTRAND": "SECOND_READ_TRANSCRIPTION_STRAND",
+            "PIPERLIB": "/data/CCBR_Pipeliner/db/PipeDB/R2/",
+            "PYTHONPATH": "/data/CCBR_Pipeliner/db/PipeDB/bin/lib/python3.4/site-packages/",
+            "Picardsettings": "------------------------- PICARD options --------------------------------------------------------------------",
+            "QUALIMAP": "export JAVA_OPTS='-Djava.awt.headless=true -Djava.io.tmpdir=/lscratch/$SLURM_JOBID'; /usr/local/apps/qualimap/qualimap_v2.2.1/qualimap --java-mem-size=64G",
+            "RESUME": "no",
+            "RNASEQCJAR": "/usr/local/apps/rnaseqc/1.1.8/RNA-SeQC_v1.1.8.jar",
+            "RSEM": "/usr/local/apps/rsem/1.3.0",
+            "SAMSTRANDFIELD": "None",
+            "SAMTOOLS": "/usr/local/apps/samtools/1.6/bin/samtools",
+            "SEEDMISMATCHES": 2,
+            "SIMPLECLIPTHRESHOLD": 10,
+            "SJDBOVERHANG": 125,
+            "SNPEFF": "java -Xmx24g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/snpEff/4.3t/snpEff.jar",
+            "STARSTRANDCOL": 4,
+            "STARVER": "STAR/2.5.2b",
+            "STRANDED": 2,
+            "STRICTNESS": 0.97,
+            "SUBREADVER": "subread/1.5.2",
+            "SamplesInformation": "-------------sample list & contrasts information --------------------------------------------------------",
+            "Starsettings": "------------------------- STAR version and parameters ---------------------------------------------------------",
+            "TARGETLENGTH": 50,
+            "TRAILINGQUALITY": 10,
+            "TRIM": "yes",
+            "TRIMMOMATIC": "java -Xmx8g  -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/trimmomatic/Trimmomatic-0.33/trimmomatic-0.33.jar",
+            "TRIMMOMATICVER": "trimmomatic/0.33",
+            "Trimsettings": "---------------------------- TRIMMOMATIC parameters ----------------------------------------------------------",
+            "WIGSTRAND": "Stranded",
+            "WIGTYPE": "None",
+            "WINDOWQUALITY": 27,
+            "WINDOWSIZE": 4,
+            "cufflinks": "-------------------------Cufflinks options (for now defaults)----------------------------------------------------",
+            "mincountinfo": "------------------------------Min count thresholds-------------------------------------------------------------",
+            "strandinfo": "-[SUBREAD STRANDEDNESS: 0=unstranded--1=stranded--2=reverse-strand-specific]- ",
+            "subreadsettings": "---------------------- SUBREAD parameters ------------------------------------------------------------------",
+            "tool_parameters": {
+                "CROPLENGTH": 0,
+                "FASTAWITHADAPTERSETC": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters_new.fa",
+                "FASTAWITHADAPTERSETD": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.consolidated.fa",
+                "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+                "FASTQ_SCREEN_CONFIG2": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen_2.conf",
+                "HEADCROPLENGTH": 0,
+                "KRAKENBACDB": "/fdb/kraken/20170202_bacteria",
+                "LEADINGQUALITY": 10,
+                "MINLEN": 35,
+                "PALINDROMECLIPTHRESHOLD": 36,
+                "SEEDMISMATCHES": 2,
+                "SIMPLECLIPTHRESHOLD": 10,
+                "STRICTNESS": 0.97,
+                "TARGETLENGTH": 50,
+                "TRAILINGQUALITY": 10,
+                "Trimsettings": "---------------------------- TRIMMOMATIC parameters ----------------------------------------------------------",
+                "WINDOWQUALITY": 27,
+                "WINDOWSIZE": 4
+            },
+            "tool_versions": {
+                "BOWTIE2VER": "bowtie/2-2.3.4",
+                "BWAVER": "bwa/0.7.17",
+                "CUTADAPTVER": "cutadapt/1.18",
+                "FASTQCVER": "fastqc/0.11.5",
+                "FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
+                "KRAKENVER": "kraken/1.1",
+                "KRONATOOLSVER": "kronatools/2.7",
+                "MULTIQCVER": "multiqc/1.4",
+                "PARALLELVER": "parallel/20171222",
+                "PERLVER": "perl/5.24.3",
+                "PICARDVER": "picard/2.17.11",
+                "PRESEQVER": "preseq/2.0.3",
+                "PYTHONVER": "python/3.5",
+                "RMATSVER": "rmats/4.0.1",
+                "RSEMVER": "rsem/1.3.0",
+                "RSEQCVER": "rseqc/2.6.4",
+                "RVER": "R/3.5",
+                "SAMTOOLSVER": "samtools/1.6",
+                "STARVER": "STAR/2.7.0f",
+                "SUBREADVER": "subread/1.5.2",
+                "TRIMMOMATICVER": "trimmomatic/0.33"
+            },
+            "wig": "------------------------------------wig options (for now default) ------------------------------------------------------"
+        },
+        "rnaseqvargerm": {
+            "A1": "CTGTCTCTTATACACATCTCCGAGCCCACGAGAC",
+            "A2": "CTGTCTCTTATACACATCTGACGCTGCCGACGA",
+            "ADAPTER1": "-",
+            "ADAPTER2": "",
+            "ALIGNINTRONMAX": 1000000,
+            "ALIGNINTRONMIN": 20,
+            "ALIGNMATESGAPMAX": 1000000,
+            "ALIGNSJDBOVERHANGMIN": 1,
+            "ALIGNSJOVERHANGMIN": 8,
+            "ANNOVAR1": "/usr/local/apps/ANNOVAR/2015-03-22/convert2annovar.pl",
+            "ANNOVAR2": "/usr/local/apps/ANNOVAR/2015-03-22/table_annovar.pl",
+            "BAMTOOLS": "/usr/local/apps/bamtools/2.3.0/bin/bamtools",
+            "BEDTOOLS": "/usr/local/apps/bedtools/2.19.0/bin/bedtools",
+            "BWA": "/usr/local/apps/bwa/0.7.15/bwa",
+            "BWAVER": "bwa/0.7.10",
+            "CHKQCVER": " /data/CCBR_Pipeliner/dev/RNA-Seq-pipeline/ver2/summarizeFastQCver2",
+            "CONFMULTIQC": "/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/multiqc_config.yaml",
+            "CONTRASTS": [
+                "Normal",
+                "Tumor"
+            ],
+            "CROPLENGTH": 0,
+            "DEG": "yes",
+            "Encode": "-----------------------Encode options (for now we have defaults except first) --------------------------------------",
+            "FASTQC": "/usr/local/apps/fastqc/0.11.5/fastqc",
+            "FASTQCVER": "fastqc",
+            "FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
+            "FILTERINTRONMOTIFS": "RemoveNoncanonicalUnannotated",
+            "FILTERMISMATCHNMAX": 999,
+            "FILTERMISMATCHNOVERLMAX": 0.3,
+            "FILTERMULTIMAPNMAX": 20,
+            "FILTERTYPE": "BySJout",
+            "FIRSTANNO": "Scripts/vcfAnnFirst_snpEff.py",
+            "GATK": "java -Xmx64g -jar /usr/local/apps/GATK/3.6/GenomeAnalysisTK.jar",
+            "GROUPS": [
+                "Normal",
+                "Tumor",
+                "Normal",
+                "Tumor",
+                "Normal",
+                "Tumor"
+            ],
+            "HEADCROPLENGTH": 0,
+            "INDEXBAM": "java -jar /usr/local/apps/picard/1.129/picard.jar BuildBamIndex",
+            "INPUTDIR": "/scratch/nikhil/731/fastq/",
+            "IOoptions": "--------------------------- Output and input locations ---------------------------------------------------------",
+            "LEADINGQUALITY": 10,
+            "MARKDUPS": "module load picard/2.1.1; java -Xmx16g -XX:ParallelGCThreads=12 -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar MarkDuplicates",
+            "MINCOUNTGENEJUNCTIONS": 5,
+            "MINCOUNTGENES": 5,
+            "MINCOUNTJUNCTIONS": 5,
+            "MINLEN": 20,
+            "MINSAMPLES": 1,
+            "MULTIQC": "multiqc/0.9dev0",
+            "MUTECT": "module load java/1.7.0_25; java -Xmx16g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/muTect/2014-12-15/muTect-1.1.7.jar",
+            "MYFOLDER": "/scratch/nikhil/731/",
+            "MYSAMPLES": [
+                "12284_N_S38",
+                "12284_T_S37",
+                "21238_N_S42",
+                "21238_T_S41",
+                "23709_N_S40",
+                "23709_T_S39"
+            ],
+            "NBJUNCS": 4000000,
+            "NGSQCTOOLKIT": "/usr/local/apps/ngsqctoolkit/2.3.3/QC/IlluQC.pl",
+            "NOVOALIGN": "/usr/local/apps/novocraft/3.04.04/novoalign",
+            "NOVOSORT": "/usr/local/apps/novocraft/3.04.04/novosort",
+            "OUTSAMUNMAPPED": "Within",
+            "Options": "---------------------------------- Branching options --------------------------------------------------------------",
+            "PALINDROMECLIPTHRESHOLD": 36,
+            "PICARD1": "module load picard/2.1.1; java -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar AddOrReplaceReadGroups",
+            "PICARD2": "module load picard/2.1.1; java -Xmx4G -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar $PICARDJARPATH/picard.jar CollectInsertSizeMetrics",
+            "PICARD3": "/ngs/bin/jdk1.8.0_25/bin/java -jar /ngs/bin/picard-tools-1.119/CreateSequenceDictionary.jar",
+            "PICARDSTRAND": "SECOND_READ_TRANSCRIPTION_STRAND",
+            "PICARDVER": "picard/1.119",
+            "PIPERLIB": "/data/CCBR_Pipeliner/db/PipeDB/R2/",
+            "PYTHONPATH": "/data/CCBR_Pipeliner/db/PipeDB/bin/lib/python3.4/site-packages/",
+            "Picardsettings": "------------------------- PICARD options --------------------------------------------------------------------",
+            "QUALIMAP": "export JAVA_OPTS='-Djava.awt.headless=true -Djava.io.tmpdir=/lscratch/$SLURM_JOBID'; /usr/local/apps/qualimap/qualimap_v2.2/qualimap --java-mem-size=64G",
+            "RESUME": "no",
+            "RNASEQCVER": "/usr/local/apps/rnaseqc/1.1.8/RNA-SeQC_v1.1.8.jar",
+            "RSEM": "/data/CCBR_Pipeliner/db/PipeDB/bin/rsem1.2.23/RSEM-1.2.23",
+            "SAMSTRANDFIELD": "None",
+            "SAMTOOLS": "/usr/local/apps/samtools/1.3.1/bin/samtools",
+            "SEEDMISMATCHES": 2,
+            "SIMPLECLIPTHRESHOLD": 10,
+            "SJDBOVERHANG": 125,
+            "SNPEFF": "java -Xmx24g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/snpEff/4.2/snpEff.jar",
+            "SNPSIFT": "java -Xmx24g -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/snpEff/4.2/SnpSift.jar",
+            "STAR": "/usr/local/apps/STAR/2.4.0h/bin/Linux_x86_64/STAR",
+            "STARSTRANDCOL": 4,
+            "STARVER": "STAR/2.5.2b",
+            "STRANDED": 2,
+            "STRICTNESS": 0.97,
+            "SUBREADVER": "subread/1.4.6",
+            "SamplesInformation": "-------------sample list & contrasts information --------------------------------------------------------",
+            "Starsettings": "------------------------- STAR version and parameters ---------------------------------------------------------",
+            "TARGETLENGTH": 50,
+            "TRAILINGQUALITY": 10,
+            "TRIM": "yes",
+            "TRIMMOMATIC": "java -Xmx8g  -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/trimmomatic/Trimmomatic-0.33/trimmomatic-0.33.jar",
+            "TRIMMOMATICVER": "trimmomatic/0.33",
+            "Trimsettings": "---------------------------- TRIMMOMATIC parameters ----------------------------------------------------------",
+            "VARSCAN": "java -Djava.io.tmpdir=/lscratch/$SLURM_JOBID -jar /usr/local/apps/varscan/2.3.6/VarScan.v2.3.6.jar",
+            "WIGSTRAND": "Stranded",
+            "WIGTYPE": "None",
+            "WINDOWQUALITY": 27,
+            "WINDOWSIZE": 4,
+            "cufflinks": "-------------------------Cufflinks options (for now defaults)----------------------------------------------------",
+            "mincountinfo": "------------------------------Min count thresholds-------------------------------------------------------------",
+            "strandinfo": "-[SUBREAD STRANDEDNESS: 0=unstranded--1=stranded--2=reverse-strand-specific]- ",
+            "subreadsettings": "---------------------- SUBREAD parameters ------------------------------------------------------------------",
+            "wig": "------------------------------------wig options (for now default) ------------------------------------------------------"
+        }
+    },
+    "final": {
+        "CAPmirseq-plus": "CAPmirseq-plus.snakefile",
+        "ChIPseq": "ChIPseq.snakefile",
+        "InitialChIPseqQC": "InitialChIPseqQC.snakefile",
+        "bam2recal": "all-bam2recal.rl",
+        "cellranger": "scrnaseq.snakefile",
+        "custom": "all-custom.rl",
+        "exomeseq-germline": "all-exomeseq-germline.rl",
+        "exomeseq-germline-partial": "all-exomeseq-germline-partial.rl",
+        "exomeseq-germline-recal": "all-exomeseq-germline-realign.rl",
+        "exomeseq-pairs": "all-exomeseq-pairs.rl",
+        "exomeseq-somatic": "all-exomeseq-somatic.rl",
+        "exomeseq-somatic-tumoronly": "all-exomeseq-somatic-tumoronly.rl",
+        "initialqc": "all-initialqc.rl",
+        "initialqcgenomeseq": "all-initialqcgenomeseq.rl",
+        "initialqcrnaseq": "initialqcrnaseq.snakefile",
+        "miRSeq_v2": "miRSeq.snakefile",
+        "rnaseq": "rnaseq.snakefile",
+        "rnaseqfusion": "all-rnafusion.rl",
+        "rnaseqvargerm": "all-rnaseqvargerm.rl",
+        "scRNA_v2": "scrna.snakefile",
+        "scrnaDE": "scrnaDE.snakefile",
+        "scrnaQC": "scrnaQC.snakefile",
+        "scrnaseqcluster": "scrnaseq.snakefile",
+        "scrnaseqinit": "scrnaseq.snakefile",
+        "wgs-somatic": "all-wgs-somatic.rl",
+        "wgs-somatic-tumoronly": "all-wgs-somatic-tumoronly.rl",
+        "wgslow": "all-wgslow.rl"
+    },
+    "project": {
+        "DEG": "yes",
+        "MINCOUNTGENEJUNCTIONS": "0.5",
+        "MINCOUNTGENES": "0.5",
+        "MINCOUNTJUNCTIONS": "0.5",
+        "MINSAMPLES": "2",
+        "PICARDSTRAND": "NONE",
+        "SJDBOVERHANG": "100",
+        "STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/STAR/2.7.0f/genes-100",
+        "STARSTRANDCOL": "2",
+        "STRANDED": "0",
+        "TRIM": "yes",
+        "analyst": "",
+        "annotation": "mm10",
+        "batchsize": "20",
+        "binset": "standard-bin",
+        "cluster": "cluster_medium.json",
+        "contrasts": {
+            "rcontrasts": "na"
+        },
+        "custom": [],
+        "datapath": "/data/kuhnsa/RNA-seek/.tests",
+        "description": "Enter CCBR Project Description and Notes here.\n",
+        "efiletype": "fastq",
+        "filetype": "fastq.gz",
+        "flowcellid": "stats",
+        "from_counts": "False",
+        "groups": {
+            "rgroups": [
+                "WT",
+                "WT",
+                "KO",
+                "KO"
+            ],
+            "rlabels": [
+                "WT_1",
+                "WT_2",
+                "KO_1",
+                "KO_2"
+            ],
+            "rsamps": [
+                "WT_S1",
+                "WT_S2",
+                "KO_S3",
+                "KO_S4"
+            ]
+        },
+        "id": "RNA-seek",
+        "nends": 2,
+        "organism": "",
+        "pairs": {},
+        "pfamily": "rnaseq",
+        "pi": "",
+        "pipehome": "/spin1/scratch/Testing/INIT/Pipeliner",
+        "pipeline": "initialqcrnaseq",
+        "platform": "Illumina",
+        "poc": "",
+        "rgid": {
+            "KO_S3": {
+                "rgcn": "na",
+                "rglb": "na",
+                "rgpl": "ILLUMINA",
+                "rgpu": "na",
+                "rgsm": "KO_S3"
+            },
+            "KO_S4": {
+                "rgcn": "na",
+                "rglb": "na",
+                "rgpl": "ILLUMINA",
+                "rgpu": "na",
+                "rgsm": "KO_S4"
+            },
+            "WT_S1": {
+                "rgcn": "na",
+                "rglb": "na",
+                "rgpl": "ILLUMINA",
+                "rgpu": "na",
+                "rgsm": "WT_S1"
+            },
+            "WT_S2": {
+                "rgcn": "na",
+                "rglb": "na",
+                "rgpl": "ILLUMINA",
+                "rgpu": "na",
+                "rgsm": "WT_S2"
+            }
+        },
+        "samples": {
+            "na": "na"
+        },
+        "smparams": [],
+        "targetspath": "",
+        "technique": "",
+        "units": {
+            "KO_S3": "KO_S3",
+            "KO_S4": "KO_S4",
+            "WT_S1": "WT_S1",
+            "WT_S2": "WT_S2"
+        },
+        "username": "sk@nih.gov",
+        "version": "4.0",
+        "workpath": "/data/kuhnsa/RNA-seek/workflow/tmp"
+    },
+    "references": {
+        "ChIPseq": {
+            "BLACKLISTBWAINDEX": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/indexes/mm10.blacklist.chrM.chr_rDNA",
+            "BOWTIE2INDEX": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/indexes/mm10",
+            "BWA": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/indexes/mm10",
+            "CHROMS": [
+                "chr1",
+                "chr2",
+                "chr3",
+                "chr4",
+                "chr5",
+                "chr6",
+                "chr7",
+                "chr8",
+                "chr9",
+                "chr10",
+                "chr11",
+                "chr12",
+                "chr13",
+                "chr14",
+                "chr15",
+                "chr16",
+                "chr17",
+                "chr18",
+                "chr19",
+                "chrX",
+                "chrY",
+                "chrM"
+            ],
+            "EFFECTIVEGENOMESIZE": "2400000000",
+            "FASTAWITHADAPTERSETC": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters_new.fa",
+            "FASTAWITHADAPTERSETD": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.consolidated.fa",
+            "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+            "GENEINFO": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/geneinfo.bed",
+            "GENOME": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/ref.fa",
+            "GENOMECHR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/Chromsomes/",
+            "GTFFILE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/genes.gtf",
+            "KRAKENBACDB": "/fdb/kraken/20170202_bacteria",
+            "REFLEN": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/indexes/mm10.fa.sizes"
+        },
+        "exomeseq": {
+            "ADAPTER1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC",
+            "ADAPTER2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT",
+            "ADMIXTUREKEY": "/data/CCBR_Pipeliner/db/PipeDB/lib/mouse_genomes_strain_key.txt",
+            "ADMIXTUREREFS": "39",
+            "ALVIEWGENOME": "mm10",
+            "AVIASET": "mm10",
+            "BWAGENOME": "/fdb/igenomes/Mus_musculus/UCSC/mm10/Sequence/BWAIndex/genome.fa",
+            "CANVASBALLELES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_knownSNPs_sites.vcf.gz",
+            "CANVASFILTER": "/data/CCBR_Pipeliner/db/PipeDB/lib/canvas_refs/mm10/mm10_WindowMasker.bed",
+            "CANVASGENOME": "/data/CCBR_Pipeliner/db/PipeDB/lib/canvas_refs/mm10/WholeGenomeFasta",
+            "CANVASKMER": "/data/CCBR_Pipeliner/db/PipeDB/lib/canvas_refs/mm10/mm10_kmer.fa",
+            "CANVASPLOIDY": "/data/CCBR_Pipeliner/db/PipeDB/lib/ploidy.vcf",
+            "CHROMS": [
+                "chr1",
+                "chr2",
+                "chr3",
+                "chr4",
+                "chr5",
+                "chr6",
+                "chr7",
+                "chr8",
+                "chr9",
+                "chr10",
+                "chr11",
+                "chr12",
+                "chr13",
+                "chr14",
+                "chr15",
+                "chr16",
+                "chr17",
+                "chr18",
+                "chr19",
+                "chrX",
+                "chrY",
+                "chrM"
+            ],
+            "CNVKITACCESS": "/data/CCBR_Pipeliner/db/PipeDB/lib/access-mm10.bed",
+            "CNVKITANNO": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_refFlat.txt",
+            "CNVKITGENOME": "/data/CCBR_Pipeliner/db/PipeDB/lib/genome.fa",
+            "CNVKITREF": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_flatRef.cnn",
+            "CNVKIT_TARGETS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_cnvkit_targets_split.bed",
+            "CONPAIRMARKERSA": "/data/CCBR_Pipeliner/db/PipeDB/lib/SureSelect_Mouse_All_Exon_V1_GRCm38_markers_MAF_0.4_LD_0.8.txt",
+            "CONPAIRMARKERSB": "/data/CCBR_Pipeliner/db/PipeDB/lib/SureSelect_Mouse_All_Exon_V1_GRCm38_markers_MAF_0.4_LD_0.8.bed",
+            "DB29": "/data/CCBR_Pipeliner/db/PipeDB/lib/snpEff_db/dbNSFP2.9.txt.gz",
+            "DELLY_EXCLUSIONS": "/data/CCBR_Pipeliner/db/PipeDB/lib/delly.mouse.mm10.excl.tsv",
+            "EXONS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_UCSCexons.bed",
+            "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+            "FILTERSIFT": "( QUAL >= 20 )",
+            "GENOME": "/fdb/igenomes/Mus_musculus/UCSC/mm10/Sequence/WholeGenomeFasta/genome.fa",
+            "HAPMAP_DBNSFP": "/data/CCBR_Pipeliner/db/PipeDB/lib/snpEff_db/hapmap.bed",
+            "INDELSITES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz",
+            "KNOWNANCESTRY": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNINDELS": "-known /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz",
+            "KNOWNRECAL": "-knownSites /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz -knownSites /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNVCF": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNVCF2": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_knownSNPs_sites.vcf.gz",
+            "MUTECTCOSMIC": "",
+            "MUTECTGENOME": "/fdb/igenomes/Mus_musculus/UCSC/mm10/Sequence/WholeGenomeFasta/genome.fa",
+            "MUTECTSNP": "",
+            "MUTECTVARIANTS": "--dbsnp /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "NOVOINDEX": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_genome.nix",
+            "ORGANISM": "MOUSE",
+            "PON": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_dbSNP_allStrains_compSet.vcf.gz",
+            "REFFLAT": "/data/CCBR_Pipeliner/db/PipeDB/lib/SS_mouse_exome_mm10_reformat.bed",
+            "SELECTDB": "SIFT_score,SIFT_pred,Polyphen2_HVAR_score,Polyphen2_HVAR_pred,LRT_score,LRT_pred,GERP++_RS,MutationAssessor_score,MutationAssessor_pred,1000Gp1_AF,1000Gp1_EUR_AF,ESP6500_EA_AF,ESP6500_AA_AF",
+            "SNP138": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "SNPEFF_CONFIG": "/usr/local/apps/snpEff/4.3t/snpEff.config",
+            "SNPEFF_GENOME": "GRCm38.86",
+            "SNPSITES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "STRELKA_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/strelka_demo_config.ini",
+            "THETASNPS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_theta_SNPfile_reformat.txt",
+            "VARDICTBED": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10.chroms.bed",
+            "VEPBUILD": "GRCm38",
+            "VEPFILTERVCF": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "VEPGENOME": "/data/CCBR_Pipeliner/db/PipeDB/lib/genome.fa",
+            "VEPSPECIES": "mus_musculus",
+            "adapter.file": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.ngsqc.dat",
+            "fastqc.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/fastqc.adapters",
+            "nextera1": "CTGTCTCTTATACACATCTCCGAGCCCACGAGAC",
+            "nextera2": "CTGTCTCTTATACACATCTGACGCTGCCGACGA",
+            "trimmomatic.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/adapters2.fa"
+        },
+        "genomeseq": {
+            "ADAPTER1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC",
+            "ADAPTER2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT",
+            "ADMIXTUREKEY": "/data/CCBR_Pipeliner/db/PipeDB/lib/mouse_genomes_strain_key.txt",
+            "ADMIXTUREREFS": "39",
+            "ALVIEWGENOME": "mm10",
+            "AVIASET": "mm10",
+            "BWAGENOME": "/fdb/igenomes/Mus_musculus/UCSC/mm10/Sequence/BWAIndex/genome.fa",
+            "CANVASBALLELES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_knownSNPs_sites.vcf.gz",
+            "CANVASFILTER": "/data/CCBR_Pipeliner/db/PipeDB/lib/canvas_refs/mm10/mm10_WindowMasker.bed",
+            "CANVASGENOME": "/data/CCBR_Pipeliner/db/PipeDB/lib/canvas_refs/mm10/WholeGenomeFasta",
+            "CANVASKMER": "/data/CCBR_Pipeliner/db/PipeDB/lib/canvas_refs/mm10/mm10_kmer.fa",
+            "CANVASPLOIDY": "/data/CCBR_Pipeliner/db/PipeDB/lib/ploidy.vcf",
+            "CHROMS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_chromosomes",
+            "CNVKITACCESS": "/data/CCBR_Pipeliner/db/PipeDB/lib/access-mm10.bed",
+            "CNVKITANNO": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_refFlat.txt",
+            "CNVKITANTITARGETS": "/data/CCBR_Pipeliner/db/PipeDB/lib/fake.antitargetcoverage.cnn",
+            "CNVKITGENOME": "/data/CCBR_Pipeliner/db/PipeDB/lib/genome.fa",
+            "CNVKITREF": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_flatRef.cnn",
+            "CNVKITWGSTARGETS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_cnvkit_wgs_targets.bed",
+            "CNVKIT_TARGETS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_cnvkit_targets_split.bed",
+            "CONPAIRMARKERSA": "/data/CCBR_Pipeliner/db/PipeDB/lib/SureSelect_Mouse_All_Exon_V1_GRCm38_markers_MAF_0.4_LD_0.8.txt",
+            "CONPAIRMARKERSB": "/data/CCBR_Pipeliner/db/PipeDB/lib/SureSelect_Mouse_All_Exon_V1_GRCm38_markers_MAF_0.4_LD_0.8.bed",
+            "DB29": "/data/CCBR_Pipeliner/db/PipeDB/lib/snpEff_db/dbNSFP2.9.txt.gz",
+            "DELLY_EXCLUSIONS": "/data/CCBR_Pipeliner/db/PipeDB/lib/delly.mouse.mm10.excl.tsv",
+            "EXONS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_UCSCexons.bed",
+            "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+            "FILTERSIFT": "( QUAL >= 20 )",
+            "GENOME": "/fdb/igenomes/Mus_musculus/UCSC/mm10/Sequence/WholeGenomeFasta/genome.fa",
+            "HAPMAP_DBNSFP": "/data/CCBR_Pipeliner/db/PipeDB/lib/snpEff_db/hapmap.bed",
+            "INDELSITES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz",
+            "KNOWNANCESTRY": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNINDELS": "-known /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz",
+            "KNOWNRECAL": "-knownSites /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz -knownSites /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNVCF": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNVCF2": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_knownSNPs_sites.vcf.gz",
+            "MUTECTCOSMIC": "",
+            "MUTECTGENOME": "/fdb/igenomes/Mus_musculus/UCSC/mm10/Sequence/WholeGenomeFasta/genome.fa",
+            "MUTECTSNP": "",
+            "MUTECTVARIANTS": "--dbsnp /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "NOVOINDEX": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_genome.nix",
+            "ORGANISM": "MOUSE",
+            "PON": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_dbSNP_allStrains_compSet.vcf.gz",
+            "REFFLAT": "/data/CCBR_Pipeliner/db/PipeDB/lib/SS_mouse_exome_mm10_reformat.bed",
+            "SELECTDB": "SIFT_score,SIFT_pred,Polyphen2_HVAR_score,Polyphen2_HVAR_pred,LRT_score,LRT_pred,GERP++_RS,MutationAssessor_score,MutationAssessor_pred,1000Gp1_AF,1000Gp1_EUR_AF,ESP6500_EA_AF,ESP6500_AA_AF",
+            "SNP138": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "SNPEFF_CONFIG": "/usr/local/apps/snpEff/4.3t/snpEff.config",
+            "SNPEFF_GENOME": "GRCm38.86",
+            "SNPSITES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "STRELKA_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/strelka_demo_config.ini",
+            "THETASNPS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_theta_SNPfile_reformat.txt",
+            "VARDICTBED": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10.chroms.bed",
+            "VEPBUILD": "GRCm38",
+            "VEPFILTERVCF": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "VEPGENOME": "/data/CCBR_Pipeliner/db/PipeDB/lib/genome.fa",
+            "VEPSPECIES": "mus_musculus",
+            "adapter.file": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.ngsqc.dat",
+            "fastqc.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/fastqc.adapters",
+            "nextera1": "CTGTCTCTTATACACATCTCCGAGCCCACGAGAC",
+            "nextera2": "CTGTCTCTTATACACATCTGACGCTGCCGACGA",
+            "trimmomatic.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/adapters2.fa"
+        },
+        "mirseq": {
+            "BOWTIE_REF": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/bowtie_indices/mm10",
+            "FASTA_REF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/mm10_basic.fa",
+            "MIRBASE_HAIRPIN": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/miRBase_v22/mmu_hairpin.fa",
+            "MIRBASE_MATURE": "/data/CCBR_Pipeliner/db/PipeDB/miRseq/miRBase_v22/mmu_mature.fa",
+            "ORGANISM": "Mouse"
+        },
+        "rnaseq": {
+            "ADMIXTUREKEY": "/data/CCBR_Pipeliner/db/PipeDB/lib/mouse_genomes_strain_key.txt",
+            "ADMIXTUREREFS": "39",
+            "ALVIEWGENOME": "mm10",
+            "ANNOTATE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/annotate.genes.txt",
+            "ANNOTATEISOFORMS": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/annotate.isoforms.txt",
+            "AVIASET": "mm10",
+            "BEDREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/genes.ref.bed",
+            "EXONS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_UCSCexons.bed",
+            "FASTAWITHADAPTERSETC": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters_new.fa",
+            "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+            "FUSCATCHCONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fusioncatcher_mm10_configuration.cfg",
+            "FUSCATCHDAT": "/fdb/fusioncatcher/mus_musculus",
+            "FUSIONGTFFILE": "/fdb/STAR_indices/2.5.2b/GENCODE/Gencode_mouse/release_M12/genes.gtf",
+            "GENEINFO": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/geneinfo.bed",
+            "GENOME": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/mm10.fa",
+            "GENOMEFILE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/mm10.fa",
+            "GTFFILE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/genes.gtf",
+            "KARYOBEDS": "/data/CCBR_Pipeliner/db/PipeDB/dev/karyobeds/mm.vM12/",
+            "KARYOPLOTER": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/karyoplot_gene_coordinates.txt",
+            "KNOWNANCESTRY": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNINDELS": "-known /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz",
+            "KNOWNRECAL": "-knownSites /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz -knownSites /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNVCF": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNVCF2": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_knownSNPs_sites.vcf.gz",
+            "ONCOFUSEBUILD": "mm10",
+            "ORGANISM": "MOUSE",
+            "QUALIMAP_INFO": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/qualimap_info.txt",
+            "REFFLAT": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/refFlat.txt",
+            "RRNALIST": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/mm10.rRNA_interval_list",
+            "RSEMREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/rsemref/mm10",
+            "SNPEFF_CONFIG": "/usr/local/apps/snpEff/4.3t/snpEff.config",
+            "SNPEFF_GENOME": "GRCm38.86",
+            "SNPSITES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/STAR/2.7.0f/genes-",
+            "STARFUSIONLIB": "/data/CCBR_Pipeliner/db/PipeDB/lib/Mouse_gencode_M20_CTAT_lib_Mar272019.plug-n-play/ctat_genome_lib_build_dir",
+            "STARREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/STAR/2.5.2b/genes-",
+            "adapter.file": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.ngsqc.dat",
+            "fastqc.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/fastqc.adapters",
+            "trimmomatic.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/adapters2.fa"
+        },
+        "rnaseqvargerm": {
+            "ADAPTER1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC",
+            "ADAPTER2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT",
+            "ADMIXTUREKEY": "/data/CCBR_Pipeliner/db/PipeDB/lib/mouse_genomes_strain_key.txt",
+            "ADMIXTUREREFS": "39",
+            "ALVIEWGENOME": "mm10",
+            "ANNOTATE": "/data/CCBR_Pipeliner/db/PipeDB/dev/Mm10_genes.txt",
+            "AVIASET": "mm10",
+            "BEDREF": "/data/CCBR_Pipeliner/db/PipeDB/lib/GRCm38_mm10_RefSeq.bed",
+            "BWAGENOME": "/fdb/igenomes/Mus_musculus/UCSC/mm10/Sequence/BWAIndex/genome.fa",
+            "CHROMS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_chromosomes",
+            "CNVKITACCESS": "/data/CCBR_Pipeliner/db/PipeDB/lib/access-mm10.bed",
+            "CNVKITGENOME": "/data/CCBR_Pipeliner/db/PipeDB/lib/genome.fa",
+            "CNVKIT_TARGETS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_cnvkit_targets_split.bed",
+            "CONPAIRMARKERS": "/data/CCBR_Pipeliner/db/PipeDB/lib/SureSelect_Mouse_All_Exon_V1_GRCm38_markers_MAF_0.4_LD_0.8.txt",
+            "DB29": "/data/CCBR_Pipeliner/db/PipeDB/lib/snpEff_db/dbNSFP2.9.txt.gz",
+            "DELLY_EXCLUSIONS": "/data/CCBR_Pipeliner/db/PipeDB/lib/delly.mouse.mm10.excl.tsv",
+            "EXONS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_UCSCexons.bed",
+            "FASTAWITHADAPTERSETC": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters_new.fa",
+            "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
+            "FILTERSIFT": "( QUAL >= 20 )",
+            "GENOME": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/mm10.fa",
+            "GENOMEFILE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/mm10.fa",
+            "GTFFILE": "/fdb/STAR_indices/2.5.2b/GENCODE/Gencode_mouse/release_M12/genes.gtf",
+            "HAPMAP_DBNSFP": "/data/CCBR_Pipeliner/db/PipeDB/lib/snpEff_db/hapmap.bed",
+            "INDELSITES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz",
+            "KNOWNANCESTRY": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNINDELS": "-known /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz",
+            "KNOWNRECAL": "-knownSites /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_indels.vcf.gz -knownSites /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNVCF": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "KNOWNVCF2": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_known_snps.vcf.gz",
+            "MUTECTCOSMIC": "",
+            "MUTECTGENOME": "/fdb/igenomes/Mus_musculus/UCSC/mm10/Sequence/WholeGenomeFasta/genome.fa",
+            "MUTECTSNP": "",
+            "MUTECTVARIANTS": "--dbsnp /data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "NOVOINDEX": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_genome.nix",
+            "ORGANISM": "MOUSE",
+            "REFFLAT": "/data/CCBR_Pipeliner/db/PipeDB/dev/refFlatMm10.txt",
+            "RRNALIST": "/data/CCBR_Pipeliner/db/PipeDB/dev/gencode.vM12.annotation.rRNA.interval_list",
+            "RSEMREF": "/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/mouse_gencode",
+            "SALMONREF": "/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/mouse_gencode.transcripts.fa",
+            "SELECTDB": "SIFT_score,SIFT_pred,Polyphen2_HVAR_score,Polyphen2_HVAR_pred,LRT_score,LRT_pred,GERP++_RS,MutationAssessor_score,MutationAssessor_pred,1000Gp1_AF,1000Gp1_EUR_AF,ESP6500_EA_AF,ESP6500_AA_AF",
+            "SNP138": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "SNPEFF_CONFIG": "/usr/local/apps/snpEff/4.3t/snpEff.config",
+            "SNPEFF_GENOME": "GRCm38.86",
+            "SNPSITES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
+            "STARDIR": "/fdb/STAR_indices/2.5.2b/GENCODE/Gencode_mouse/release_M12/genes-",
+            "STARREF": "/fdb/STAR_indices/2.5.2b/GENCODE/Gencode_mouse/release_M12/genes-",
+            "STRELKA_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/strelka_demo_config.ini",
+            "THETASNPS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_theta_SNPfile_reformat.txt",
+            "adapter.file": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.ngsqc.dat",
+            "fastqc.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/fastqc.adapters",
+            "nextera1": "CTGTCTCTTATACACATCTCCGAGCCCACGAGAC",
+            "nextera2": "CTGTCTCTTATACACATCTGACGCTGCCGACGA",
+            "trimmomatic.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/adapters2.fa"
+        }
+    },
+    "rules": {
+        "admixture_germline": [
+            "exomeseq-germline",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly"
+        ],
+        "admixture_wgs": [
+            "wgslow",
+            "rnaseqvargerm",
+            "wgs-somatic",
+            "wgs-somatic-tumoronly"
+        ],
+        "alview": [
+            "exomeseq-somatic"
+        ],
+        "annovar": [
+            "exomeseq-pairs"
+        ],
+        "bamstats": [
+            "initialqc",
+            "exomeseq-germline",
+            "exomeseq-somatic-tumoronly",
+            "exomeseq-somatic"
+        ],
+        "bicseq": [
+            "none"
+        ],
+        "bwa.index.ref": [
+            "none"
+        ],
+        "bwa.mem": [
+            "initialqc",
+            "initialqcgenomeseq"
+        ],
+        "canvas_wgs_germ": [
+            "wgslow"
+        ],
+        "canvas_wgs_somatic": [
+            "wgs-somatic"
+        ],
+        "canvas_wgs_tumoronly": [
+            "wgs-somatic-tumoronly"
+        ],
+        "cnvkit_germ": [
+            "none"
+        ],
+        "cnvkit_somatic": [
+            "none"
+        ],
+        "cnvkit_somatic_tumoronly": [
+            "none"
+        ],
+        "cnvkit_summary": [
+            "none"
+        ],
+        "cnvkit_summary_tumoronly": [
+            "none"
+        ],
+        "cnvkit_wgs_somatic": [
+            "none"
+        ],
+        "conpair": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "database_somatic": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "database_somatic_tumoronly": [
+            "wgs-somatic-tumoronly",
+            "exomeseq-somatic-tumoronly"
+        ],
+        "delly_germline": [
+            "wgslow"
+        ],
+        "delly_somatic": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "fastq_screen": [
+            "initialqc",
+            "initialqcgenomeseq",
+            "rnaseqvargerm",
+            "rnaseqfusion",
+            "wgslow",
+            "exomeseq-germline",
+            "wgs-somatic-tumoronly",
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic",
+            "exomeseq-somatic"
+        ],
+        "fastqc.fastq": [
+            "initialqc",
+            "initialqcgenomeseq",
+            "wgslow",
+            "exomeseq-germline",
+            "wgs-somatic-tumoronly",
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic",
+            "exomeseq-somatic"
+        ],
+        "fastqc.rnaseqvar": [
+            "rnaseqvargerm",
+            "rnaseqfusion"
+        ],
+        "fastqc.trimmed": [
+            "initialqc",
+            "initialqcgenomeseq",
+            "rnaseqvargerm",
+            "rnaseqfusion",
+            "wgslow",
+            "exomeseq-germline",
+            "wgs-somatic-tumoronly",
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic",
+            "exomeseq-somatic"
+        ],
+        "freec_exome_somatic_pass1": [
+            "exomeseq-somatic"
+        ],
+        "freec_exome_somatic_pass2": [
+            "exomeseq-somatic"
+        ],
+        "freec_wgs_somatic_pass1": [
+            "wgs-somatic"
+        ],
+        "freec_wgs_somatic_pass2": [
+            "wgs-somatic"
+        ],
+        "freec_wgs_tumoronly": [
+            "wgs-somatic-tumoronly"
+        ],
+        "fusioncatcher": [
+            "rnaseqfusion"
+        ],
+        "fusioninsp": [
+            "rnaseqfusion"
+        ],
+        "fusioninsp_fuscatch": [
+            "rnaseqfusion"
+        ],
+        "fusioninsp_starfus": [
+            "rnaseqfusion"
+        ],
+        "gatk.apply.variant.recal": [
+            "none"
+        ],
+        "gatk.combine.gvcfs": [
+            "exomeseq-germline-recal",
+            "exomeseq-germline-partial",
+            "exomeseq-germline",
+            "rnaseqvargerm",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic",
+            "wgs-somatic-tumoronly"
+        ],
+        "gatk.genotype.gvcfs": [
+            "exomeseq-germline",
+            "exomeseq-germline-recal",
+            "exomeseq-germline-partial",
+            "wgslow",
+            "rnaseqvargerm",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic",
+            "wgs-somatic-tumoronly"
+        ],
+        "gatk.haplotype.caller": [
+            "exomeseq-germline",
+            "wgslow",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic",
+            "wgs-somatic-tumoronly"
+        ],
+        "gatk.merge.chrom": [
+            "exomeseq-germline",
+            "exomeseq-germline-recal",
+            "exomeseq-germline-partial",
+            "wgslow",
+            "rnaseqvargerm",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic",
+            "wgs-somatic-tumoronly"
+        ],
+        "gatk.merge.mutect2.chrom": [
+            "exomeseq-somatic"
+        ],
+        "gatk.merge.mutect2.chrom.tumoronly": [
+            "exomeseq-somatic-tumoronly"
+        ],
+        "gatk.merge.somatic.vcfs": [
+            "none"
+        ],
+        "gatk.merge.wgs.mutect2.chrom": [
+            "wgs-somatic"
+        ],
+        "gatk.merge.wgs.mutect2.chrom.tumoronly": [
+            "wgs-somatic-tumoronly"
+        ],
+        "gatk.mutect2": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "gatk.mutect2.tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "gatk.realign": [
+            "initialqc",
+            "initialqcgenomeseq",
+            "bam2recal",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly",
+            "exomeseq-pairs",
+            "exomeseq-germline",
+            "exomeseq-germline-recal",
+            "exomeseq-germline-partial",
+            "wgslow",
+            "rnaseqvargerm"
+        ],
+        "gatk.recal": [
+            "initialqc",
+            "initialqcgenomeseq",
+            "bam2recal",
+            "exomeseq-pairs",
+            "exomeseq-germline-recal",
+            "exomeseq-germline-partial",
+            "wgslow",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly",
+            "exomeseq-germline",
+            "rnaseqvargerm"
+        ],
+        "gatk.rnaseqvar.haplotype.caller": [
+            "rnaseqvargerm"
+        ],
+        "gatk.splitncigarreads": [
+            "rnaseqvargerm"
+        ],
+        "gatk.variant.annotator": [
+            "none"
+        ],
+        "gatk.variant.recal": [
+            "none"
+        ],
+        "gatk_select_variants": [
+            "exomeseq-germline",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly"
+        ],
+        "gatk_select_variants_genomeseq": [
+            "wgslow",
+            "wgs-somatic",
+            "wgs-somatic-tumoronly"
+        ],
+        "gatk_select_variants_rnaseqvar": [
+            "rnaseqvargerm"
+        ],
+        "generate_QC_table": [
+            "none"
+        ],
+        "germline_filter_exome": [
+            "exomeseq-germline",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly"
+        ],
+        "germline_filter_rnaseqvar": [
+            "rnaseqvargerm"
+        ],
+        "germline_filter_wgs": [
+            "wgslow",
+            "wgs-somatic",
+            "wgs-somatic-tumoronly"
+        ],
+        "index_bams": [
+            "wgslow",
+            "exomeseq-germline",
+            "wgs-somatic-tumoronly",
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic",
+            "exomeseq-somatic"
+        ],
+        "maftools": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "maftools_tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "make.genomeseq.network": [
+            "wgslow",
+            "rnaseqvargerm",
+            "wgs-somatic",
+            "wgs-somatic-tumoronly"
+        ],
+        "make.germline.network": [
+            "exomeseq-germline",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly"
+        ],
+        "make_target_files": [
+            "initialqc",
+            "exomeseq-somatic",
+            "exomeseq-somatic-tumoronly",
+            "exomeseq-germline"
+        ],
+        "manta_germline": [
+            "exomeseq-germline"
+        ],
+        "manta_somatic": [
+            "exomeseq-somatic"
+        ],
+        "manta_somatic_tumoronly": [
+            "exomeseq-somatic-tumoronly"
+        ],
+        "manta_wgs": [
+            "wgslow"
+        ],
+        "manta_wgs_somatic": [
+            "wgs-somatic"
+        ],
+        "manta_wgs_somatic_tumoronly": [
+            "wgs-somatic-tumoronly"
+        ],
+        "merge_somatic_tumoronly_vcfs": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "merge_somatic_vcfs": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "mkdir_somatic": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "mkdir_somatic_tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "multiqc": [
+            "initialqc"
+        ],
+        "multiqc_genomeseq": [
+            "initialqcgenomeseq"
+        ],
+        "mutect": [
+            "exomeseq-somatic"
+        ],
+        "mutect_tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "mutect_wgs": [
+            "wgs-somatic"
+        ],
+        "mutsig_merged": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "mutsig_merged_tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "mutsig_mutect": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "mutsig_mutect2": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "mutsig_mutect2_tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "mutsig_mutect_tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "mutsig_strelka": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "mutsig_vardict": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "mutsig_vardict_tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "ngsqc": [
+            "initialqc",
+            "initialqcgenomeseq",
+            "rnaseqvargerm"
+        ],
+        "novocraft.novoalign": [
+            "none"
+        ],
+        "novocraft.sort": [
+            "bam2recal",
+            "initialqc",
+            "exomeseq-germline-partial",
+            "initialqcgenomeseq",
+            "rnaseqvargerm"
+        ],
+        "oncofuse": [
+            "rnaseqfusion"
+        ],
+        "oncofuse_fuscatch": [
+            "rnaseqfusion"
+        ],
+        "oncofuse_starfus": [
+            "rnaseqfusion"
+        ],
+        "oncotator_mutect": [
+            "none"
+        ],
+        "oncotator_mutect2": [
+            "none"
+        ],
+        "oncotator_strelka": [
+            "none"
+        ],
+        "picard.headers": [
+            "initialqc",
+            "bam2recal",
+            "exomeseq-germline",
+            "exomeseq-germline-recal",
+            "exomeseq-germline-partial",
+            "initialqcgenomeseq"
+        ],
+        "picard.index.bam": [
+            "none"
+        ],
+        "picard.markdups": [
+            "bam2recal",
+            "initialqc",
+            "exomeseq-germline",
+            "exomeseq-germline-recal",
+            "exomeseq-germline-partial",
+            "initialqcgenomeseq"
+        ],
+        "picard.rnaseqvar.headers": [
+            "rnaseqvargerm"
+        ],
+        "picard.rnaseqvar.markdups": [
+            "rnaseqvargerm"
+        ],
+        "pindel_germline": [
+            "none"
+        ],
+        "qualimap": [
+            "initialqc",
+            "exomeseq-germline",
+            "exomeseq-somatic-tumoronly",
+            "exomeseq-somatic"
+        ],
+        "qualimap_rnaseqvar": [
+            "rnaseqvargerm"
+        ],
+        "qualimap_wgs": [
+            "initialqcgenomeseq",
+            "wgslow",
+            "wgs-somatic-tumoronly",
+            "wgs-somatic"
+        ],
+        "rnafusioncleanup": [
+            "none"
+        ],
+        "rnafusionmkdir": [
+            "rnaseqfusion"
+        ],
+        "rnaseqforfusions": [
+            "none"
+        ],
+        "samtools.flagstats": [
+            "none"
+        ],
+        "samtools.flagstats.dedup": [
+            "none"
+        ],
+        "samtools.mpileup": [
+            "none"
+        ],
+        "samtools.sam2bam": [
+            "none"
+        ],
+        "samtools.sort": [
+            "none"
+        ],
+        "samtools_sort": [
+            "rnaseqvargerm"
+        ],
+        "script.bzip2": [
+            "none"
+        ],
+        "script.checkqc": [
+            "none"
+        ],
+        "script.coverage.qc": [
+            "none"
+        ],
+        "script.split.gvcfs": [
+            "none"
+        ],
+        "sequenza": [
+            "wgs-somatic",
+            "exomeseq-somatic"
+        ],
+        "snpeff": [
+            "exomeseq-germline",
+            "exomeseq-germline-recal",
+            "exomeseq-germline-partial"
+        ],
+        "snpeff.dbnsfp": [
+            "none"
+        ],
+        "snpeff_genomeseq": [
+            "wgslow"
+        ],
+        "snpeff_somatic": [
+            "none"
+        ],
+        "star.align": [
+            "rnaseqvargerm"
+        ],
+        "star.align.2": [
+            "rnaseqvargerm"
+        ],
+        "starfusion": [
+            "rnaseqfusion"
+        ],
+        "strelka": [
+            "exomeseq-somatic"
+        ],
+        "svaba_germline": [
+            "wgslow"
+        ],
+        "svaba_wgs_somatic": [
+            "wgs-somatic"
+        ],
+        "svdetect": [
+            "none"
+        ],
+        "theta": [
+            "none"
+        ],
+        "trimmomatic": [
+            "initialqc",
+            "initialqcgenomeseq",
+            "rnaseqvargerm",
+            "rnaseqfusion",
+            "wgslow",
+            "exomeseq-germline",
+            "wgs-somatic-tumoronly",
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic",
+            "exomeseq-somatic"
+        ],
+        "vardict": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "vardict_tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "varscan": [
+            "exomeseq-pairs"
+        ],
+        "vcf2maf": [
+            "exomeseq-somatic",
+            "wgs-somatic"
+        ],
+        "vcf2maf_tumoronly": [
+            "exomeseq-somatic-tumoronly",
+            "wgs-somatic-tumoronly"
+        ],
+        "wgs_strelka": [
+            "wgs-somatic"
+        ]
+    }
+}

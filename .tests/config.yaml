@@ -1,3 +1,0 @@
-# Global configuration file for the pipeline
-# Please see sample samples.tsv for sample metadata
-samples: ".tests/samples.tsv"
