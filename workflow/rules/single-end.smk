@@ -33,9 +33,9 @@ rule trim_se:
         minlen=config['bin'][pfamily]['tool_parameters']['MINLEN'],
     threads:32
     shell: """
-module load {params.cutadaptver};
-cutadapt --nextseq-trim=2 --trim-n -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} -m {params.minlen} -b file:{params.fastawithadaptersetd} -j {threads} -o {output.outfq} {input.infq}
-"""
+    module load {params.cutadaptver};
+    cutadapt --nextseq-trim=2 --trim-n -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} -m {params.minlen} -b file:{params.fastawithadaptersetd} -j {threads} -o {output.outfq} {input.infq}
+    """
 
 
 rule fastqc:
