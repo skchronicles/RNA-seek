@@ -1,0 +1,498 @@
+---
+title: "Post-Count QC"
+author: "CCBR RNA-seq pipeline"
+output: html_document
+params:
+  folder: result
+  sampleinfo: sampletable.txt
+  data: RawCountFile_genes_filtered.txt
+  projectId: "<projectId>"
+  projectDesc: "<desc>"
+---
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+countMethod <- "subread"
+if(grepl("rsem",params$data, ignore.case=TRUE)){
+  countMethod <- "rsem"
+}
+projectId<-params$projectId
+projectDesc<-params$projectDesc
+dateandtime<-format(Sys.time(), "%a %b %d %Y - %X")
+```
+### **Project:**
+####    *`r projectId`*
+### **Description:** 
+####    *`r projectDesc`*
+###  **Count method:** 
+####    *`r countMethod`* 
+### **Report generated:** 
+####    *`r dateandtime`* 
+
+
+```{r setup, echo=FALSE, warning=FALSE,message=FALSE,fig.align='center'}
+
+suppressMessages(library(rgl))
+suppressMessages(library(knitr))
+suppressMessages(library('edgeR'))
+suppressMessages(library('statmod'))
+suppressMessages(library('RColorBrewer')) 
+suppressMessages(library('gplots'))
+suppressMessages(library('reshape')) 
+suppressMessages(library('ggplot2'))
+suppressMessages(library('ggfortify'))
+suppressMessages(library(ggdendro))
+suppressMessages(library(amap))
+suppressMessages(library(DT))
+suppressMessages(library(plotly))
+suppressMessages(library('geneplotter'))
+suppressMessages(library('DESeq2'))
+
+knit_hooks$set(rgl = function(before, options, envir) {
+  if (!before) {
+    ## after a chunk has been evaluated
+    if (rgl.cur() == 0) return()  # no active device
+    name = paste(options$fig.path, options$label, sep = '')
+    rgl.snapshot(paste(name, '.png', sep = ''), fmt = 'png')
+    return(paste('\\includegraphics{', name, '}\n', sep = ''))
+  }
+})
+
+knit_hooks$set(webgl = hook_webgl)
+```
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+
+## grab args & normalization
+
+DIR <- params$folder
+FILE1 <- params$sampleinfo
+FILE2 <- params$data
+
+# ANNOTATE <- args[4]
+
+#
+## setwd(DIR)
+# read files
+sampleinfo=read.delim(FILE1)
+x = read.delim(FILE2,row.names=1)
+colnames(x)=as.character(sampleinfo[,4])
+sampleFiles=as.character(sampleinfo[,2])
+## read annotation file
+## ann=read.delim(ANNOTATE)
+# DGElist object --------------------------------------------------------------
+condition = as.factor(sampleinfo$condition)
+y = DGEList(counts=x,group=condition)
+## Normalization TMM ------------------------------------------------------------
+## method = =c("TMM","RLE","upperquartile","none")
+y <- calcNormFactors(y,method="TMM")
+# y$samples
+
+Group <- factor(sampleinfo$condition)
+if ( length(levels(Group)) == 1 ) {
+  design=~1
+  v1 <- voom(as.matrix(x),design=NULL,plot=FALSE,normalize="quantile")
+} else {
+  design=model.matrix(~0+Group)
+  v1 <- voom(as.matrix(x),design,plot=FALSE,normalize="quantile")
+}
+ddsHTSeq<-DESeqDataSetFromMatrix(countData=x,colData=sampleinfo, design=design)
+dds<-DESeq(ddsHTSeq)
+dds.ndata=as.data.frame(counts(dds,normalized=TRUE))
+
+
+## estimating common and tagwise dispersions -----------------------------------------
+y <- estimateCommonDisp(y)
+y <- estimateTagwiseDisp(y) #default trend: moveingave
+
+ylog2=cpm(y,log=TRUE,normalized.lib.sizes=TRUE,prior.count=0.5) # prior count like avelogcpm
+rawlog2= cpm(y,log=TRUE,normalized.lib.sizes=FALSE,prior.count=0.5)
+#ddslog2= cpm(dds.ndata,log=TRUE,normalized.lib.sizes=FALSE,prior.count=0.5) 
+
+rld <- rlogTransformation(dds, blind=TRUE)
+rldm=assay(rld)
+colnames(rldm)=colnames(x)
+
+## save it
+```
+
+## **Count Distribution** {.tabset}
+
+### Before Normalization
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+beforehist <- ggplotly(ggplot(melt(as.data.frame(rawlog2))) + geom_line(stat="density", aes(x = value,colour = variable)) + labs(x = NULL) + theme(legend.position='right') + scale_x_log10())
+beforehist
+```
+
+### TMM
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+tmmhist <- ggplotly(ggplot(melt(as.data.frame(ylog2))) + geom_line(stat="density", aes(x = value,colour = variable)) + labs(x = NULL) + theme(legend.position='right') + scale_x_log10())
+tmmhist
+```
+
+### DESeq2
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+deshist <- ggplotly(ggplot(melt(as.data.frame(rldm))) + geom_line(stat="density", aes(x = value,colour = variable)) + labs(x = NULL) + theme(legend.position='right') + scale_x_log10())
+deshist
+```
+
+### Limma
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+limmahist <- ggplotly(ggplot(melt(as.data.frame(v1$E))) + geom_line(stat="density", aes(x = value,colour = variable)) + labs(x = NULL) + theme(legend.position='right') + scale_x_log10())
+limmahist
+```
+
+## **PCA Plots** {.tabset}
+
+### Before Normalization
+
+```{r, echo=FALSE,webgl=TRUE,message=FALSE, warning=FALSE}
+
+## PCA for before norm
+
+before.edf=rawlog2
+before.tedf= t(before.edf)
+before.pca=prcomp(before.tedf,scale.=T)
+before.tedf1 = data.frame(before.tedf)
+Phenotype=sampleinfo$condition
+cell_rep=sampleinfo$label
+before.tedf1$group = as.factor(Phenotype)
+before.pc1 = round(before.pca$sdev[1]^2/sum(before.pca$sdev^2)*100,2)
+before.pc2 = round(before.pca$sdev[2]^2/sum(before.pca$sdev^2)*100,2)
+before.pc3 = round(before.pca$sdev[3]^2/sum(before.pca$sdev^2)*100,2)
+
+pcafactor = as.factor(sampleinfo$condition)
+
+library(RColorBrewer)
+
+col <- brewer.pal(nlevels(pcafactor), "Paired")
+
+p <- plot_ly(as.data.frame(before.pca$x[,1:3]), x = ~PC1, y = ~PC2, z = ~PC3, color = pcafactor, colors = col, hoverinfo="text",
+             hovertext = ~sampleinfo$label) %>%
+  add_markers() %>%
+  layout(title = "Before Normalization PCA plot", 
+         scene = list(xaxis = list(title = paste0("PC1 (",before.pc1,"%)")),
+                      yaxis = list(title = paste0("PC2 (",before.pc2,"%)")),
+                      zaxis = list(title = paste0("PC3 (",before.pc3,"%)"))))
+
+p
+
+# plot(before.pca,type="lines")  #Decide how many PC's are relevant for plotting
+  #before.pca$x[,1:3]  #look at first 3 PC's
+
+#plot3d(before.pca$x[,1:3],col = as.integer(before.tedf1$group),type="s",size=2,main="PCA before normalization",xlab=paste0("PC1 (",before.pc1,"%)"),ylab=paste0("PC2 (",before.pc2,"%)"),zlab=paste0("PC3 (",before.pc3,"%)"))
+#group.v<-as.vector(cell_rep)
+#text3d(before.pca$x, before.pca$y, before.pca$z, group.v, cex=1.0, adj = 1.2)
+#legend3d("topright", legend = levels(sampleinfo$condition), pch = 16, col = as.numeric(as.factor(levels(sampleinfo$condition))), cex=0.5)
+#rgl.postscript("pca3d_raw.pdf","pdf")
+#rgl.snapshot("pca3d_raw.png","png")
+
+```
+
+### TMM
+
+```{r, echo=FALSE,webgl=TRUE,message=FALSE, warning=FALSE}
+
+## PCA for edgeR
+
+edgeR.edf=ylog2
+edgeR.tedf= t(edgeR.edf)
+edgeR.pca=prcomp(edgeR.tedf,scale.=T)
+edgeR.tedf1 = data.frame(edgeR.tedf)
+Phenotype=sampleinfo$condition
+cell_rep=sampleinfo$label
+edgeR.tedf1$group = as.factor(Phenotype)
+edgeR.pc1 = round(edgeR.pca$sdev[1]^2/sum(edgeR.pca$sdev^2)*100,2)
+edgeR.pc2 = round(edgeR.pca$sdev[2]^2/sum(edgeR.pca$sdev^2)*100,2)
+edgeR.pc3 = round(edgeR.pca$sdev[3]^2/sum(edgeR.pca$sdev^2)*100,2)
+
+pcafactor = as.factor(sampleinfo$condition)
+
+library(RColorBrewer)
+
+col <- brewer.pal(nlevels(pcafactor), "Paired")
+
+p <- plot_ly(as.data.frame(edgeR.pca$x[,1:3]), x = ~PC1, y = ~PC2, z = ~PC3, color = pcafactor, colors = col, hoverinfo="text",
+             hovertext = ~sampleinfo$label) %>%
+  add_markers() %>%
+  layout(title = "edgeR PCA plot", 
+         scene = list(xaxis = list(title = paste0("PC1 (",edgeR.pc1,"%)")),
+                      yaxis = list(title = paste0("PC2 (",edgeR.pc2,"%)")),
+                      zaxis = list(title = paste0("PC3 (",edgeR.pc3,"%)"))))
+
+p
+
+# plot(edgeR.pca,type="lines")  #Decide how many PC's are relevant for plotting
+  #edgeR.pca$x[,1:3]  #look at first 3 PC's
+
+#plot3d(edgeR.pca$x[,1:3],col = as.integer(edgeR.tedf1$group),type="s",size=2,main="PCA after TMM normalization",xlab=paste0("PC1 (",edgeR.pc1,"%)"),ylab=paste0("PC2 (",edgeR.pc2,"%)"),zlab=paste0("PC3 (",edgeR.pc3,"%)"))
+#group.v<-as.vector(cell_rep)
+#text3d(edgeR.pca$x, edgeR.pca$y, edgeR.pca$z, group.v, cex=1.0, adj = 1.2)
+#legend3d("topright", legend = levels(sampleinfo$condition), pch = 16, col = as.numeric(as.factor(levels(sampleinfo$condition))), cex=0.5)
+#rgl.postscript("pca3d_edgeR.pdf","pdf")
+#rgl.snapshot("pca3d_edgeR.png","png")
+
+```
+
+### DESeq2
+
+```{r, echo=FALSE,webgl=TRUE,message=FALSE, warning=FALSE}
+
+## PCA for deseq2
+
+#rld <- rlogTransformation(dds, blind=TRUE)
+#rldm=assay(rld)
+#colnames(rldm)=colnames(x)
+deseq2.edf=as.matrix(rldm)
+#deseq2.edf=ddslog2
+deseq2.tedf= t(deseq2.edf)
+deseq2.tedf=deseq2.tedf[,apply(deseq2.tedf,2,var)!= 0]
+deseq2.pca=prcomp(deseq2.tedf,scale.=T)
+deseq2.tedf1 = data.frame(deseq2.tedf)
+Phenotype=sampleinfo$condition
+cell_rep=sampleinfo$label
+deseq2.tedf1$group = as.factor(Phenotype)
+deseq2.pc1 = round(deseq2.pca$sdev[1]^2/sum(deseq2.pca$sdev^2)*100,2)
+deseq2.pc2 = round(deseq2.pca$sdev[2]^2/sum(deseq2.pca$sdev^2)*100,2)
+deseq2.pc3 = round(deseq2.pca$sdev[3]^2/sum(deseq2.pca$sdev^2)*100,2)
+
+pcafactor = as.factor(sampleinfo$condition)
+
+library(RColorBrewer)
+
+col <- brewer.pal(nlevels(pcafactor), "Paired")
+
+p <- plot_ly(as.data.frame(deseq2.pca$x[,1:3]), x = ~PC1, y = ~PC2, z = ~PC3, color = pcafactor, colors = col, hoverinfo="text",
+             hovertext = ~sampleinfo$label) %>%
+  add_markers() %>%
+  layout(title = "DESeq2 PCA plot", 
+         scene = list(xaxis = list(title = paste0("PC1 (",deseq2.pc1,"%)")),
+                      yaxis = list(title = paste0("PC2 (",deseq2.pc2,"%)")),
+                      zaxis = list(title = paste0("PC3 (",deseq2.pc3,"%)"))))
+
+p
+
+#plot3d(deseq2.pca$x[,1:3],col = as.integer(deseq2.tedf1$group),type="s",size=2,main="PCA after DESeq2 normalization",xlab=paste0("PC1 (",deseq2.pc1,"%)"),ylab=paste0("PC2 (",deseq2.pc2,"%)"),zlab=paste0("PC3 (",deseq2.pc3,"%)"))
+#group.v<-as.vector(cell_rep)
+#text3d(deseq2.pca$x, deseq2.pca$y, deseq2.pca$z, group.v, cex=1.0, adj = 1.2)
+#legend3d("topright", legend = levels(sampleinfo$condition), pch = 16, col = as.numeric(as.factor(levels(sampleinfo$condition))), cex=0.5)
+#rgl.postscript("pca3d_deseq2.pdf","pdf")
+#rgl.snapshot("pca3d_deseq2.png","png")
+
+```
+
+### Limma
+
+```{r, echo=FALSE,webgl=TRUE,message=FALSE, warning=FALSE}
+
+## PCA for Limma
+
+limma.edf=as.matrix(v1$E)
+limma.tedf= t(limma.edf)
+limma.tedf=limma.tedf[,apply(limma.tedf,2,var)!= 0]
+limma.pca=prcomp(limma.tedf,scale.=T)
+limma.tedf1 = data.frame(limma.tedf)
+Phenotype=sampleinfo$condition
+cell_rep=sampleinfo$label
+limma.tedf1$group = as.factor(Phenotype)
+limma.pc1 = round(limma.pca$sdev[1]^2/sum(limma.pca$sdev^2)*100,2)
+limma.pc2 = round(limma.pca$sdev[2]^2/sum(limma.pca$sdev^2)*100,2)
+limma.pc3 = round(limma.pca$sdev[3]^2/sum(limma.pca$sdev^2)*100,2)
+
+pcafactor = as.factor(sampleinfo$condition)
+
+library(RColorBrewer)
+
+col <- brewer.pal(nlevels(pcafactor), "Paired")
+
+p <- plot_ly(as.data.frame(limma.pca$x[,1:3]), x = ~PC1, y = ~PC2, z = ~PC3, color = pcafactor, colors = col, hoverinfo="text",
+             hovertext = ~sampleinfo$label) %>%
+  add_markers() %>%
+  layout(title = "Limma PCA plot", 
+         scene = list(xaxis = list(title = paste0("PC1 (",limma.pc1,"%)")),
+                      yaxis = list(title = paste0("PC2 (",limma.pc2,"%)")),
+                      zaxis = list(title = paste0("PC3 (",limma.pc3,"%)"))))
+
+p
+
+
+#plot3d(limma.pca$x[,1:3],col = as.integer(limma.tedf1$group),type="s",size=2,main="PCA after Limma normalization",xlab=paste0("PC1 (",limma.pc1,"%)"),ylab=paste0("PC2 (",limma.pc2,"%)"),zlab=paste0("PC3 (",limma.pc3,"%)"))
+#group.v<-as.vector(cell_rep)
+#text3d(limma.pca$x, limma.pca$y, limma.pca$z, group.v, cex=1.0, adj = 1.2)
+#legend3d("topright", legend = levels(sampleinfo$condition), pch = 16, col = as.numeric(as.factor(levels(sampleinfo$condition))), cex=0.5)
+#rgl.postscript("pca3d_limma.pdf","pdf")
+#rgl.snapshot("pca3d_limma.png","png")
+
+```
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+before.dfm <- melt(as.data.frame(rawlog2))
+edgeR.dfm <- melt(as.data.frame(ylog2))
+deseq2.dfm <- melt(as.data.frame(rldm))
+limma.dfm <- melt(as.data.frame(v1$E))
+```
+
+## **Boxplots** {.tabset}
+
+### Before Normalization
+
+```{r, echo=FALSE,message=FALSE,fig.show='hold',fig.align='center', warning=FALSE}
+par(mar=c(par("mar")[1]+5,par("mar")[-1]))
+boxplot(value~variable,las=2,data=before.dfm,main="Before normalization",ylab="Counts",col=as.numeric(as.factor(sampleinfo$condition)))
+```
+
+### TMM
+
+```{r, echo=FALSE,message=FALSE,fig.show='hold',fig.align='center', warning=FALSE}
+par(mar=c(par("mar")[1]+5,par("mar")[-1]))
+boxplot(value~variable,las=2,data=edgeR.dfm,main="TMM",ylab="Counts",col=as.numeric(as.factor(sampleinfo$condition)))
+```
+
+### DESeq2
+
+```{r, echo=FALSE,message=FALSE,fig.show='hold',fig.align='center', warning=FALSE}
+par(mar=c(par("mar")[1]+5,par("mar")[-1]))
+boxplot(value~variable,las=2,data=deseq2.dfm,main="DESeq2",ylab="Counts",col=as.numeric(as.factor(sampleinfo$condition)))
+```
+
+### Limma
+
+```{r, echo=FALSE,message=FALSE,fig.show='hold',fig.align='center', warning=FALSE}
+par(mar=c(par("mar")[1]+5,par("mar")[-1]))
+boxplot(value~variable,las=2,data=limma.dfm,main="Limma",ylab="Counts",col=as.numeric(as.factor(sampleinfo$condition)))
+```
+
+## **Similarity Heatmaps Using Pearson - Complete Linkage** {.tabset}
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+bothdendro = "both"
+hmapsize = floor(length(sampleinfo$label)/20) + 8
+if(hmapsize>20){
+hmapsize = 15
+bothdendro = "none"
+}
+
+create_heatmap <- function(data){  
+    dd_col <- as.dendrogram(hclust(dist(data)))
+    dd_row <- as.dendrogram(hclust(dist(t(data))))
+    dendro_1 <- dendro_data(dd_col)
+    dendro_2 <- dendro_data(dd_row)
+    
+    hmcol <- colorRampPalette(c("black","red","yellow","white"),space="rgb")(100)
+    
+    ggdend <- function(df) {
+      ggplot() +
+        geom_segment(data = df, aes(x=x, y=y, xend=xend, yend=yend)) +
+        labs(x = "", y = "") + theme_minimal() +
+        theme(axis.text = element_blank(), axis.ticks = element_blank(),
+              panel.grid = element_blank())
+    }
+    
+    dendro_columns <- ggdend(dendro_1$segments)
+    dendro_rows <- ggdend(dendro_2$segments) + coord_flip()
+    
+    melt_mat <- melt(data)
+    hmap <- ggplot(data = melt_mat, aes(x=X1, y=X2, fill=value)) + 
+           geom_tile() +
+           scale_fill_gradientn(colours = rev(hmcol), limit = c(0,max(data)), space = "Lab", name="Correlation") +
+           theme_minimal()+ 
+           theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 10, hjust = 1),
+                 legend.justification = c(1, 0),
+                 legend.position = c(0.6, 0.7),
+                 legend.direction = "horizontal",
+                 axis.title.x = element_blank(),
+                 axis.title.y = element_blank()) +
+           coord_fixed()
+    
+    eaxis <- list(showticklabels = FALSE, showgrid = FALSE, zeroline = FALSE)
+    p_empty <- plot_ly() %>% layout(margin = list(l = 200), xaxis = eaxis,yaxis = eaxis)
+    
+    sply <- subplot(dendro_columns, p_empty, hmap, dendro_rows, nrows = 2)
+    
+    sply <- layout(sply,
+                   yaxis = list(domain=c(0.47, 1)),
+                   xaxis = list(domain=c(0, 0.5)),
+                   xaxis3 = list(domain=c(0, 0.5)),
+                   xaxis4 = list(domain=c(0.5, 1)),
+                   margin = list(l = 150, r = 0, b = 50,t = 0))
+    
+    return(sply)
+}
+
+```
+
+### Before Normalization
+
+```{r, echo=FALSE,message=FALSE,fig.show='hold',fig.align='center', warning=FALSE, fig.width=hmapsize, fig.height=hmapsize}
+
+hmcol <- colorRampPalette(c("black","red","yellow","white"),space="rgb")(100)
+before.distrawlog2=amap::Dist(t(rawlog2),method="pearson")
+before.mat = as.matrix(before.distrawlog2)
+
+heatmap.2(before.mat, trace="none", col = rev(hmcol), labCol=FALSE, Rowv=TRUE, Colv= TRUE, dendrogram = bothdendro, colRow=as.numeric(as.factor(sampleinfo$condition)), margin=c(16, 16), main="Before normalization")
+```
+
+### TMM
+
+```{r, echo=FALSE,message=FALSE,fig.show='hold',fig.align='center', warning=FALSE, fig.width=hmapsize, fig.height=hmapsize}
+
+edgeR.distylog2=amap::Dist(t(ylog2),method="pearson")
+edgeR.mat = as.matrix(edgeR.distylog2)
+heatmap.2(edgeR.mat, trace="none", col = rev(hmcol), labCol=FALSE, Rowv=TRUE, Colv= TRUE, dendrogram = bothdendro, colRow=as.numeric(as.factor(sampleinfo$condition)), margin=c(16, 16), main="TMM")
+```
+
+### DESeq2
+
+```{r, echo=FALSE,message=FALSE,fig.show='hold',fig.align='center', warning=FALSE, fig.width=hmapsize, fig.height=hmapsize}
+
+deseq2.dists <- amap::Dist(t(rldm),method="pearson")
+deseq2.mat <- as.matrix(deseq2.dists)
+heatmap.2(deseq2.mat, trace="none", col = rev(hmcol), labCol=FALSE, Rowv=TRUE, Colv= TRUE, dendrogram = bothdendro, colRow=as.numeric(as.factor(sampleinfo$condition)), margin=c(16, 16), main="DESeq2")
+```
+
+### Limma
+
+```{r, echo=FALSE,message=FALSE,fig.show='hold',fig.align='center', warning=FALSE, fig.width=hmapsize, fig.height=hmapsize}
+
+limma.dists <- amap::Dist(t(limma.edf),method="pearson")
+limma.mat <- as.matrix(limma.dists)
+heatmap.2(limma.mat, trace="none", col = rev(hmcol), labCol=FALSE, Rowv=TRUE, Colv= TRUE, dendrogram = bothdendro, colRow=as.numeric(as.factor(sampleinfo$condition)), margin=c(16, 16), main="Limma")
+```
+
+
+## **MD Plots** (sample by sample mean vs fold change of expression)
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+mdchunkheight <- 3.3*length(sampleinfo$label)
+mdflag <- TRUE
+
+if(mdchunkheight>100){
+ mdchunkheight = 8
+ mdflag <- FALSE
+}
+```
+
+```{r, echo=FALSE,message=FALSE,fig.show='hold',fig.align='center', warning=FALSE, fig.height=mdchunkheight}
+if(mdflag){
+  par(mfcol=c(length(sampleinfo$label),4))
+  for(i in 1:length(sampleinfo$label)){
+    plotMD(rawlog2,column=i, main=paste0("Raw ",sampleinfo$label[i]), xlim=c(-5,15), ylim=c(-15,15))
+    abline(h=0, col="red", lty=2, lwd=2)
+  }
+  for(i in 1:length(sampleinfo$label)){
+    plotMD(ylog2,column=i, main=paste0("TMM ",sampleinfo$label[i]), xlim=c(-5,15), ylim=c(-15,15))
+    abline(h=0, col="red", lty=2, lwd=2)
+  }
+  for(i in 1:length(sampleinfo$label)){
+    plotMD(rldm,column=i, main=paste0("DESeq2 ",sampleinfo$label[i]), xlim=c(-5,15), ylim=c(-15,15))
+    abline(h=0, col="red", lty=2, lwd=2)
+  }
+  for(i in 1:length(sampleinfo$label)){
+    plotMD(v1$E,column=i, main=paste0("Limma ",sampleinfo$label[i]), xlim=c(-5,15), ylim=c(-15,15))
+    abline(h=0, col="red", lty=2, lwd=2)
+  }
+}
+```
