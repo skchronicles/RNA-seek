@@ -36,8 +36,11 @@ if paired_end:
             batch='--time=168:00:00',
         input:
             # FastQC (before and after trimming)
-            join(workpath,"rawQC"),
-            join(workpath,"QC"),
+            expand(join(workpath,"rawQC","{name}.R1_fastqc.zip"), name=samples),
+            expand(join(workpath,"rawQC","{name}.R2_fastqc.zip"), name=samples),
+            expand(join(workpath,"QC","{name}.R1.trim_fastqc.zip"), name=samples),
+            expand(join(workpath,"QC","{name}.R2.trim_fastqc.zip"), name=samples),
+            join(workpath,"QC","readlength.txt"),
 
             # FastScreen (Using two sets of reference databases)
             expand(join(workpath,"FQscreen","{name}.R1.trim_screen.txt"),name=samples),
@@ -93,8 +96,9 @@ elif not paired_end:
         params: batch='--time=168:00:00'
         input:
             # FastQC (before and after trimming)
-            join(workpath,"rawQC"),
-            join(workpath,"QC"),
+            expand(join(workpath,"rawQC","{name}.R1_fastqc.zip"), name=samples),
+            expand(join(workpath,"QC","{name}.R1.trim_fastqc.zip"), name=samples),
+            join(workpath,"QC","readlength.txt"),
 
             # FastQ Screen
             expand(join(workpath,"FQscreen","{name}.R1.trim_screen.txt"),name=samples),

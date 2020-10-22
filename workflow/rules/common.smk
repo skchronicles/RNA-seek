@@ -30,6 +30,7 @@ def check_writeaccess(filename):
     if not os.access(filename,os.W_OK):
         sys.exit("File: {} exists, but user cannot write to file due to permissions!".format(filename))
 
+
 # Rules common to RNA-seq pipeline, irrespective if the data is single-end or paired-end
 rule samplecondition:
     input:
@@ -38,7 +39,6 @@ rule samplecondition:
         out1=join(workpath,star_dir,"sampletable.txt")
     params:
         rname='pl:samplecondition',
-        batch='--mem=4g --time=10:00:00',
         pathprefix=join(workpath,star_dir),
         groups=config['project']['groups']['rgroups'],
         labels=config['project']['groups']['rlabels'],
@@ -55,6 +55,7 @@ rule samplecondition:
                 out.write("{}\n".format(params.labels[i]))
                 i=i+1
             out.close()
+
 
 rule get_strandness:
     input:
@@ -95,7 +96,6 @@ rule picard:
     params:
         rname='pl:picard',
         sampleName="{name}",
-        batch='--mem=24g --time=10:00:00 --gres=lscratch:800',
         picardver=config['bin'][pfamily]['tool_versions']['PICARDVER'],
     shell: """
     module load {params.picardver};
@@ -129,7 +129,6 @@ rule stats:
         outstar2=join(workpath,log_dir,"{name}.flagstat.concord.txt"),
     params:
         rname='pl:stats',
-        batch='--mem=24g --time=10:00:00 --gres=lscratch:800',
         picardver=config['bin'][pfamily]['tool_versions']['PICARDVER'],
         samtoolsver=config['bin'][pfamily]['tool_versions']['SAMTOOLSVER'],
         refflat=config['references'][pfamily]['REFFLAT'],
@@ -200,7 +199,6 @@ rule rsemcounts:
         join(workpath,degall_dir,"RawCountFile_RSEM_genes_filtered.txt"),
     params:
         rname='pl:rsemcounts',
-        batch='--mem=8g --time=10:00:00',
         outdir=join(workpath,degall_dir),
         annotate=config['references'][pfamily]['ANNOTATE'],
         rver=config['bin'][pfamily]['tool_versions']['RVER'],
@@ -259,7 +257,6 @@ rule pca:
         outhtml=join(workpath,degall_dir,"PcaReport_{dtype}.html")
     params:
         rname='pl:pca',
-        batch='--mem=24g --time=10:00:00',
         outdir=join(workpath,degall_dir),
         dtype="{dtype}",
         projectId=config['project']['id'],

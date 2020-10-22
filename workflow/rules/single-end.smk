@@ -5,18 +5,19 @@ rule rawfastqc:
     input:
         expand(join(workpath,"{name}.R1.fastq.gz"), name=samples)
     output:
-        join(workpath,"rawQC")
+        expand(join(workpath,"rawQC","{name}.R1_fastqc.zip"), name=samples)
     priority: 2
     params:
         rname='pl:rawfastqc',
-        batch='--cpus-per-task=32 --mem=110g --time=48:00:00',
+        outdir=join(workpath,"rawQC"),
         fastqcver=config['bin'][pfamily]['tool_versions']['FASTQCVER'],
     threads: 32
     shell: """
-    mkdir -p {output};
+    mkdir -p {params.outdir};
     module load {params.fastqcver};
-    fastqc {input} -t {threads} -o {output};
+    fastqc {input} -t {threads} -o {params.outdir};
     """
+
 
 rule trim_se:
     input:
@@ -25,7 +26,6 @@ rule trim_se:
         outfq=temp(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"))
     params:
         rname='pl:trim_se',
-        batch='--cpus-per-task=32 --mem=110g --time=48:00:00',
         cutadaptver=config['bin'][pfamily]['tool_versions']['CUTADAPTVER'],
         fastawithadaptersetd=config['bin'][pfamily]['tool_parameters']['FASTAWITHADAPTERSETD'],
         leadingquality=config['bin'][pfamily]['tool_parameters']['LEADINGQUALITY'],
@@ -37,23 +37,25 @@ module load {params.cutadaptver};
 cutadapt --nextseq-trim=2 --trim-n -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} -m {params.minlen} -b file:{params.fastawithadaptersetd} -j {threads} -o {output.outfq} {input.infq}
 """
 
+
 rule fastqc:
     input:
         expand(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"), name=samples)
     output:
-        join(workpath,"QC")
+        expand(join(workpath,"QC","{name}.R1.trim_fastqc.zip"), name=samples),
+        join(workpath,"QC","readlength.txt")
     priority: 2
     params:
         rname='pl:fastqc',
-        batch='--cpus-per-task=32 --mem=110g --time=48:00:00',
+        outdir=join(workpath,"QC"),
         fastqcver=config['bin'][pfamily]['tool_versions']['FASTQCVER'],
     threads: 32
     shell: """
-    mkdir -p {output};
+    mkdir -p {params.outdir};
     module load {params.fastqcver};
-    fastqc {input} -t {threads} -o {output};
+    fastqc {input} -t {threads} -o {params.outdir};
     module load python/3.5;
-    python Scripts/get_read_length.py {output} > {output}/readlength.txt  2> {output}/readlength.err
+    python Scripts/get_read_length.py {params.outdir} > {params.outdir}/readlength.txt  2> {params.outdir}/readlength.err
     """
 
 rule fastq_screen:
@@ -66,7 +68,6 @@ rule fastq_screen:
         out4=join(workpath,"FQscreen2","{name}.R1.trim_screen.png")
     params:
         rname='pl:fqscreen',
-        batch='--cpus-per-task=24 --mem=64g --time=10:00:00',
         fastq_screen=config['bin'][pfamily]['tool_versions']['FASTQ_SCREEN'],
         outdir = join(workpath,"FQscreen"),
         outdir2 = join(workpath,"FQscreen2"),
@@ -81,6 +82,7 @@ rule fastq_screen:
     {params.fastq_screen} --conf {params.fastq_screen_config} --outdir {params.outdir} --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
     {params.fastq_screen} --conf {params.fastq_screen_config2} --outdir {params.outdir2} --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
     """
+
 
 rule kraken_se:
     input:
@@ -108,17 +110,17 @@ rule kraken_se:
     mv /lscratch/$SLURM_JOBID/{params.prefix}.kronahtml {output.kronahtml}
     """
 
+
 rule star1p:
     input:
         file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
-        qcdir=join(workpath,"QC")
+        qcrl=join(workpath,"QC","readlength.txt"),
     output:
         out1=join(workpath,star_dir,"{name}.SJ.out.tab"),
         out3=temp(join(workpath,star_dir,"{name}.Aligned.out.bam")),
     params:
         rname='pl:star1p',
         prefix="{name}",
-        batch='--cpus-per-task=32 --mem=110g --time=48:00:00',
         starver=config['bin'][pfamily]['tool_versions']['STARVER'],
         stardir=config['references'][pfamily]['STARDIR'],
         filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
@@ -137,7 +139,7 @@ rule star1p:
     threads: 32
     run:
         import glob,json
-        rl=int(open(join(input.qcdir,"readlength.txt")).readlines()[0].strip())-1
+        rl=int(open(input.qcrl).readlines()[0].strip())-1
         dbrl=sorted(list(map(lambda x:int(re.findall("genes-(\d+)",x)[0]),glob.glob(params.stardir+'*/',recursive=False))))
         bestdbrl=next(x[1] for x in enumerate(dbrl) if x[1] >= rl)
         cmd="cd {star_dir}; module load "+params.starver+"; STAR --genomeDir "+params.stardir+str(bestdbrl)+" --outFilterIntronMotifs "+params.filterintronmotifs+" --outSAMstrandField "+params.samstrandfield+"  --outFilterType "+params.filtertype+" --outFilterMultimapNmax "+str(params.filtermultimapnmax)+" --alignSJoverhangMin "+str(params.alignsjoverhangmin)+" --alignSJDBoverhangMin "+str(params.alignsjdboverhangmin)+"  --outFilterMismatchNmax "+str(params.filtermismatchnmax)+" --outFilterMismatchNoverLmax "+str(params.filtermismatchnoverlmax)+"  --alignIntronMin "+str(params.alignintronmin)+" --alignIntronMax "+str(params.alignintronmax)+" --alignMatesGapMax "+str(params.alignmatesgapmax)+" --clip3pAdapterSeq "+params.adapter1+" "+params.adapter2+" --readFilesIn "+input.file1+" --readFilesCommand zcat --runThreadN "+str(threads)+" --outFileNamePrefix "+params.prefix+". --outSAMtype BAM Unsorted --alignEndsProtrude 10 ConcordantPair --peOverlapNbasesMin 10"
@@ -153,6 +155,7 @@ rule star1p:
           json.dump(config, F, sort_keys = True, indent = 4,ensure_ascii=False)
         F.close()
 
+
 rule sjdb:
     input:
         files=expand(join(workpath,star_dir,"{name}.SJ.out.tab"), name=samples),
@@ -164,12 +167,12 @@ rule sjdb:
     cat {input.files} |sort|uniq|awk -F \"\\t\" '{{if ($5>0 && $6==1) {{print}}}}'|cut -f1-4|sort|uniq|grep \"^chr\"|grep -v \"^chrM\" > {output.out1}
     """
 
+
 rule star2p:
     input:
         file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         tab=join(workpath,star_dir,"uniq.filtered.SJ.out.tab"),
-        qcdir=join(workpath,"QC"),
-        #dir="STARINDEX"
+        qcrl=join(workpath,"QC","readlength.txt"),
     output:
         out1=temp(join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam")),
         out2=join(workpath,star_dir,"{name}.p2.ReadsPerGene.out.tab"),
@@ -179,7 +182,6 @@ rule star2p:
     params:
         rname='pl:star2p',
         prefix="{name}.p2",
-        batch='--cpus-per-task=32 --mem=110g --time=48:00:00',
         starver=config['bin'][pfamily]['tool_versions']['STARVER'],
         filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
         samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
@@ -203,13 +205,14 @@ rule star2p:
     threads:32
     run:
         import glob
-        rl=int(open(join(input.qcdir,"readlength.txt")).readlines()[0].strip())-1
+        rl=int(open(input.qcrl).readlines()[0].strip())-1
         dbrl=sorted(list(map(lambda x:int(re.findall("genes-(\d+)",x)[0]),glob.glob(params.stardir+'*/',recursive=False))))
         bestdbrl=next(x[1] for x in enumerate(dbrl) if x[1] >= rl)
         cmd="cd {star_dir}; module load "+params.starver+"; STAR --genomeDir "+params.stardir+str(bestdbrl)+" --outFilterIntronMotifs "+params.filterintronmotifs+" --outSAMstrandField "+params.samstrandfield+"  --outFilterType "+params.filtertype+" --outFilterMultimapNmax "+str(params.filtermultimapnmax)+" --alignSJoverhangMin "+str(params.alignsjoverhangmin)+" --alignSJDBoverhangMin "+str(params.alignsjdboverhangmin)+"  --outFilterMismatchNmax "+str(params.filtermismatchnmax)+" --outFilterMismatchNoverLmax "+str(params.filtermismatchnoverlmax)+"  --alignIntronMin "+str(params.alignintronmin)+" --alignIntronMax "+str(params.alignintronmax)+" --alignMatesGapMax "+str(params.alignmatesgapmax)+"  --clip3pAdapterSeq "+params.adapter1+" "+params.adapter2+" --readFilesIn "+input.file1+" --readFilesCommand zcat --runThreadN "+str(threads)+" --outFileNamePrefix "+params.prefix+". --outSAMunmapped "+params.outsamunmapped+" --outWigType "+params.wigtype+" --outWigStrand "+params.wigstrand+" --sjdbFileChrStartEnd "+str(input.tab)+" --sjdbGTFfile "+params.gtffile+" --limitSjdbInsertNsj "+str(params.nbjuncs)+" --quantMode TranscriptomeSAM GeneCounts --outSAMtype BAM SortedByCoordinate --alignEndsProtrude 10 ConcordantPair --peOverlapNbasesMin 10"
         shell(cmd)
         cmd="sleep 120;cd {workpath};mv {workpath}/{star_dir}/{params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir}; mv {workpath}/{star_dir}/{params.prefix}.Log.final.out {workpath}/{log_dir}"
         shell(cmd)
+
 
 # Post Alignment Rules
 rule rsem:
@@ -223,7 +226,6 @@ rule rsem:
         rname='pl:rsem',
         prefix="{name}.RSEM",
         outdir=join(workpath,degall_dir),
-        batch='--cpus-per-task=16 --mem=32g --time=24:00:00',
         rsemref=config['references'][pfamily]['RSEMREF'],
         rsemver=config['bin'][pfamily]['tool_versions']['RSEMVER'],
         pythonver=config['bin'][pfamily]['tool_versions']['PYTHONVER'],
