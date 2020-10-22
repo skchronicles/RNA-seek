@@ -49,13 +49,14 @@ rule fastqc:
         rname='pl:fastqc',
         outdir=join(workpath,"QC"),
         fastqcver=config['bin'][pfamily]['tool_versions']['FASTQCVER'],
+        getrl=join("workflow", "scripts", "get_read_length.py"),
     threads: 32
     shell: """
     mkdir -p {params.outdir};
     module load {params.fastqcver};
     fastqc {input} -t {threads} -o {params.outdir};
     module load python/3.5;
-    python Scripts/get_read_length.py {params.outdir} > {params.outdir}/readlength.txt  2> {params.outdir}/readlength.err
+    python {params.getrl} {params.outdir} > {params.outdir}/readlength.txt  2> {params.outdir}/readlength.err
     """
 
 rule fastq_screen:
@@ -230,7 +231,7 @@ rule rsem:
         rsemver=config['bin'][pfamily]['tool_versions']['RSEMVER'],
         pythonver=config['bin'][pfamily]['tool_versions']['PYTHONVER'],
         annotate=config['references'][pfamily]['ANNOTATE'],
-        pythonscript=join(workpath,"Scripts","merge_rsem_results.py"),
+        pythonscript=join("workflow", "scripts", "merge_rsem_results.py"),
     threads: 16
     shell: """
     if [ ! -d {params.outdir} ]; then mkdir {params.outdir}; fi
@@ -252,7 +253,7 @@ rule bam2bw_rnaseq_se:
     params:
         rname='pl:bam2bw',
         prefix="{name}",
-        bashscript=join(workpath,"Scripts","bam2strandedbw.se.sh")
+        bashscript=join("workflow", "scripts", "bam2strandedbw.se.sh")
     threads: 2
     shell: """
     sh {params.bashscript} {input.bam}

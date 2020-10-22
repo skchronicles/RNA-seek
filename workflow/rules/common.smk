@@ -67,7 +67,7 @@ rule get_strandness:
         rname='pl:get_strandness',
         outdir=join(workpath,log_dir),
         pythonver=config['bin'][pfamily]['tool_versions']['PYTHONVER'],
-        pythonscript=join(workpath,"Scripts","get_strandness.py")
+        pythonscript=join("workflow", "scripts", "get_strandness.py")
     run:
         import os
         os.chdir(params.outdir)
@@ -133,7 +133,8 @@ rule stats:
         samtoolsver=config['bin'][pfamily]['tool_versions']['SAMTOOLSVER'],
         refflat=config['references'][pfamily]['REFFLAT'],
         rrnalist=config['references'][pfamily]['RRNALIST'],
-        picardstrand=config['bin'][pfamily]['PICARDSTRAND']
+        picardstrand=config['bin'][pfamily]['PICARDSTRAND'],
+        statscript=join("workflow", "scripts", "bam_count_concord_stats.py")
     shell: """
     module load R/3.5;
     module load {params.picardver};
@@ -142,7 +143,7 @@ rule stats:
     module load {params.samtoolsver};
     samtools flagstat {input.file1} > {output.outstar2};
     module load python/3.5;
-    python Scripts/bam_count_concord_stats.py {input.file1} >> {output.outstar2}
+    python {params.statscript} {input.file1} >> {output.outstar2}
     """
 
 
@@ -184,7 +185,7 @@ rule rsem_merge:
         rname='pl:rsem_merge',
         pythonver=config['bin'][pfamily]['tool_versions']['PYTHONVER'],
         annotate=config['references'][pfamily]['ANNOTATE'],
-        pythonscript=join(workpath,"Scripts","merge_rsem_results.py"),
+        pythonscript=join("workflow", "scripts", "merge_rsem_results.py"),
     shell: """
     module load {params.pythonver}
     python {params.pythonscript} {params.annotate} {degall_dir} {degall_dir}
@@ -202,7 +203,7 @@ rule rsemcounts:
         outdir=join(workpath,degall_dir),
         annotate=config['references'][pfamily]['ANNOTATE'],
         rver=config['bin'][pfamily]['tool_versions']['RVER'],
-        rscript=join(workpath,"Scripts","rsemcounts.R")
+        rscript=join("workflow", "scripts", "rsemcounts.R")
     shell: """
     cd {params.outdir}
     module load {params.rver}
@@ -262,9 +263,9 @@ rule pca:
         projectId=config['project']['id'],
         projDesc=config['project']['description'].rstrip('\n'),
         rver=config['bin'][pfamily]['tool_versions']['RVER'],
-        scripts_dir=join(workpath,"Scripts"),
-        rscript1=join(workpath,"Scripts","pcacall.R"),
-        rscript2=join(workpath,"Scripts","PcaReport.Rmd"),
+        scripts_dir=join("workflow", "scripts"),
+        rscript1=join("workflow", "scripts", "pcacall.R"),
+        rscript2=join("workflow", "scripts", "PcaReport.Rmd"),
     shell: """
     cd {params.outdir}
 
