@@ -145,3 +145,10 @@ scratch/
 
 # mkdocs documentation
 site/
+
+# Pipeline generated files or directories
+.tests/*/
+.snakemake/
+
+# Running fastqc
+.oracle_jre_usage/
