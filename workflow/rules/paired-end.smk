@@ -79,9 +79,10 @@ rule fastq_screen:
         out8=join(workpath,"FQscreen2","{name}.R2.trim_screen.png")
     params:
         rname='pl:fqscreen',
-        fastq_screen=config['bin'][pfamily]['tool_versions']['FASTQ_SCREEN'],
         outdir = join(workpath,"FQscreen"),
         outdir2 = join(workpath,"FQscreen2"),
+        # Exposed Parameters: modify resources/fastq_screen{_2}.conf to change defaults
+        # locations to bowtie2 indices
         fastq_screen_config=config['bin'][pfamily]['tool_parameters']['FASTQ_SCREEN_CONFIG'],
         fastq_screen_config2=config['bin'][pfamily]['tool_parameters']['FASTQ_SCREEN_CONFIG2'],
     threads: 24
