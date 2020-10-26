@@ -6,6 +6,7 @@
 				"BWAVER": "bwa/0.7.17",
 				"CUTADAPTVER": "cutadapt/1.18",
 				"FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
+                                "FASTQSCREENVER": "fastq_screen/0.14.0",
 				"FASTQCVER": "fastqc/0.11.5",
 				"KRAKENVER": "kraken/1.1",
 				"KRONATOOLSVER": "kronatools/2.7",
@@ -22,9 +23,9 @@
 				"SUBREADVER": "subread/1.5.2"
 			},
 			"tool_parameters": {
-				"FASTAWITHADAPTERSETD": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.consolidated.fa",
-				"FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
-				"FASTQ_SCREEN_CONFIG2": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen_2.conf",
+				"FASTAWITHADAPTERSETD": "resources/TruSeq_and_nextera_adapters.consolidated.fa",
+				"FASTQ_SCREEN_CONFIG": "resources/fastq_screen.conf",
+				"FASTQ_SCREEN_CONFIG2": "resources/fastq_screen_2.conf",
 				"KRAKENBACDB": "/fdb/kraken/20170202_bacteria",
 				"Trimsettings": "---------------------------- TRIMMOMATIC parameters ----------------------------------------------------------",
 				"LEADINGQUALITY": 10,
