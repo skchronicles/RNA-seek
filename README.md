@@ -44,6 +44,14 @@ snakemake -npr -s workflow/Snakefile
 
 Submit master job to the cluster:
 ```bash
+# Local Testing (Interactive node)
+
+## Method 1: Using environment modules
+snakemake -pr --use-envmodule --cores 4 --configfile=.tests/run.json
+
+## Method 2: Using Singularity Images
+snakemake -npr --use-singularity --singularity-args '-B /data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen_db' --cores 4 --configfile=.tests/run.json
+
 # Add later
 echo "Coming soon!"
 ```
