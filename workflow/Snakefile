@@ -52,9 +52,9 @@ if paired_end:
             expand(join(workpath,"FQscreen2","{name}.R2.trim_screen.txt"),name=samples),
             expand(join(workpath,"FQscreen2","{name}.R2.trim_screen.png"),name=samples),
 
-            # Kraken + Krona
-            expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),name=samples),
-            expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),name=samples),
+            # Kraken + Krona (add later: create docker image)
+            # expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),name=samples),
+            # expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),name=samples),
 
             # STAR
             expand(join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),name=samples),
@@ -106,9 +106,9 @@ elif not paired_end:
             expand(join(workpath,"FQscreen2","{name}.R1.trim_screen.txt"),name=samples),
             expand(join(workpath,"FQscreen2","{name}.R1.trim_screen.png"),name=samples),
 
-            # Kraken + Krona
-            expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),name=samples),
-            expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),name=samples),
+            # Kraken + Krona (add later: create docker image)
+            # expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),name=samples),
+            # expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),name=samples),
 
             # Infer Library Strandedness
             join(workpath,log_dir,"strandness.txt"),
