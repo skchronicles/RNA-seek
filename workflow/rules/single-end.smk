@@ -84,32 +84,33 @@ rule fastq_screen:
     {params.fastq_screen} --conf {params.fastq_screen_config2} --outdir {params.outdir2} --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
     """
 
-
-rule kraken_se:
-    input:
-        fq=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
-    output:
-        krakentaxa = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),
-        kronahtml = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),
-    params:
-        rname='pl:kraken',
-        prefix = "{name}",
-        outdir=join(workpath,kraken_dir),
-        bacdb=config['bin'][pfamily]['tool_parameters']['KRAKENBACDB'],
-        krakenver=config['bin'][pfamily]['tool_versions']['KRAKENVER'],
-        kronatoolsver=config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
-    threads: 24
-    shell: """
-    module load {params.krakenver};
-    module load {params.kronatoolsver};
-    cd /lscratch/$SLURM_JOBID;
-    cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
-    kraken --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` --fastq-input --gzip-compressed --threads {threads} --output /lscratch/$SLURM_JOBID/{params.prefix}.krakenout --preload {input.fq}
-    kraken-translate --mpa-format --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` /lscratch/$SLURM_JOBID/{params.prefix}.krakenout |cut -f2|sort|uniq -c|sort -k1,1nr > /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa
-    cut -f2,3 {params.prefix}.krakenout | ktImportTaxonomy - -o {params.prefix}.kronahtml
-    mv /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa {output.krakentaxa}
-    mv /lscratch/$SLURM_JOBID/{params.prefix}.kronahtml {output.kronahtml}
-    """
+## Add later: create kraken2 docker image (use MiniKraken2_v1_8GB database)
+## ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/old/minikraken2_v1_8GB_201904.tgz
+#rule kraken_se:
+#    input:
+#        fq=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+#    output:
+#        krakentaxa = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),
+#        kronahtml = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),
+#    params:
+#        rname='pl:kraken',
+#        prefix = "{name}",
+#        outdir=join(workpath,kraken_dir),
+#        bacdb=config['bin'][pfamily]['tool_parameters']['KRAKENBACDB'],
+#        krakenver=config['bin'][pfamily]['tool_versions']['KRAKENVER'],
+#        kronatoolsver=config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
+#    threads: 24
+#    shell: """
+#    module load {params.krakenver};
+#    module load {params.kronatoolsver};
+#    cd /lscratch/$SLURM_JOBID;
+#    cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
+#    kraken --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` --fastq-input --gzip-compressed --threads {threads} --output /lscratch/$SLURM_JOBID/{params.prefix}.krakenout --preload {input.fq}
+#    kraken-translate --mpa-format --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` /lscratch/$SLURM_JOBID/{params.prefix}.krakenout |cut -f2|sort|uniq -c|sort -k1,1nr > /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa
+#    cut -f2,3 {params.prefix}.krakenout | ktImportTaxonomy - -o {params.prefix}.kronahtml
+#    mv /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa {output.krakentaxa}
+#    mv /lscratch/$SLURM_JOBID/{params.prefix}.kronahtml {output.kronahtml}
+#    """
 
 
 rule star1p:
