@@ -97,33 +97,35 @@ rule fastq_screen:
     """
 
 
-rule kraken_pe:
-    input:
-        fq1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
-        fq2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
-    output:
-        krakentaxa = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),
-        kronahtml = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),
-    params:
-        rname='pl:kraken',
-        prefix = "{name}",
-        outdir=join(workpath,kraken_dir),
-        bacdb=config['bin'][pfamily]['tool_parameters']['KRAKENBACDB'],
-        krakenver=config['bin'][pfamily]['tool_versions']['KRAKENVER'],
-        kronatoolsver=config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
-    threads: 24
-    shell: """
-    module load {params.krakenver};
-    module load {params.kronatoolsver};
-    if [ ! -d {params.outdir} ];then mkdir {params.outdir};fi
-    cd /lscratch/$SLURM_JOBID;
-    cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
-    kraken --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` --fastq-input --gzip-compressed --threads {threads} --output /lscratch/$SLURM_JOBID/{params.prefix}.krakenout --preload --paired {input.fq1} {input.fq2}
-    kraken-translate --mpa-format --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` /lscratch/$SLURM_JOBID/{params.prefix}.krakenout |cut -f2|sort|uniq -c|sort -k1,1nr > /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa
-    cut -f2,3 /lscratch/$SLURM_JOBID/{params.prefix}.krakenout | ktImportTaxonomy - -o /lscratch/$SLURM_JOBID/{params.prefix}.kronahtml
-    mv /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa {output.krakentaxa}
-    mv /lscratch/$SLURM_JOBID/{params.prefix}.kronahtml {output.kronahtml}
-    """
+## Add later: create kraken2 docker image (use MiniKraken2_v1_8GB database)
+## ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/old/minikraken2_v1_8GB_201904.tgz
+#rule kraken_pe:
+#    input:
+#        fq1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+#        fq2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
+#    output:
+#        krakentaxa = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),
+#        kronahtml = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),
+#    params:
+#        rname='pl:kraken',
+#        prefix = "{name}",
+#        outdir=join(workpath,kraken_dir),
+#        bacdb=config['bin'][pfamily]['tool_parameters']['KRAKENBACDB'],
+#        krakenver=config['bin'][pfamily]['tool_versions']['KRAKENVER'],
+#        kronatoolsver=config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
+#    threads: 24
+#    shell: """
+#    module load {params.krakenver};
+#    module load {params.kronatoolsver};
+#    if [ ! -d {params.outdir} ];then mkdir {params.outdir};fi
+#    cd /lscratch/$SLURM_JOBID;
+#    cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
+#    kraken --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` --fastq-input --gzip-compressed --threads {threads} --output /lscratch/$SLURM_JOBID/{params.prefix}.krakenout --preload --paired {input.fq1} {input.fq2}
+#    kraken-translate --mpa-format --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` /lscratch/$SLURM_JOBID/{params.prefix}.krakenout |cut -f2|sort|uniq -c|sort -k1,1nr > /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa
+#    cut -f2,3 /lscratch/$SLURM_JOBID/{params.prefix}.krakenout | ktImportTaxonomy - -o /lscratch/$SLURM_JOBID/{params.prefix}.kronahtml
+#    mv /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa {output.krakentaxa}
+#    mv /lscratch/$SLURM_JOBID/{params.prefix}.kronahtml {output.kronahtml}
+#    """
 
 
 rule star1p:
@@ -135,9 +137,12 @@ rule star1p:
         out1= join(workpath,star_dir,"{name}.SJ.out.tab"),
         out3= temp(join(workpath,star_dir,"{name}.Aligned.out.bam")),
     params:
-        rname='pl:star1p',prefix="{name}",
-        starver=config['bin'][pfamily]['tool_versions']['STARVER'],
+        rname='pl:star1p',
+        prefix=join(workpath, star_dir, "{name}"),
+        best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
+        # Exposed Parameters: modify config/genomes/{genome}.json to change default
         stardir=config['references'][pfamily]['STARDIR'],
+        # Exposed Parameters: modify config/templates/tools.json to change defaults
         filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
         samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
         filtertype=config['bin'][pfamily]['FILTERTYPE'],
@@ -152,23 +157,31 @@ rule star1p:
         adapter1=config['bin'][pfamily]['ADAPTER1'],
         adapter2=config['bin'][pfamily]['ADAPTER2'],
     threads: 32
-    run:
-        import glob,json
-        rl=int(open(input.qcrl).readlines()[0].strip())-1
-        dbrl=sorted(list(map(lambda x:int(re.findall("genes-(\d+)",x)[0]),glob.glob(params.stardir+'*/',recursive=False))))
-        bestdbrl=next(x[1] for x in enumerate(dbrl) if x[1] >= rl)
-        cmd="cd {star_dir}; module load "+params.starver+"; STAR --genomeDir "+params.stardir+str(bestdbrl)+" --outFilterIntronMotifs "+params.filterintronmotifs+" --outSAMstrandField "+params.samstrandfield+"  --outFilterType "+params.filtertype+" --outFilterMultimapNmax "+str(params.filtermultimapnmax)+" --alignSJoverhangMin "+str(params.alignsjoverhangmin)+" --alignSJDBoverhangMin "+str(params.alignsjdboverhangmin)+"  --outFilterMismatchNmax "+str(params.filtermismatchnmax)+" --outFilterMismatchNoverLmax "+str(params.filtermismatchnoverlmax)+"  --alignIntronMin "+str(params.alignintronmin)+" --alignIntronMax "+str(params.alignintronmax)+" --alignMatesGapMax "+str(params.alignmatesgapmax)+" --clip3pAdapterSeq "+params.adapter1+" "+params.adapter2+" --readFilesIn "+input.file1+" "+input.file2+" --readFilesCommand zcat --runThreadN "+str(threads)+" --outFileNamePrefix "+params.prefix+". --outSAMtype BAM Unsorted --alignEndsProtrude 10 ConcordantPair --peOverlapNbasesMin 10"
-        shell(cmd)
-        A=open(join(workpath,"run.json"),'r')
-        a=eval(A.read())
-        A.close()
-        config=dict(a.items())
-        config['project']['SJDBOVERHANG']=str(bestdbrl)
-        config['project']["STARDIR"]= config['references'][pfamily]['STARDIR']+str(bestdbrl)
-        config['project']['READLENGTH']=str(rl+1)
-        with open(join(workpath,'run.json'),'w') as F:
-          json.dump(config, F, sort_keys = True, indent = 4,ensure_ascii=False)
-        F.close()
+    envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
+    container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.1"
+    shell: """
+    readlength=$(python3 {params.best_rl_script} {input.qcrl} {params.stardir})
+    STAR --genomeDir {params.stardir}${{readlength}} \
+    --outFilterIntronMotifs {params.filterintronmotifs} \
+    --outSAMstrandField {params.samstrandfield} \
+    --outFilterType {params.filtertype} \
+    --outFilterMultimapNmax {params.filtermultimapnmax} \
+    --alignSJoverhangMin {params.alignsjoverhangmin} \
+    --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
+    --outFilterMismatchNmax {params.filtermismatchnmax} \
+    --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
+    --alignIntronMin {params.alignintronmin} \
+    --alignIntronMax {params.alignintronmax} \
+    --alignMatesGapMax {params.alignmatesgapmax} \
+    --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
+    --readFilesIn {input.file1} {input.file2} \
+    --readFilesCommand zcat \
+    --runThreadN {threads} \
+    --outFileNamePrefix {params.prefix}. \
+    --outSAMtype BAM Unsorted \
+    --alignEndsProtrude 10 ConcordantPair \
+    --peOverlapNbasesMin 10
+    """
 
 
 rule sjdb:
@@ -179,7 +192,7 @@ rule sjdb:
     params:
         rname='pl:sjdb'
     shell: """
-    cat {input.files} |sort|uniq|awk -F \"\\t\" '{{if ($5>0 && $6==1) {{print}}}}'|cut -f1-4|sort|uniq|grep \"^chr\"|grep -v \"^chrM\" > {output.out1}
+    cat {input.files} | sort | uniq | awk -F \"\\t\" '{{if ($5>0 && $6==1) {{print}}}}'| cut -f1-4 | sort | uniq | grep \"^chr\" | grep -v \"^chrM\" > {output.out1}
     """
 
 
@@ -224,7 +237,7 @@ rule star2p:
         rl=int(open(input.qcrl).readlines()[0].strip())-1
         dbrl=sorted(list(map(lambda x:int(re.findall("genes-(\d+)",x)[0]),glob.glob(params.stardir+'*/',recursive=False))))
         bestdbrl=next(x[1] for x in enumerate(dbrl) if x[1] >= rl)
-        cmd="cd {star_dir}; module load "+params.starver+"; STAR --genomeDir "+params.stardir+str(bestdbrl)+" --outFilterIntronMotifs "+params.filterintronmotifs+" --outSAMstrandField "+params.samstrandfield+"  --outFilterType "+params.filtertype+" --outFilterMultimapNmax "+str(params.filtermultimapnmax)+" --alignSJoverhangMin "+str(params.alignsjoverhangmin)+" --alignSJDBoverhangMin "+str(params.alignsjdboverhangmin)+"  --outFilterMismatchNmax "+str(params.filtermismatchnmax)+" --outFilterMismatchNoverLmax "+str(params.filtermismatchnoverlmax)+"  --alignIntronMin "+str(params.alignintronmin)+" --alignIntronMax "+str(params.alignintronmax)+" --alignMatesGapMax "+str(params.alignmatesgapmax)+"  --clip3pAdapterSeq "+params.adapter1+" "+params.adapter2+" --readFilesIn "+input.file1+" "+input.file2+" --readFilesCommand zcat --runThreadN "+str(threads)+" --outFileNamePrefix "+params.prefix+". --outSAMunmapped "+params.outsamunmapped+" --outWigType "+params.wigtype+" --outWigStrand "+params.wigstrand+" --sjdbFileChrStartEnd "+str(input.tab)+" --sjdbGTFfile "+params.gtffile+" --limitSjdbInsertNsj "+str(params.nbjuncs)+" --quantMode TranscriptomeSAM GeneCounts --outSAMtype BAM SortedByCoordinate --alignEndsProtrude 10 ConcordantPair --peOverlapNbasesMin 10;"
+        cmd="cd {star_dir}; module load "+params.starver+"; STAR --genomeDir "+params.stardir+str(bestdbrl)+" --outFilterIntronMotifs "+params.filterintronmotifs+" --outSAMstrandField "+params.samstrandfield+"  --outFilterType "+params.filtertype+" --outFilterMultimapNmax "+str(params.filtermultimapnmax)+" --alignSJoverhangMin "+str(params.alignsjoverhangmin)+" --alignSJDBoverhangMin "+str(params.alignsjdboverhangmin)+"  --outFilterMismatchNmax "+str(params.filtermismatchnmax)+" --outFilterMismatchNoverLmax "+str(params.filtermismatchnoverlmax)+"  --alignIntronMin "+str(params.alignintronmin)+" --alignIntronMax "+str(params.alignintronmax)+" --alignMatesGapMax "+str(params.alignmatesgapmax)+"  --clip3pAdapterSeq "+STARDIR+" "+params.adapter2+" --readFilesIn "+input.file1+" "+input.file2+" --readFilesCommand zcat --runThreadN "+str(threads)+" --outFileNamePrefix "+params.prefix+". --outSAMunmapped "+params.outsamunmapped+" --outWigType "+params.wigtype+" --outWigStrand "+params.wigstrand+" --sjdbFileChrStartEnd "+str(input.tab)+" --sjdbGTFfile "+params.gtffile+" --limitSjdbInsertNsj "+str(params.nbjuncs)+" --quantMode TranscriptomeSAM GeneCounts --outSAMtype BAM SortedByCoordinate --alignEndsProtrude 10 ConcordantPair --peOverlapNbasesMin 10;"
         shell(cmd)
         cmd="sleep 120;cd {workpath};mv {workpath}/{star_dir}/{params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir}; mv {workpath}/{star_dir}/{params.prefix}.Log.final.out {workpath}/{log_dir}"
         shell(cmd)
