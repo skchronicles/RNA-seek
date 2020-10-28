@@ -233,7 +233,7 @@ rule star2p:
         wigstrand=config['bin'][pfamily]['WIGSTRAND'],
         gtffile=config['references'][pfamily]['GTFFILE'],
         nbjuncs=config['bin'][pfamily]['NBJUNCS'],
-    threads:32
+    threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
     container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
     shell: """
@@ -279,9 +279,12 @@ rule qualibam:
         rname='pl:qualibam',
         outdir=join(workpath,"QualiMap","{name}"),
         gtfFile=config['references'][pfamily]['GTFFILE'],
+    threads: 8
+    envmodules: config['bin'][pfamily]['tool_versions']['QUALIMAPVER']
+    container: "docker://nciccbr/ccbr_qualimap:v0.0.1"
     shell: """
-    module load qualimap/2.2.1
-    unset DISPLAY;qualimap bamqc -bam {input.bamfile} --feature-file {params.gtfFile} -outdir {params.outdir} -nt $SLURM_CPUS_PER_TASK --java-mem-size=11G
+    unset DISPLAY;
+    qualimap bamqc -bam {input.bamfile} --feature-file {params.gtfFile} -outdir {params.outdir} -nt {threads} --java-mem-size=11G
     """
 
 
