@@ -160,7 +160,7 @@ rule star1p:
     envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
     container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
     shell: """
-    readlength=$(python3 {params.best_rl_script} {input.qcrl} {params.stardir})
+    readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
     STAR --genomeDir {params.stardir}${{readlength}} \
     --outFilterIntronMotifs {params.filterintronmotifs} \
     --outSAMstrandField {params.samstrandfield} \
