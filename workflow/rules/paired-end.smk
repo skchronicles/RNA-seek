@@ -160,8 +160,6 @@ rule star1p:
     envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
     container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
     shell: """
-    # If optimal_read_length.py returns a StopIteration Error, the container bindpath
-    # to STAR indices for each read length are not set correctly.
     readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
     STAR --genomeDir {params.stardir}${{readlength}} \
     --outFilterIntronMotifs {params.filterintronmotifs} \
@@ -212,8 +210,11 @@ rule star2p:
         out5=join(workpath,log_dir,"{name}.p2.Log.final.out"),
     params:
         rname='pl:star2p',
-        prefix="{name}.p2",
-        starver=config['bin'][pfamily]['tool_versions']['STARVER'],
+        prefix=join(workpath, star_dir, "{name}.p2"),
+        best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
+        # Exposed Parameters: modify config/genomes/{genome}.json to change default
+        stardir=config['references'][pfamily]['STARDIR'],
+        # Exposed Parameters: modify config/templates/tools.json to change defaults
         filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
         samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
         filtertype=config['bin'][pfamily]['FILTERTYPE'],
@@ -232,17 +233,41 @@ rule star2p:
         wigstrand=config['bin'][pfamily]['WIGSTRAND'],
         gtffile=config['references'][pfamily]['GTFFILE'],
         nbjuncs=config['bin'][pfamily]['NBJUNCS'],
-        stardir=config['references'][pfamily]['STARDIR'],
     threads:32
-    run:
-        import glob,os
-        rl=int(open(input.qcrl).readlines()[0].strip())-1
-        dbrl=sorted(list(map(lambda x:int(re.findall("genes-(\d+)",x)[0]),glob.glob(params.stardir+'*/',recursive=False))))
-        bestdbrl=next(x[1] for x in enumerate(dbrl) if x[1] >= rl)
-        cmd="cd {star_dir}; module load "+params.starver+"; STAR --genomeDir "+params.stardir+str(bestdbrl)+" --outFilterIntronMotifs "+params.filterintronmotifs+" --outSAMstrandField "+params.samstrandfield+"  --outFilterType "+params.filtertype+" --outFilterMultimapNmax "+str(params.filtermultimapnmax)+" --alignSJoverhangMin "+str(params.alignsjoverhangmin)+" --alignSJDBoverhangMin "+str(params.alignsjdboverhangmin)+"  --outFilterMismatchNmax "+str(params.filtermismatchnmax)+" --outFilterMismatchNoverLmax "+str(params.filtermismatchnoverlmax)+"  --alignIntronMin "+str(params.alignintronmin)+" --alignIntronMax "+str(params.alignintronmax)+" --alignMatesGapMax "+str(params.alignmatesgapmax)+"  --clip3pAdapterSeq "+params.adapter1+" "+params.adapter2+" --readFilesIn "+input.file1+" "+input.file2+" --readFilesCommand zcat --runThreadN "+str(threads)+" --outFileNamePrefix "+params.prefix+". --outSAMunmapped "+params.outsamunmapped+" --outWigType "+params.wigtype+" --outWigStrand "+params.wigstrand+" --sjdbFileChrStartEnd "+str(input.tab)+" --sjdbGTFfile "+params.gtffile+" --limitSjdbInsertNsj "+str(params.nbjuncs)+" --quantMode TranscriptomeSAM GeneCounts --outSAMtype BAM SortedByCoordinate --alignEndsProtrude 10 ConcordantPair --peOverlapNbasesMin 10;"
-        shell(cmd)
-        cmd="sleep 120;cd {workpath};mv {workpath}/{star_dir}/{params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir}; mv {workpath}/{star_dir}/{params.prefix}.Log.final.out {workpath}/{log_dir}"
-        shell(cmd)
+    envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
+    container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
+    shell: """
+    readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
+    STAR --genomeDir {params.stardir}${{readlength}} \
+    --outFilterIntronMotifs {params.filterintronmotifs} \
+    --outSAMstrandField {params.samstrandfield}  \
+    --outFilterType {params.filtertype} \
+    --outFilterMultimapNmax {params.filtermultimapnmax} \
+    --alignSJoverhangMin {params.alignsjoverhangmin} \
+    --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
+    --outFilterMismatchNmax {params.filtermismatchnmax} \
+    --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
+    --alignIntronMin {params.alignintronmin} \
+    --alignIntronMax {params.alignintronmax} \
+    --alignMatesGapMax {params.alignmatesgapmax} \
+    --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
+    --readFilesIn {input.file1} {input.file2} \
+    --readFilesCommand zcat \
+    --runThreadN {threads} \
+    --outFileNamePrefix {params.prefix}. \
+    --outSAMunmapped {params.outsamunmapped} \
+    --outWigType {params.wigtype} \
+    --outWigStrand {params.wigstrand} \
+    --sjdbFileChrStartEnd {input.tab} \
+    --sjdbGTFfile {params.gtffile} \
+    --limitSjdbInsertNsj {params.nbjuncs} \
+    --quantMode TranscriptomeSAM GeneCounts \
+    --outSAMtype BAM SortedByCoordinate \
+    --alignEndsProtrude 10 ConcordantPair \
+    --peOverlapNbasesMin 10
+    mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
+    mv {params.prefix}.Log.final.out {workpath}/{log_dir}
+    """
 
 
 rule qualibam:
