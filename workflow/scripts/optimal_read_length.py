@@ -22,7 +22,7 @@ if __name__ == '__main__':
 	my_read_length=int(open(readlength).readlines()[0].strip())-1
 
 	# Find all STAR Indice read lengths
-	star_read_lengths=sorted(list(map(lambda x:int(re.findall("genes-(\d+)",x)[0]), glob.glob(stardir+'*/',recursive=False))))
+	star_read_lengths=sorted(list(map(lambda x:int(re.findall("genes-(\d+)",x)[0]), glob.glob(stardir+'*/'))))
 
 	myrl = find_optimal_read_length(rl=my_read_length, dbrl=star_read_lengths)
 
