@@ -1,11 +1,19 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 from __future__ import print_function
 import sys, glob, json, re
 
 
 def find_optimal_read_length(rl, dbrl):
-	# Get the best read length given a list of available STAR Indices
-	return next(x[1] for x in enumerate(dbrl) if x[1] >= rl)
+	'''Returns the best read length given a list of available STAR Indices'''
+	try:
+		best_index = next(x[1] for x in enumerate(dbrl) if x[1] >= rl)
+	except StopIteration:
+		# This could be due to not setting or incorrectly setting the singularity
+		# bind paths to the STAR indices for each read length.
+		# Please check how you are setting -B when running singularity.
+		print('Are you using singularity, and have you set the bind path to STAR indices?', file=sys.stderr)
+		sys.exit('Failed to find best index for STAR based on read length')
+	return best_index
 
 
 if __name__ == '__main__':

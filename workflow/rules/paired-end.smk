@@ -160,6 +160,8 @@ rule star1p:
     envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
     container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
     shell: """
+    # If optimal_read_length.py returns a StopIteration Error, the container bindpath
+    # to STAR indices for each read length are not set correctly.
     readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
     STAR --genomeDir {params.stardir}${{readlength}} \
     --outFilterIntronMotifs {params.filterintronmotifs} \

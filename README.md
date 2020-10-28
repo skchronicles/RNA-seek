@@ -50,7 +50,7 @@ Submit master job to the cluster:
 snakemake -pr --use-envmodule --cores 4 --configfile=.tests/run.json
 
 ## Method 2: Using Singularity Images
-snakemake -npr --use-singularity --singularity-args '-B /data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen_db' --cores 4 --configfile=.tests/run.json
+snakemake -npr --use-singularity --singularity-args '-B /data/CCBR_Pipeliner/db/PipeDB/' --cores 4 --configfile=.tests/run.json
 
 # Add later
 echo "Coming soon!"
