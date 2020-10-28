@@ -85,7 +85,11 @@ rule get_strandness:
             json.dump(config, F, sort_keys = True, indent = 4,ensure_ascii=False)
         F.close()
 
-
+# Create a new docker image for picard, there is a bug in current version that causes
+# a segmentation fault; although the problem can be fixed by adding the following to each cmd:
+# USE_JDK_DEFLATER=true USE_JDK_INFLATER=true
+# https://github.com/broadinstitute/picard/issues/1329
+# Try using picard cloud jar
 rule picard:
     input:
         file1=join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam"),
@@ -96,11 +100,12 @@ rule picard:
     params:
         rname='pl:picard',
         sampleName="{name}",
-        picardver=config['bin'][pfamily]['tool_versions']['PICARDVER'],
+    threads: 6
+    envmodules: config['bin'][pfamily]['tool_versions']['PICARDVER'],
+    container: "docker://nciccbr/ccbr_picard:v0.0.1"
     shell: """
-    module load {params.picardver};
-    java -Xmx110g  -XX:ParallelGCThreads=5 -jar $PICARDJARPATH/picard.jar AddOrReplaceReadGroups I={input.file1} O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam TMP_DIR=/lscratch/$SLURM_JOBID RGID=id RGLB=library RGPL=illumina RGPU=machine RGSM=sample;
-    java -Xmx110g -XX:ParallelGCThreads=5 -jar $PICARDJARPATH/picard.jar MarkDuplicates I=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam TMP_DIR=/lscratch/$SLURM_JOBID CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT METRICS_FILE={output.outstar3};
+    java -Xmx110g  -XX:ParallelGCThreads=5 -jar ${{PICARDJARPATH}}/picard.jar AddOrReplaceReadGroups I={input.file1} O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam TMP_DIR=/lscratch/$SLURM_JOBID RGID=id RGLB=library RGPL=illumina RGPU=machine RGSM=sample;
+    java -Xmx110g -XX:ParallelGCThreads=5 -jar ${{PICARDJARPATH}}/picard.jar MarkDuplicates I=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam TMP_DIR=/lscratch/$SLURM_JOBID CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT METRICS_FILE={output.outstar3};
     mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam {output.outstar2};
     mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bai {output.outstar2b};
     sed -i 's/MarkDuplicates/picard.sam.MarkDuplicates/g' {output.outstar3};
