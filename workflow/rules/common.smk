@@ -85,11 +85,7 @@ rule get_strandness:
             json.dump(config, F, sort_keys = True, indent = 4,ensure_ascii=False)
         F.close()
 
-# Create a new docker image for picard, there is a bug in current version that causes
-# a segmentation fault; although the problem can be fixed by adding the following to each cmd:
-# USE_JDK_DEFLATER=true USE_JDK_INFLATER=true
-# https://github.com/broadinstitute/picard/issues/1329
-# Try using picard cloud jar
+
 rule picard:
     input:
         file1=join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam"),
