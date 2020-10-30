@@ -150,5 +150,6 @@ site/
 .tests/*/
 .snakemake/
 
-# Running fastqc
+# Cached Java directories
 .oracle_jre_usage/
+.java/
