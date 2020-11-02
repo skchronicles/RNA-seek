@@ -184,12 +184,13 @@ rule rsem_merge:
         join(workpath,degall_dir,"RSEM.isoforms.FPKM.all_samples.txt"),
     params:
         rname='pl:rsem_merge',
-        pythonver=config['bin'][pfamily]['tool_versions']['PYTHONVER'],
         annotate=config['references'][pfamily]['ANNOTATE'],
         pythonscript=join("workflow", "scripts", "merge_rsem_results.py"),
+        inputdir=join(workpath, degall_dir)
+    envmodules: config['bin'][pfamily]['tool_versions']['PYTHONVER'],
+    container: "docker://nciccbr/ccbr_python:v0.0.1"
     shell: """
-    module load {params.pythonver}
-    python {params.pythonscript} {params.annotate} {degall_dir} {degall_dir}
+    python {params.pythonscript} {params.annotate} {params.inputdir} {params.inputdir}
     """
 
 
