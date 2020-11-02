@@ -212,42 +212,20 @@ rule rsemcounts:
     """
 
 
-rule qualicounts:
-    input:
-        countsmatrix=join(workpath,degall_dir,"RawCountFile_RSEM_genes_filtered.txt"),
-        groupsfile=join(workpath,"groups.tab"),
-    output:
-        outcounts=join(workpath,"QualiMap","RawCountFile_RSEM_genes_filtered_qualimap.txt"),
-        globalreport=join(workpath,"QualiMap","GlobalReport.html"),
-    params:
-        rname='pl:qualicounts',
-        sampletable=join(workpath,"QualiMap","qualimap_sample_table.txt"),
-        outdir=join(workpath,"QualiMap"),
-        info=config['references'][pfamily]['QUALIMAP_INFO'],
-    shell: """
-    module load qualimap/2.2.1
-    # Remove gene symbols from count matrix
-    sed 's/|[a-zA-Z0-9]\+//g' {input.countsmatrix} | tail -n +2 > {output.outcounts}
-    sed '/^$/d' {input.groupsfile} | awk -v OFS='\\t' '{{print $1, $2,"{output.outcounts}", NR+1}}' > {params.sampletable}
-    qualimap counts -d {params.sampletable} -i {params.info} -outdir {params.outdir}
-    """
-
-
 rule rseqc:
     input:
         file1=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
     output:
         out1=join(workpath,rseqc_dir,"{name}.strand.info"),
-        out4=join(workpath,rseqc_dir,"{name}.Rdist.info")
+        out2=join(workpath,rseqc_dir,"{name}.Rdist.info")
     params:
         bedref=config['references'][pfamily]['BEDREF'],
-        rseqcver=config['bin'][pfamily]['tool_versions']['RSEQCVER'],
-        rname="pl:rseqc"
+        rname="pl:rseqc",
+    envmodules: config['bin'][pfamily]['tool_versions']['RSEQCVER'],
+    container: "docker://nciccbr/ccbr_rseqc_3.0.0:v032219"
     shell: """
-    module load {params.rseqcver}
-    cd {rseqc_dir}
     infer_experiment.py -r {params.bedref} -i {input.file1} -s 1000000 > {output.out1}
-    read_distribution.py -i {input.file1} -r {params.bedref} > {output.out4}
+    read_distribution.py -i {input.file1} -r {params.bedref} > {output.out2}
     """
 
 
