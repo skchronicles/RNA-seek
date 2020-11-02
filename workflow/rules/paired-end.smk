@@ -298,21 +298,21 @@ rule rsem:
         out2=join(workpath,degall_dir,"{name}.RSEM.isoforms.results"),
     params:
         rname='pl:rsem',
-        prefix="{name}.RSEM",
-        outdir=join(workpath,degall_dir),
+        prefix=join(workpath,degall_dir,"{name}.RSEM"),
         rsemref=config['references'][pfamily]['RSEMREF'],
-        rsemver=config['bin'][pfamily]['tool_versions']['RSEMVER'],
-        pythonver=config['bin'][pfamily]['tool_versions']['PYTHONVER'],
         annotate=config['references'][pfamily]['ANNOTATE'],
-        pythonscript=join("workflow", "scripts", "merge_rsem_results.py"),
+    envmodules:
+        config['bin'][pfamily]['tool_versions']['RSEMVER'],
+        config['bin'][pfamily]['tool_versions']['PYTHONVER'],
+    container: "docker://nciccbr/ccbr_rsem_1.3.1:v032219"
     threads: 16
     shell: """
-    if [ ! -d {params.outdir} ]; then mkdir {params.outdir}; fi
-    cd {params.outdir}
-    module load {params.rsemver}
+    # Get strandedness to calculate Forward Probability
     fp=`tail -n1 {input.file2} | awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}'`
     echo "Forward Probability Passed to RSEM: $fp"
-    rsem-calculate-expression --no-bam-output --calc-ci --seed 12345  --bam --paired-end -p {threads}  {input.file1} {params.rsemref} {params.prefix} --time --temporary-folder /lscratch/$SLURM_JOBID --keep-intermediate-files --forward-prob=$fp --estimate-rspd
+    rsem-calculate-expression --no-bam-output --calc-ci --seed 12345  \
+    --bam --paired-end -p {threads}  {input.file1} {params.rsemref} {params.prefix} --time \
+    --temporary-folder /lscratch/$SLURM_JOBID --keep-intermediate-files --forward-prob=${{fp}} --estimate-rspd
     """
 
 
