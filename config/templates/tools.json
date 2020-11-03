@@ -3,6 +3,7 @@
 		"rnaseq": {
 			"tool_versions": {
 				"BOWTIE2VER": "bowtie/2-2.3.4",
+				"BEDTOOLSVER": "bedtools/2.29.2",
 				"BWAVER": "bwa/0.7.17",
 				"CUTADAPTVER": "cutadapt/1.18",
 				"FASTQ_SCREEN": "/data/CCBR_Pipeliner/db/PipeDB/bin/fastq_screen_v0.9.3/fastq_screen",
@@ -21,7 +22,8 @@
 				"RVER": "R/3.5",
 				"SAMTOOLSVER": "samtools/1.6",
 				"STARVER": "STAR/2.7.0f",
-				"SUBREADVER": "subread/1.5.2"
+				"SUBREADVER": "subread/1.5.2",
+				"UCSCVER": "ucsc/405"
 			},
 			"tool_parameters": {
 				"FASTAWITHADAPTERSETD": "resources/TruSeq_and_nextera_adapters.consolidated.fa",

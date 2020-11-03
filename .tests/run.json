@@ -291,6 +291,7 @@
             },
             "tool_versions": {
                 "BOWTIE2VER": "bowtie/2-2.3.4",
+                "BEDTOOLSVER": "bedtools/2.29.2",
                 "BWAVER": "bwa/0.7.17",
                 "CUTADAPTVER": "cutadapt/1.18",
                 "FASTQCVER": "fastqc/0.11.5",
@@ -312,7 +313,8 @@
                 "SAMTOOLSVER": "samtools/1.6",
                 "STARVER": "STAR/2.7.0f",
                 "SUBREADVER": "subread/1.5.2",
-                "TRIMMOMATICVER": "trimmomatic/0.33"
+                "TRIMMOMATICVER": "trimmomatic/0.33",
+                "UCSCVER": "ucsc/405"
             },
             "wig": "------------------------------------wig options (for now default) ------------------------------------------------------"
         },
