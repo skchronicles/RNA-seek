@@ -21,7 +21,7 @@ jobs:
         snakefile: workflow/Snakefile
         args: "--lint -s workflow/Snakefile --configfile=.tests/run.json || echo 'There may have been a few warnings or errors. Please read through the log to determine if its harmless.'"
 
-  Testing:
+  Dry-run:
     runs-on: ubuntu-latest
     needs: Linting
     steps:
