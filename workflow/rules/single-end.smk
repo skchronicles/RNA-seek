@@ -253,15 +253,15 @@ rule bam2bw_rnaseq_se:
         rbw=join(workpath,bams_dir,"{name}.rev.bw")
     params:
         rname='pl:bam2bw',
-        prefix="{name}",
+        outprefix=join(workpath,bams_dir,"{name}"),
         bashscript=join("workflow", "scripts", "bam2strandedbw.se.sh")
     threads: 2
     shell: """
-    sh {params.bashscript} {input.bam}
+    bash {params.bashscript} {input.bam} {params.outprefix}
 
     # reverse files if method is not dUTP/NSR/NNSR ... ie, R1 in the direction of RNA strand.
-    strandinfo=`tail -n1 {input.strandinfo}|awk '{{print $NF}}'`
-    if [ `echo "$strandinfo < 0.25"|bc` -eq 1 ];then
+    strandinfo=`tail -n1 {input.strandinfo} | awk '{{print $NF}}'`
+    if [ `echo "$strandinfo < 0.25"|bc` -eq 1 ]; then
     mv {output.fbw} {output.fbw}.tmp
     mv {output.rbw} {output.fbw}
     mv {output.fbw}.tmp {output.rbw}

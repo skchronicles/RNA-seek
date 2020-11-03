@@ -325,14 +325,20 @@ rule bam2bw_rnaseq_pe:
         rbw=join(workpath,bams_dir,"{name}.rev.bw")
     params:
         rname='pl:bam2bw',
-        prefix="{name}",
+        outprefix=join(workpath,bams_dir,"{name}"),
         bashscript=join("workflow", "scripts", "bam2strandedbw.pe.sh")
     threads: 4
+    envmodules:
+        config['bin'][pfamily]['tool_versions']['SAMTOOLSVER'],
+        config['bin'][pfamily]['tool_versions']['BEDTOOLSVER'],
+        config['bin'][pfamily]['tool_versions']['UCSCVER'],
+        config['bin'][pfamily]['tool_versions']['PARALLELVER'],
+    container: "docker://nciccbr/ccbr_bam2strandedbw:v0.0.1"
     shell: """
-    sh {params.bashscript} {input.bam}
+    bash {params.bashscript} {input.bam} {params.outprefix}
 
     # reverse files if method is not dUTP/NSR/NNSR ... ie, R1 in the direction of RNA strand.
-    strandinfo=`tail -n1 {input.strandinfo}|awk '{{print $NF}}'`
+    strandinfo=`tail -n1 {input.strandinfo} | awk '{{print $NF}}'`
     if [ `echo "$strandinfo < 0.25"|bc` -eq 1 ];then
     mv {output.fbw} {output.fbw}.tmp
     mv {output.rbw} {output.fbw}
