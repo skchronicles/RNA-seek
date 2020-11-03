@@ -5,7 +5,7 @@ import os,sys
 import pandas as pd
 
 
-def FPKM(fpattern, searchpath, anno, ftype, mycols):
+def Counts(fpattern, searchpath, anno, ftype, mycols):
 	"""
 	Get each samples FPKM vaules from RSEMs *.RSEM.genes.results and *.RSEM.isoform.results
 	"""
@@ -41,5 +41,5 @@ if __name__ == '__main__':
 	annotations=pd.read_csv(ens2genefile,header=None,sep=" ",usecols=[0,2])
 	annotations.columns=["gene_id","GeneName"]
 
-	FPKM(fpattern = "RSEM.genes.results", searchpath = rsemgenesfolder, anno = annotations, ftype = "genes", mycols = ["gene_id"])
-	FPKM(fpattern = "RSEM.isoforms.results", searchpath = rsemisoformsfolder, anno = annotations, ftype = "isoforms", mycols = ["transcript_id","gene_id"])
+	Counts(fpattern = "RSEM.genes.results", searchpath = rsemgenesfolder, anno = annotations, ftype = "genes", mycols = ["gene_id"])
+	Counts(fpattern = "RSEM.isoforms.results", searchpath = rsemisoformsfolder, anno = annotations, ftype = "isoforms", mycols = ["transcript_id","gene_id"])
