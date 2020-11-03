@@ -153,3 +153,6 @@ site/
 # Cached Java directories
 .oracle_jre_usage/
 .java/
+
+# GNU Parallel
+.parallel/
