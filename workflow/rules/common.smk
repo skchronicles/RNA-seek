@@ -109,15 +109,15 @@ rule picard:
 
 
 rule preseq:
-    params:
-        rname = "pl:preseq",
-        preseqver=config['bin'][pfamily]['tool_versions']['PRESEQVER'],
     input:
         bam = join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
     output:
         ccurve = join(workpath,preseq_dir,"{name}.ccurve"),
+    params:
+        rname = "pl:preseq",
+    envmodules: config['bin'][pfamily]['tool_versions']['PRESEQVER'],
+    container: "docker://nciccbr/ccbr_preseq:v0.0.1"
     shell:"""
-    module load {params.preseqver};
     preseq c_curve -B -o {output.ccurve} {input.bam}
     """
 
