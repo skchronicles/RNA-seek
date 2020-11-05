@@ -10,11 +10,10 @@ rule rawfastqc:
     params:
         rname='pl:rawfastqc',
         outdir=join(workpath,"rawQC"),
-        fastqcver=config['bin'][pfamily]['tool_versions']['FASTQCVER'],
     threads: 32
+    envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
+    container: "docker://nciccbr/fastqc:v0.0.1"
     shell: """
-    mkdir -p {params.outdir};
-    module load {params.fastqcver};
     fastqc {input} -t {threads} -o {params.outdir};
     """
 
