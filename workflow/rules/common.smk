@@ -32,60 +32,6 @@ def check_writeaccess(filename):
 
 
 # Rules common to RNA-seq pipeline, irrespective if the data is single-end or paired-end
-rule samplecondition:
-    input:
-        files=expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"), name=samples)
-    output:
-        out1=join(workpath,star_dir,"sampletable.txt")
-    params:
-        rname='pl:samplecondition',
-        pathprefix=join(workpath,star_dir),
-        groups=config['project']['groups']['rgroups'],
-        labels=config['project']['groups']['rlabels'],
-        allsamples=config['project']['groups']['rsamps'],
-        gtffile=config['references'][pfamily]['GTFFILE']
-    run:
-        with open(output.out1, "w") as out:
-            out.write("sampleName\tfileName\tcondition\tlabel\n")
-            i=0
-            for f in input.files:
-                out.write("{}\t".format(params.allsamples[i]))
-                out.write("{}/{}.star.count.txt\t".format(params.pathprefix, params.allsamples[i]))
-                out.write("{}\t".format(params.groups[i]))
-                out.write("{}\n".format(params.labels[i]))
-                i=i+1
-            out.close()
-
-
-rule get_strandness:
-    input:
-        groupsfile=join(workpath,"groups.tab"),
-        files=expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
-    output:
-        outfile=join(workpath,log_dir,"strandness.txt")
-    params:
-        rname='pl:get_strandness',
-        outdir=join(workpath,log_dir),
-        pythonver=config['bin'][pfamily]['tool_versions']['PYTHONVER'],
-        pythonscript=join("workflow", "scripts", "get_strandness.py")
-    run:
-        import os
-        os.chdir(params.outdir)
-        check_readaccess(input.groupsfile)
-        os.system("module load "+params.pythonver+";python "+params.pythonscript+" "+input.groupsfile+" > "+output.outfile)
-        strandfile=open(output.outfile,'r')
-        strandness=strandfile.readline().strip()
-        strandfile.close()
-        A=open(join(workpath,"run.json"),'r')
-        a=eval(A.read())
-        A.close()
-        config=dict(a.items())
-        config['project']['STRANDED']=strandness
-        with open(join(workpath,'run.json'),'w') as F:
-            json.dump(config, F, sort_keys = True, indent = 4,ensure_ascii=False)
-        F.close()
-
-
 rule picard:
     input:
         file1=join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam"),
@@ -202,25 +148,6 @@ rule rsem_merge:
     """
 
 
-rule rsemcounts:
-    input:
-        files=expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"), name=samples),
-        sampletable=join(workpath,star_dir,"sampletable.txt")
-    output:
-        join(workpath,degall_dir,"RawCountFile_RSEM_genes_filtered.txt"),
-    params:
-        rname='pl:rsemcounts',
-        outdir=join(workpath,degall_dir),
-        annotate=config['references'][pfamily]['ANNOTATE'],
-        rver=config['bin'][pfamily]['tool_versions']['RVER'],
-        rscript=join("workflow", "scripts", "rsemcounts.R")
-    shell: """
-    cd {params.outdir}
-    module load {params.rver}
-    Rscript {params.rscript} '{params.outdir}' '{input.files}' '{params.annotate}' '{input.sampletable}'
-    """
-
-
 rule rseqc:
     input:
         file1=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
@@ -235,28 +162,4 @@ rule rseqc:
     shell: """
     infer_experiment.py -r {params.bedref} -i {input.file1} -s 1000000 > {output.out1}
     read_distribution.py -i {input.file1} -r {params.bedref} > {output.out2}
-    """
-
-
-rule pca:
-    input:
-        file1=join(workpath,star_dir,"sampletable.txt"),
-        file2=join(workpath,degall_dir,"RawCountFile_{dtype}_filtered.txt"),
-    output:
-        outhtml=join(workpath,degall_dir,"PcaReport_{dtype}.html")
-    params:
-        rname='pl:pca',
-        outdir=join(workpath,degall_dir),
-        dtype="{dtype}",
-        projectId=config['project']['id'],
-        projDesc=config['project']['description'].rstrip('\n'),
-        rver=config['bin'][pfamily]['tool_versions']['RVER'],
-        scripts_dir=join("workflow", "scripts"),
-        rscript1=join("workflow", "scripts", "pcacall.R"),
-        rscript2=join("workflow", "scripts", "PcaReport.Rmd"),
-    shell: """
-    cd {params.outdir}
-
-    module load {params.rver}
-    Rscript {params.rscript1} '{params.outdir}' '{output.outhtml}' '{input.file1}' '{input.file2}' '{params.projectId}' '{params.projDesc}' '{params.rscript2}'
     """
