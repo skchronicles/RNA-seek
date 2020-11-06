@@ -1,0 +1,83 @@
+# Order that modules should appear in report. Try to list in order of analysis,
+# eg. FastQC is usually the first step, so should be last in this list
+# USAGE: multiqc -f -c multiqc_config.yaml --interactive  -d ../  -n multiqc_report.html
+
+custom_logo: '/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/nih-bnfo-logo.png'
+
+fastqscreen_simpleplot: true
+
+module_order:
+# Pre-alignment QC
+    - 'fastq_screen'
+    - 'fastqc':
+        name: 'FastQC'
+        info: 'This section of the report shows FastQC results before and after adapter trimming.'
+        path_filters:
+            - '*_fastqc.zip' 
+#            - '*.R?_fastqc.zip'
+    - 'cutadapt'
+#    - 'fastqc':
+#        name: 'FastQC (trimmed data)'
+#        anchor: 'after'
+#        info: 'This section of the report shows FastQC results after adapter trimming.'
+#        path_filters: 
+#            - '*.trim_fastqc.zip'
+    - 'trimmomatic'
+    - 'skewer'
+# Alignment tool stats
+    - 'bismark'
+    - 'hicup'
+    - 'salmon'
+    - 'kallisto'
+    - 'star'
+    - 'tophat'
+    - 'bowtie2'
+    - 'bowtie1'
+# Post-alignment analysis results
+    - 'quast'
+    - 'preseq'
+    - 'rsem'
+    - 'snpeff'
+    - 'qualimap':
+        path_filters:
+            - insert_size_histogram.txt
+    - 'bcftools'
+    - 'featureCounts'
+    - 'methylQA'
+    - 'rseqc'
+    - 'picard'
+    - 'prokka'
+    - 'samblaster'
+    - 'samtools'
+    - 'bamtools'
+
+#section_comments:
+#    featurecounts: 'This comment is for a module header, but should still work'
+#    star_alignments: 'This new way of commenting above sections is **awesome**!'
+
+
+table_columns_visible:
+    QualiMap:
+        avg_gc: False 
+        median_insert_size: True
+        30_x_pc: False
+    featureCounts:
+        percent_assigned: False
+        Assigned: False
+
+
+extra_fn_clean_exts:
+    - type: regex
+      pattern: 'QualiMap \| \w.* |'
+    - type: regex
+      pattern: 'DEG_ALL \| \w.* |'
+    - type: regex
+      pattern: 'STAR_files \|'
+    - type: regex
+      pattern: 'logfiles \|'
+    - type: remove
+      pattern: '.star_rg_added'
+    - type: remove
+      pattern: '.RSEM'
+    - type: remove
+      pattern: '.p2'

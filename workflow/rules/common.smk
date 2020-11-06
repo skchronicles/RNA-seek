@@ -102,33 +102,6 @@ rule stats:
     """
 
 
-rule rnaseq_multiqc:
-    input:
-        expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
-        expand(join(workpath,"FQscreen","{name}.R1.trim_screen.png"),name=samples),
-        expand(join(workpath,log_dir,"{name}.flagstat.concord.txt"),name=samples),
-        expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
-        expand(join(workpath,log_dir,"{name}.star.duplic"),name=samples),
-        expand(join(workpath,preseq_dir,"{name}.ccurve"),name=samples),
-        expand(join(workpath,degall_dir,"PcaReport_{dtype}.html"),dtype=dtypes),
-    output:
-        join(workpath,"Reports","multiqc_report.html")
-    params:
-        rname="pl:multiqc",
-        logsdir=join(workpath,log_dir),
-        outdir=join(workpath,"Reports"),
-        multiqcver=config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
-        qcconfig=config['bin'][pfamily]['CONFMULTIQC']
-    threads: 1
-    shell: """
-    module load {params.multiqcver}
-    cd {params.outdir}
-    multiqc -f -c {params.qcconfig} --interactive -e cutadapt -d ../
-    cd {workpath}/slurmfiles
-    multiqc -f --interactive .
-    """
-
-
 rule rsem_merge:
     input:
         files=expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"), name=samples),
@@ -162,4 +135,29 @@ rule rseqc:
     shell: """
     infer_experiment.py -r {params.bedref} -i {input.file1} -s 1000000 > {output.out1}
     read_distribution.py -i {input.file1} -r {params.bedref} > {output.out2}
+    """
+
+
+rule rnaseq_multiqc:
+    input:
+        expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
+        expand(join(workpath,"FQscreen","{name}.R1.trim_screen.png"),name=samples),
+        expand(join(workpath,log_dir,"{name}.flagstat.concord.txt"),name=samples),
+        expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
+        expand(join(workpath,log_dir,"{name}.star.duplic"),name=samples),
+        expand(join(workpath,preseq_dir,"{name}.ccurve"),name=samples),
+        expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
+        expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
+    output:
+        join(workpath,"Reports","multiqc_report.html")
+    params:
+        rname="pl:multiqc",
+        outdir=join(workpath,"Reports"),
+        qcconfig=config['bin'][pfamily]['CONFMULTIQC']
+    threads: 2
+    envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
+    container: "docker://nciccbr/ccbr_multiqc_1.9:v0.0.1"
+    shell: """
+    cd {params.outdir}
+    multiqc -f -c {params.qcconfig} --interactive -e cutadapt -d ../
     """

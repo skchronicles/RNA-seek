@@ -299,7 +299,7 @@
                 "FASTQSCREENVER": "fastq_screen/0.14.0",
                 "KRAKENVER": "kraken/1.1",
                 "KRONATOOLSVER": "kronatools/2.7",
-                "MULTIQCVER": "multiqc/1.4",
+                "MULTIQCVER": "multiqc/1.9",
                 "PARALLELVER": "parallel/20171222",
                 "PERLVER": "perl/5.24.3",
                 "PICARDVER": "picard/2.17.11",

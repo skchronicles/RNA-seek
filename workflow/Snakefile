@@ -90,7 +90,7 @@ if paired_end:
             #expand(join(workpath,degall_dir,"PcaReport_{dtype}.html"),dtype=dtypes),
 
             # MultiQC
-            #join(workpath,"Reports/multiqc_report.html"),
+            join(workpath,"Reports","multiqc_report.html"),
 
 
 elif not paired_end:
@@ -138,7 +138,7 @@ elif not paired_end:
             #expand(join(workpath,degall_dir,"PcaReport_{dtype}.html"),dtype=dtypes),
 
             # MultiQC
-            #join(workpath,"Reports/multiqc_report.html"),
+            join(workpath,"Reports","multiqc_report.html"),
 
 
 # Include single-end and paired-specific rules
