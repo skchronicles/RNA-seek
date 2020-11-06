@@ -60,6 +60,7 @@ if paired_end:
             expand(join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),name=samples),
 
             # Bam to stranded bigwigs
+            expand(join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),name=samples),
             expand(join(workpath,bams_dir,"{name}.fwd.bw"),name=samples),
             expand(join(workpath,bams_dir,"{name}.rev.bw"),name=samples),
 
@@ -70,24 +71,26 @@ if paired_end:
             # Preseq
             expand(join(workpath,preseq_dir,"{name}.ccurve"),name=samples),
 
-            # Infer Library Strandedness
-            join(workpath,log_dir,"strandness.txt"),
-
             # QualiMap (bamQC and counts)
             expand(join(workpath,"QualiMap","{name}","qualimapReport.html"),name=samples),
-            # join(workpath,"QualiMap","GlobalReport.html"),
+
+            # RSeQC
+            expand(join(workpath,rseqc_dir,"{name}.strand.info"),name=samples),
+            expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
 
             # RSEM merge and counts
+            expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
+            expand(join(workpath,degall_dir,"{name}.RSEM.isoforms.results"),name=samples),
             join(workpath,degall_dir,"RSEM.genes.FPKM.all_samples.txt"),
             join(workpath,degall_dir,"RSEM.isoforms.FPKM.all_samples.txt"),
-            join(workpath,degall_dir,"RawCountFile_RSEM_genes_filtered.txt"),
-            join(workpath,star_dir,"sampletable.txt"),
+            #join(workpath,degall_dir,"RawCountFile_RSEM_genes_filtered.txt"),
+            #join(workpath,star_dir,"sampletable.txt"),
 
             # PCA Reports
-            expand(join(workpath,degall_dir,"PcaReport_{dtype}.html"),dtype=dtypes),
+            #expand(join(workpath,degall_dir,"PcaReport_{dtype}.html"),dtype=dtypes),
 
             # MultiQC
-            join(workpath,"Reports/multiqc_report.html"),
+            #join(workpath,"Reports/multiqc_report.html"),
 
 
 elif not paired_end:
@@ -110,30 +113,32 @@ elif not paired_end:
             # expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),name=samples),
             # expand(join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),name=samples),
 
-            # Infer Library Strandedness
-            join(workpath,log_dir,"strandness.txt"),
+            # STAR
+            expand(join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),name=samples),
 
             # Picard
-            expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
+            #expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
 
             # QualiMap
-            # join(workpath,"QualiMap","GlobalReport.html"),
+            #expand(join(workpath,"QualiMap","{name}","qualimapReport.html"),name=samples),
 
             # Bam to stranded bigwigs
             expand(join(workpath,bams_dir,"{name}.fwd.bw"),name=samples),
             expand(join(workpath,bams_dir,"{name}.rev.bw"),name=samples),
 
             # RSEM
+            expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
+            expand(join(workpath,degall_dir,"{name}.RSEM.isoforms.results"),name=samples),
             join(workpath,degall_dir,"RSEM.genes.FPKM.all_samples.txt"),
             join(workpath,degall_dir,"RSEM.isoforms.FPKM.all_samples.txt"),
-            join(workpath,degall_dir,"RawCountFile_RSEM_genes_filtered.txt"),
-            join(workpath,star_dir,"sampletable.txt"),
+            #join(workpath,degall_dir,"RawCountFile_RSEM_genes_filtered.txt"),
+            #join(workpath,star_dir,"sampletable.txt"),
 
             # PCA Report
-            expand(join(workpath,degall_dir,"PcaReport_{dtype}.html"),dtype=dtypes),
+            #expand(join(workpath,degall_dir,"PcaReport_{dtype}.html"),dtype=dtypes),
 
             # MultiQC
-            join(workpath,"Reports/multiqc_report.html"),
+            #join(workpath,"Reports/multiqc_report.html"),
 
 
 # Include single-end and paired-specific rules
