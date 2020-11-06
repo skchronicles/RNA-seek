@@ -64,5 +64,6 @@ rule pca:
     shell: """
     cd {params.outdir}
     module load {params.rver}
-    Rscript {params.rscript1} '{params.outdir}' '{output.outhtml}' '{input.file1}' '{input.file2}' '{params.projectId}' '{params.projDesc}' '{params.rscript2}'
+    Rscript {params.rscript1} '{params.outdir}' '{output.outhtml}' \
+    '{input.file1}' '{input.file2}' '{params.projectId}' '{params.projDesc}' '{params.rscript2}'
     """

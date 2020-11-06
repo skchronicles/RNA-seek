@@ -38,7 +38,11 @@ rule trim_pe:
     envmodules: config['bin'][pfamily]['tool_versions']['CUTADAPTVER']
     container: "docker://nciccbr/ccbr_cutadapt_1.18:v032219"
     shell: """
-    cutadapt --pair-filter=any --nextseq-trim=2 --trim-n -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} -m {params.minlen}:{params.minlen} -b file:{params.fastawithadaptersetd} -B file:{params.fastawithadaptersetd} -j {threads} -o {output.out1} -p {output.out2} {input.file1} {input.file2}
+    cutadapt --pair-filter=any --nextseq-trim=2 --trim-n \
+    -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
+    -m {params.minlen}:{params.minlen} \
+    -b file:{params.fastawithadaptersetd} -B file:{params.fastawithadaptersetd} \
+    -j {threads} -o {output.out1} -p {output.out2} {input.file1} {input.file2}
     """
 
 
@@ -92,8 +96,11 @@ rule fastq_screen:
         config['bin'][pfamily]['tool_versions']['BOWTIE2VER'],
     container: "docker://nciccbr/ccbr_fastq_screen_0.13.0:v032219"
     shell: """
-    fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1} {input.file2}
-    fastq_screen --conf {params.fastq_screen_config2} --outdir {params.outdir2} --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1} {input.file2}
+    fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} \
+    --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1} {input.file2}
+
+    fastq_screen --conf {params.fastq_screen_config2} --outdir {params.outdir2} \
+    --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1} {input.file2}
     """
 
 
@@ -192,7 +199,11 @@ rule sjdb:
     params:
         rname='pl:sjdb'
     shell: """
-    cat {input.files} | sort | uniq | awk -F \"\\t\" '{{if ($5>0 && $6==1) {{print}}}}'| cut -f1-4 | sort | uniq | grep \"^chr\" | grep -v \"^chrM\" > {output.out1}
+    cat {input.files} | \
+    sort | uniq | \
+    awk -F \"\\t\" '{{if ($5>0 && $6==1) {{print}}}}'| \
+    cut -f1-4 | sort | uniq | \
+    grep \"^chr\" | grep -v \"^chrM\" > {output.out1}
     """
 
 

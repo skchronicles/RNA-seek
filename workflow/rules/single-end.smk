@@ -34,7 +34,10 @@ rule trim_se:
     envmodules: config['bin'][pfamily]['tool_versions']['CUTADAPTVER']
     container: "docker://nciccbr/ccbr_cutadapt_1.18:v032219"
     shell: """
-    cutadapt --nextseq-trim=2 --trim-n -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} -m {params.minlen} -b file:{params.fastawithadaptersetd} -j {threads} -o {output.outfq} {input.infq}
+    cutadapt --nextseq-trim=2 --trim-n \
+    -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
+    -m {params.minlen} -b file:{params.fastawithadaptersetd} -j {threads} \
+    -o {output.outfq} {input.infq}
     """
 
 
@@ -80,8 +83,11 @@ rule fastq_screen:
         config['bin'][pfamily]['tool_versions']['BOWTIE2VER'],
     container: "docker://nciccbr/ccbr_fastq_screen_0.13.0:v032219"
     shell: """
-    fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
-    fastq_screen --conf {params.fastq_screen_config2} --outdir {params.outdir2} --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
+    fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} \
+    --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
+
+    fastq_screen --conf {params.fastq_screen_config2} --outdir {params.outdir2} \
+    --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
     """
 
 
@@ -176,7 +182,11 @@ rule sjdb:
     params:
         rname='pl:sjdb'
     shell: """
-    cat {input.files} |sort|uniq|awk -F \"\\t\" '{{if ($5>0 && $6==1) {{print}}}}'|cut -f1-4|sort|uniq|grep \"^chr\"|grep -v \"^chrM\" > {output.out1}
+    cat {input.files} | \
+    sort | uniq | \
+    awk -F \"\\t\" '{{if ($5>0 && $6==1) {{print}}}}'| \
+    cut -f1-4 | sort | uniq | \
+    grep \"^chr\"|grep -v \"^chrM\" > {output.out1}
     """
 
 
@@ -272,7 +282,7 @@ rule rsem:
     container: "docker://nciccbr/ccbr_rsem_1.3.1:v032219"
     shell: """
     # Get strandedness to calculate Forward Probability
-    fp=`tail -n1 {input.file2} |awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}'`
+    fp=`tail -n1 {input.file2} | awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}'`
     echo "Forward Probability Passed to RSEM: $fp"
     rsem-calculate-expression --no-bam-output --calc-ci --seed 12345 \
     --bam -p {threads}  {input.file1} {params.rsemref} {params.prefix} --time \
