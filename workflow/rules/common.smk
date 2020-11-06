@@ -149,15 +149,19 @@ rule rnaseq_multiqc:
         expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
         expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
     output:
-        join(workpath,"Reports","multiqc_report.html")
+        join(workpath,"Reports","multiqc_report.html"),
+        join(workpath,"Reports", "multiqc_matrix.tsv"),
     params:
         rname="pl:multiqc",
+        workdir=join(workpath),
         outdir=join(workpath,"Reports"),
-        qcconfig=config['bin'][pfamily]['CONFMULTIQC']
+        logfiles=join(workpath,"Reports","multiqc_data","*.txt"),
+        qcconfig=config['bin'][pfamily]['CONFMULTIQC'],
+        pyparser=join("workflow", "scripts", "pyparser.py"),
     threads: 2
     envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
     container: "docker://nciccbr/ccbr_multiqc_1.9:v0.0.1"
     shell: """
-    cd {params.outdir}
-    multiqc -f -c {params.qcconfig} --interactive -e cutadapt -d ../
+    multiqc -f -c {params.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
+    python3 {params.pyparser} {params.logfiles} {params.outdir}
     """
