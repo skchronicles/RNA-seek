@@ -2,7 +2,7 @@
 # eg. FastQC is usually the first step, so should be last in this list
 # USAGE: multiqc -f -c multiqc_config.yaml --interactive  -d ../  -n multiqc_report.html
 
-custom_logo: '/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/nih-bnfo-logo.png'
+custom_logo: 'resources/nih-bnfo-logo.png'
 
 fastqscreen_simpleplot: true
 
@@ -14,7 +14,6 @@ module_order:
         info: 'This section of the report shows FastQC results before and after adapter trimming.'
         path_filters:
             - '*_fastqc.zip' 
-#            - '*.R?_fastqc.zip'
     - 'cutadapt'
 #    - 'fastqc':
 #        name: 'FastQC (trimmed data)'
