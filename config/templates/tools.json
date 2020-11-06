@@ -42,7 +42,7 @@
 			"ALIGNMATESGAPMAX": 1000000,
 			"ALIGNSJDBOVERHANGMIN": 1,
 			"ALIGNSJOVERHANGMIN": 8,
-			"CONFMULTIQC": "/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/multiqc/multiqc_config.yaml",
+			"CONFMULTIQC": "resources/multiqc_config.yaml",
 			"FILTERINTRONMOTIFS": "RemoveNoncanonicalUnannotated",
 			"FILTERMISMATCHNMAX": 999,
 			"FILTERMISMATCHNOVERLMAX": 0.3,

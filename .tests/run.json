@@ -180,7 +180,7 @@
             "ALIGNSJOVERHANGMIN": 8,
             "BWAVER": "bwa/0.7.17",
             "CHKQCVER": " /data/CCBR_Pipeliner/dev/RNA-Seq-pipeline/ver2/summarizeFastQCver2",
-            "CONFMULTIQC": "/data/CCBR_Pipeliner/db/PipeDB/Rnaseq/multiqc/multiqc_config.yaml",
+            "CONFMULTIQC": "resources/multiqc_config.yaml",
             "CONTRASTS": [
                 "Normal",
                 "Tumor"
