@@ -52,7 +52,7 @@ module load singularity snakemake
 snakemake -pr --use-envmodule --cores 4 --configfile=.tests/run.json
 
 ## Method 2: Using Singularity Images
-snakemake -npr --use-singularity --singularity-args '-B /data/CCBR_Pipeliner/db/PipeDB/,/lscratch' --cores 8 --configfile=.tests/run.json
+snakemake -npr --use-singularity --singularity-args '-B /data/CCBR_Pipeliner/db/PipeDB/,/lscratch,/fdb' --cores 8 --configfile=.tests/run.json
 
 # Add later
 echo "Coming soon!"
