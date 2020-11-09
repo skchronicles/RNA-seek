@@ -39,10 +39,10 @@ rule trim_pe:
     container: "docker://nciccbr/ccbr_cutadapt_1.18:v032219"
     shell: """
     cutadapt --pair-filter=any --nextseq-trim=2 --trim-n \
-    -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
-    -m {params.minlen}:{params.minlen} \
-    -b file:{params.fastawithadaptersetd} -B file:{params.fastawithadaptersetd} \
-    -j {threads} -o {output.out1} -p {output.out2} {input.file1} {input.file2}
+        -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
+        -m {params.minlen}:{params.minlen} \
+        -b file:{params.fastawithadaptersetd} -B file:{params.fastawithadaptersetd} \
+        -j {threads} -o {output.out1} -p {output.out2} {input.file1} {input.file2}
     """
 
 
@@ -64,7 +64,8 @@ rule fastqc:
     container: "docker://nciccbr/fastqc:v0.0.1"
     shell: """
     fastqc {input} -t {threads} -o {params.outdir};
-    python3 {params.getrl} {params.outdir} > {params.outdir}/readlength.txt  2> {params.outdir}/readlength.err
+    python3 {params.getrl} {params.outdir} > {params.outdir}/readlength.txt \
+        2> {params.outdir}/readlength.err
     """
 
 
@@ -97,42 +98,45 @@ rule fastq_screen:
     container: "docker://nciccbr/ccbr_fastq_screen_0.13.0:v032219"
     shell: """
     fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} \
-    --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1} {input.file2}
+        --threads {threads} --subset 1000000 \
+        --aligner bowtie2 --force {input.file1} {input.file2}
 
     fastq_screen --conf {params.fastq_screen_config2} --outdir {params.outdir2} \
-    --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1} {input.file2}
+        --threads {threads} --subset 1000000 \
+        --aligner bowtie2 --force {input.file1} {input.file2}
     """
 
 
-## Add later: create kraken2 docker image (use MiniKraken2_v1_8GB database)
-## ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/old/minikraken2_v1_8GB_201904.tgz
-#rule kraken_pe:
-#    input:
-#        fq1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
-#        fq2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
-#    output:
-#        krakentaxa = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.taxa.txt"),
-#        kronahtml = join(workpath,kraken_dir,"{name}.trim.fastq.kraken_bacteria.krona.html"),
-#    params:
-#        rname='pl:kraken',
-#        prefix = "{name}",
-#        outdir=join(workpath,kraken_dir),
-#        bacdb=config['bin'][pfamily]['tool_parameters']['KRAKENBACDB'],
-#        krakenver=config['bin'][pfamily]['tool_versions']['KRAKENVER'],
-#        kronatoolsver=config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
-#    threads: 24
-#    shell: """
-#    module load {params.krakenver};
-#    module load {params.kronatoolsver};
-#    if [ ! -d {params.outdir} ];then mkdir {params.outdir};fi
-#    cd /lscratch/$SLURM_JOBID;
-#    cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
-#    kraken --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` --fastq-input --gzip-compressed --threads {threads} --output /lscratch/$SLURM_JOBID/{params.prefix}.krakenout --preload --paired {input.fq1} {input.fq2}
-#    kraken-translate --mpa-format --db /lscratch/$SLURM_JOBID/`echo {params.bacdb}|awk -F "/" '{{print \$NF}}'` /lscratch/$SLURM_JOBID/{params.prefix}.krakenout |cut -f2|sort|uniq -c|sort -k1,1nr > /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa
-#    cut -f2,3 /lscratch/$SLURM_JOBID/{params.prefix}.krakenout | ktImportTaxonomy - -o /lscratch/$SLURM_JOBID/{params.prefix}.kronahtml
-#    mv /lscratch/$SLURM_JOBID/{params.prefix}.krakentaxa {output.krakentaxa}
-#    mv /lscratch/$SLURM_JOBID/{params.prefix}.kronahtml {output.kronahtml}
-#    """
+rule kraken_pe:
+    input:
+        fq1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+        fq2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
+    output:
+        krakenout = join(workpath,kraken_dir,"{name}.trim.kraken_bacteria.out.txt"),
+        krakentaxa = join(workpath,kraken_dir,"{name}.trim.kraken_bacteria.taxa.txt"),
+        kronahtml = join(workpath,kraken_dir,"{name}.trim.kraken_bacteria.krona.html"),
+    params:
+        rname='pl:kraken',
+        outdir=join(workpath,kraken_dir),
+        bacdb=config['bin'][pfamily]['tool_parameters']['KRAKENBACDB'],
+    threads: 24
+    envmodules:
+        config['bin'][pfamily]['tool_versions']['KRAKENVER'],
+        config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
+    container: "docker://nciccbr/ccbr_kraken_v2.1.1:v0.0.1"
+    shell: """
+    # Copy kraken2 db to /lscratch or /dev/shm (RAM-disk) to reduce filesytem strain
+    cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
+    kdb_base=$(basename {params.bacdb})
+    kraken2 --db /lscratch/$SLURM_JOBID/${{kdb_base}} \
+        --threads {threads} --report {output.krakentaxa} \
+        --output {output.krakenout} \
+        --gzip-compressed \
+        --paired {input.fq1} {input.fq2}
+    # Generate Krona Report
+    cut -f2,3 {output.krakenout} | \
+        ktImportTaxonomy - -o {output.kronahtml}
+    """
 
 
 rule star1p:
@@ -169,25 +173,25 @@ rule star1p:
     shell: """
     readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
     STAR --genomeDir {params.stardir}${{readlength}} \
-    --outFilterIntronMotifs {params.filterintronmotifs} \
-    --outSAMstrandField {params.samstrandfield} \
-    --outFilterType {params.filtertype} \
-    --outFilterMultimapNmax {params.filtermultimapnmax} \
-    --alignSJoverhangMin {params.alignsjoverhangmin} \
-    --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
-    --outFilterMismatchNmax {params.filtermismatchnmax} \
-    --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
-    --alignIntronMin {params.alignintronmin} \
-    --alignIntronMax {params.alignintronmax} \
-    --alignMatesGapMax {params.alignmatesgapmax} \
-    --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
-    --readFilesIn {input.file1} {input.file2} \
-    --readFilesCommand zcat \
-    --runThreadN {threads} \
-    --outFileNamePrefix {params.prefix}. \
-    --outSAMtype BAM Unsorted \
-    --alignEndsProtrude 10 ConcordantPair \
-    --peOverlapNbasesMin 10
+        --outFilterIntronMotifs {params.filterintronmotifs} \
+        --outSAMstrandField {params.samstrandfield} \
+        --outFilterType {params.filtertype} \
+        --outFilterMultimapNmax {params.filtermultimapnmax} \
+        --alignSJoverhangMin {params.alignsjoverhangmin} \
+        --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
+        --outFilterMismatchNmax {params.filtermismatchnmax} \
+        --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
+        --alignIntronMin {params.alignintronmin} \
+        --alignIntronMax {params.alignintronmax} \
+        --alignMatesGapMax {params.alignmatesgapmax} \
+        --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
+        --readFilesIn {input.file1} {input.file2} \
+        --readFilesCommand zcat \
+        --runThreadN {threads} \
+        --outFileNamePrefix {params.prefix}. \
+        --outSAMtype BAM Unsorted \
+        --alignEndsProtrude 10 ConcordantPair \
+        --peOverlapNbasesMin 10
     """
 
 
@@ -200,9 +204,10 @@ rule sjdb:
         rname='pl:sjdb'
     shell: """
     cat {input.files} | \
-    sort | uniq | \
-    awk -F \"\\t\" '{{if ($5>0 && $6==1) {{print}}}}'| \
-    cut -f1-4 | sort | uniq | \
+        sort | \
+        uniq | \
+        awk -F \"\\t\" '{{if ($5>0 && $6==1) {{print}}}}'| \
+        cut -f1-4 | sort | uniq | \
     grep \"^chr\" | grep -v \"^chrM\" > {output.out1}
     """
 
@@ -250,32 +255,32 @@ rule star2p:
     shell: """
     readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
     STAR --genomeDir {params.stardir}${{readlength}} \
-    --outFilterIntronMotifs {params.filterintronmotifs} \
-    --outSAMstrandField {params.samstrandfield}  \
-    --outFilterType {params.filtertype} \
-    --outFilterMultimapNmax {params.filtermultimapnmax} \
-    --alignSJoverhangMin {params.alignsjoverhangmin} \
-    --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
-    --outFilterMismatchNmax {params.filtermismatchnmax} \
-    --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
-    --alignIntronMin {params.alignintronmin} \
-    --alignIntronMax {params.alignintronmax} \
-    --alignMatesGapMax {params.alignmatesgapmax} \
-    --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
-    --readFilesIn {input.file1} {input.file2} \
-    --readFilesCommand zcat \
-    --runThreadN {threads} \
-    --outFileNamePrefix {params.prefix}. \
-    --outSAMunmapped {params.outsamunmapped} \
-    --outWigType {params.wigtype} \
-    --outWigStrand {params.wigstrand} \
-    --sjdbFileChrStartEnd {input.tab} \
-    --sjdbGTFfile {params.gtffile} \
-    --limitSjdbInsertNsj {params.nbjuncs} \
-    --quantMode TranscriptomeSAM GeneCounts \
-    --outSAMtype BAM SortedByCoordinate \
-    --alignEndsProtrude 10 ConcordantPair \
-    --peOverlapNbasesMin 10
+        --outFilterIntronMotifs {params.filterintronmotifs} \
+        --outSAMstrandField {params.samstrandfield}  \
+        --outFilterType {params.filtertype} \
+        --outFilterMultimapNmax {params.filtermultimapnmax} \
+        --alignSJoverhangMin {params.alignsjoverhangmin} \
+        --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
+        --outFilterMismatchNmax {params.filtermismatchnmax} \
+        --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
+        --alignIntronMin {params.alignintronmin} \
+        --alignIntronMax {params.alignintronmax} \
+        --alignMatesGapMax {params.alignmatesgapmax} \
+        --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
+        --readFilesIn {input.file1} {input.file2} \
+        --readFilesCommand zcat \
+        --runThreadN {threads} \
+        --outFileNamePrefix {params.prefix}. \
+        --outSAMunmapped {params.outsamunmapped} \
+        --outWigType {params.wigtype} \
+        --outWigStrand {params.wigstrand} \
+        --sjdbFileChrStartEnd {input.tab} \
+        --sjdbGTFfile {params.gtffile} \
+        --limitSjdbInsertNsj {params.nbjuncs} \
+        --quantMode TranscriptomeSAM GeneCounts \
+        --outSAMtype BAM SortedByCoordinate \
+        --alignEndsProtrude 10 ConcordantPair \
+        --peOverlapNbasesMin 10
     mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
     mv {params.prefix}.Log.final.out {workpath}/{log_dir}
     """
@@ -295,7 +300,8 @@ rule qualibam:
     container: "docker://nciccbr/ccbr_qualimap:v0.0.1"
     shell: """
     unset DISPLAY;
-    qualimap bamqc -bam {input.bamfile} --feature-file {params.gtfFile} -outdir {params.outdir} -nt {threads} --java-mem-size=11G
+    qualimap bamqc -bam {input.bamfile} --feature-file {params.gtfFile} \
+        -outdir {params.outdir} -nt {threads} --java-mem-size=11G
     """
 
 
@@ -320,10 +326,11 @@ rule rsem:
     shell: """
     # Get strandedness to calculate Forward Probability
     fp=`tail -n1 {input.file2} | awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}'`
+
     echo "Forward Probability Passed to RSEM: $fp"
     rsem-calculate-expression --no-bam-output --calc-ci --seed 12345  \
-    --bam --paired-end -p {threads}  {input.file1} {params.rsemref} {params.prefix} --time \
-    --temporary-folder /lscratch/$SLURM_JOBID --keep-intermediate-files --forward-prob=${{fp}} --estimate-rspd
+        --bam --paired-end -p {threads}  {input.file1} {params.rsemref} {params.prefix} --time \
+        --temporary-folder /lscratch/$SLURM_JOBID --keep-intermediate-files --forward-prob=${{fp}} --estimate-rspd
     """
 
 
@@ -351,8 +358,8 @@ rule bam2bw_rnaseq_pe:
     # reverse files if method is not dUTP/NSR/NNSR ... ie, R1 in the direction of RNA strand.
     strandinfo=`tail -n1 {input.strandinfo} | awk '{{print $NF}}'`
     if [ `echo "$strandinfo < 0.25"|bc` -eq 1 ];then
-    mv {output.fbw} {output.fbw}.tmp
-    mv {output.rbw} {output.fbw}
-    mv {output.fbw}.tmp {output.rbw}
+        mv {output.fbw} {output.fbw}.tmp
+        mv {output.rbw} {output.fbw}
+        mv {output.fbw}.tmp {output.rbw}
     fi
     """
