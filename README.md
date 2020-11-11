@@ -58,6 +58,10 @@ snakemake -npr --use-singularity --singularity-args '-B /data/CCBR_Pipeliner/db/
 module load graphviz # dot needs to be in $PATH
 snakemake --report .tests/report.html --cores 12 --configfile=.tests/run.json
 
+# Export pipeline to CWL
+module load git
+snakemake --export-cwl .tests/workflow.cwl --configfile=.tests/run.json
+
 # Add later
 echo "Coming soon!"
 ```
