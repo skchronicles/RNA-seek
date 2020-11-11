@@ -45,14 +45,18 @@ snakemake -npr -s workflow/Snakefile
 Submit master job to the cluster:
 ```bash
 # Local Testing (Interactive node)
-sinteractive --mem=110g --cpus-per-task=8 --gres=lscratch:100
+sinteractive --mem=110g --cpus-per-task=12 --gres=lscratch:200
 module load singularity snakemake
 
 ## Method 1: Using environment modules
-snakemake -pr --use-envmodule --cores 4 --configfile=.tests/run.json
+snakemake -pr --use-envmodule --cores 12 --configfile=.tests/run.json
 
 ## Method 2: Using Singularity Images
-snakemake -npr --use-singularity --singularity-args '-B /data/CCBR_Pipeliner/db/PipeDB/,/lscratch,/fdb' --cores 8 --configfile=.tests/run.json
+snakemake -npr --use-singularity --singularity-args '-B /data/CCBR_Pipeliner/db/PipeDB/,/lscratch,/fdb' --cores 12 --configfile=.tests/run.json
+
+# Generate a Snakemake Report
+module load graphviz # dot needs to be in $PATH
+snakemake --report .tests/report.html --cores 12 --configfile=.tests/run.json
 
 # Add later
 echo "Coming soon!"
