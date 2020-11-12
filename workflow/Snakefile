@@ -42,6 +42,9 @@ if paired_end:
             expand(join(workpath,"QC","{name}.R2.trim_fastqc.zip"), name=samples),
             join(workpath,"QC","readlength.txt"),
 
+            # BBtools Insert Size
+            expand(join(workpath,"QC","{name}_insert_sizes.txt"), name=samples),
+
             # FastScreen (Using two sets of reference databases)
             expand(join(workpath,"FQscreen","{name}.R1.trim_screen.txt"),name=samples),
             expand(join(workpath,"FQscreen","{name}.R1.trim_screen.png"),name=samples),

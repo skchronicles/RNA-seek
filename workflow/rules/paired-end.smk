@@ -69,6 +69,30 @@ rule fastqc:
     """
 
 
+rule bbmerge:
+    '''
+    Calculates a distribution of insert sizes after local assembly or merging
+    of each paired-end read. Please note this rule is only run with paired-end data.
+    Input: Trimmed FastQ files (scattered)
+    Output: Insert length histogram
+    '''
+    input:
+        R1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+        R2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
+    output:
+        join(workpath,"QC","{name}_insert_sizes.txt"),
+    priority: 2
+    params:
+        rname='pl:bbmerge',
+    threads: 4
+    envmodules: config['bin'][pfamily]['tool_versions']['BBTOOLSVER']
+    container: "docker://nciccbr/ccbr_bbtools_38.87:v0.0.1"
+    shell: """
+    bbtools bbmerge-auto in1={input.R1} in2={input.R2} \
+        ihist={output} k=62 extend2=200 rem ecct -Xmx32G
+    """
+
+
 rule fastq_screen:
     input:
         file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
