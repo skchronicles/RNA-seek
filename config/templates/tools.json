@@ -2,6 +2,7 @@
 	"bin": {
 		"rnaseq": {
 			"tool_versions": {
+				"BBTOOLSVER": "bbtools/38.87",
 				"BOWTIE2VER": "bowtie/2-2.3.4",
 				"BEDTOOLSVER": "bedtools/2.29.2",
 				"BWAVER": "bwa/0.7.17",
