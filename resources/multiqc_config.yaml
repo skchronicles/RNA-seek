@@ -15,14 +15,7 @@ module_order:
         path_filters:
             - '*_fastqc.zip' 
     - 'cutadapt'
-#    - 'fastqc':
-#        name: 'FastQC (trimmed data)'
-#        anchor: 'after'
-#        info: 'This section of the report shows FastQC results after adapter trimming.'
-#        path_filters: 
-#            - '*.trim_fastqc.zip'
     - 'trimmomatic'
-    - 'skewer'
 # Alignment tool stats
     - 'bismark'
     - 'hicup'
@@ -37,9 +30,7 @@ module_order:
     - 'preseq'
     - 'rsem'
     - 'snpeff'
-    - 'qualimap':
-        path_filters:
-            - insert_size_histogram.txt
+    - 'qualimap'
     - 'bcftools'
     - 'featureCounts'
     - 'methylQA'
@@ -50,6 +41,7 @@ module_order:
     - 'samtools'
     - 'bamtools'
 
+# Example of adding a comment
 #section_comments:
 #    featurecounts: 'This comment is for a module header, but should still work'
 #    star_alignments: 'This new way of commenting above sections is **awesome**!'
