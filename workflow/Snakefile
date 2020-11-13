@@ -80,6 +80,7 @@ if paired_end:
             # RSeQC
             expand(join(workpath,rseqc_dir,"{name}.strand.info"),name=samples),
             expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
+            expand(join(workpath,rseqc_dir,"{name}.inner_distance_freq.txt"),name=samples),
 
             # RSEM merge and counts
             expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),

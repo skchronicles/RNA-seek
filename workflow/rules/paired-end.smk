@@ -358,6 +358,23 @@ rule rsem:
     """
 
 
+rule inner_distance:
+    input:
+        bam=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
+    output:
+        out1=join(workpath,rseqc_dir,"{name}.inner_distance_freq.txt"),
+    params:
+        prefix=join(workpath,rseqc_dir,"{name}"),
+        genemodel=config['references'][pfamily]['BEDREF'],
+        rname="pl:inner_distance",
+    envmodules: config['bin'][pfamily]['tool_versions']['RSEQCVER'],
+    container: "docker://nciccbr/ccbr_rseqc_3.0.0:v032219"
+    shell: """
+    inner_distance.py -i {input.bam} -r {params.genemodel} \
+        -k 10000000 -o {params.prefix}
+    """
+
+
 rule bam2bw_rnaseq_pe:
     input:
         bam=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
