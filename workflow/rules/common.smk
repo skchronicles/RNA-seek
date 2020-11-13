@@ -47,12 +47,12 @@ rule picard:
     container: "docker://nciccbr/ccbr_picard:v0.0.1"
     shell: """
     java -Xmx110g  -XX:ParallelGCThreads=5 -jar ${{PICARDJARPATH}}/picard.jar AddOrReplaceReadGroups \
-    I={input.file1} O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
-    TMP_DIR=/lscratch/$SLURM_JOBID RGID=id RGLB=library RGPL=illumina RGPU=machine RGSM=sample;
+        I={input.file1} O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
+        TMP_DIR=/lscratch/$SLURM_JOBID RGID=id RGLB=library RGPL=illumina RGPU=machine RGSM=sample;
     java -Xmx110g -XX:ParallelGCThreads=5 -jar ${{PICARDJARPATH}}/picard.jar MarkDuplicates \
-    I=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
-    O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam \
-    TMP_DIR=/lscratch/$SLURM_JOBID CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT METRICS_FILE={output.outstar3};
+        I=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
+        O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam \
+        TMP_DIR=/lscratch/$SLURM_JOBID CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT METRICS_FILE={output.outstar3};
     mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam {output.outstar2};
     mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bai {output.outstar2b};
     sed -i 's/MarkDuplicates/picard.sam.MarkDuplicates/g' {output.outstar3};
@@ -92,10 +92,10 @@ rule stats:
     container: "docker://nciccbr/ccbr_rstat:v0.0.1"
     shell: """
     java -Xmx110g -jar ${{PICARDJARPATH}}/picard.jar CollectRnaSeqMetrics \
-    REF_FLAT={params.refflat} I={input.file1} O={output.outstar1} \
-    RIBOSOMAL_INTERVALS={params.rrnalist} \
-    STRAND_SPECIFICITY=SECOND_READ_TRANSCRIPTION_STRAND \
-    TMP_DIR=/lscratch/$SLURM_JOBID  VALIDATION_STRINGENCY=SILENT;
+        REF_FLAT={params.refflat} I={input.file1} O={output.outstar1} \
+        RIBOSOMAL_INTERVALS={params.rrnalist} \
+        STRAND_SPECIFICITY=SECOND_READ_TRANSCRIPTION_STRAND \
+        TMP_DIR=/lscratch/$SLURM_JOBID  VALIDATION_STRINGENCY=SILENT;
     sed -i 's/CollectRnaSeqMetrics/picard.analysis.CollectRnaSeqMetrics/g' {output.outstar1}
     samtools flagstat {input.file1} > {output.outstar2};
     python3 {params.statscript} {input.file1} >> {output.outstar2}
