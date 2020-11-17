@@ -1,4 +1,6 @@
+from snakemake.workflow import workflow as wf_api
 from snakemake.utils import R
+from scripts.common import provided
 from os.path import join
 from os import listdir
 import os, sys
@@ -35,6 +37,10 @@ if paired_end:
         params:
             batch='--time=168:00:00',
         input:
+            # FastQValidator
+            expand(join(workpath,"rawQC","{name}.validated.R1.fastq.log"), name=provided(samples, wf_api.use_singularity)),
+            expand(join(workpath,"rawQC","{name}.validated.R2.fastq.log"), name=provided(samples, wf_api.use_singularity)),
+
             # FastQC (before and after trimming)
             expand(join(workpath,"rawQC","{name}.R1_fastqc.zip"), name=samples),
             expand(join(workpath,"rawQC","{name}.R2_fastqc.zip"), name=samples),
@@ -102,6 +108,9 @@ elif not paired_end:
     rule all:
         params: batch='--time=168:00:00'
         input:
+            # FastQValidator
+            expand(join(workpath,"rawQC","{name}.validated.R1.fastq.log"), name=provided(samples, wf_api.use_singularity)),
+
             # FastQC (before and after trimming)
             expand(join(workpath,"rawQC","{name}.R1_fastqc.zip"), name=samples),
             expand(join(workpath,"QC","{name}.R1.trim_fastqc.zip"), name=samples),

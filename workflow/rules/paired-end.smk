@@ -1,6 +1,32 @@
 # Paired-end snakemake rules imported in the main Snakefile.
 
 # Pre Alignment Rules
+rule validator:
+    '''
+    Validates FastQ files to ensure they are not corrupted or incomplete prior
+    to running the entire workflow. This rule will only run if the --use-singularity
+    flag is provided to snakemake.
+    Input: Raw FastQ files
+    Output: Log file containing any warnings or errors about evaluated FastQ file
+    '''
+    input:
+        R1=join(workpath,"{name}.R1.fastq.gz"),
+        R2=join(workpath,"{name}.R2.fastq.gz"),
+    output:
+        out1=join(workpath,"rawQC","{name}.validated.R1.fastq.log"),
+        out2=join(workpath,"rawQC","{name}.validated.R2.fastq.log"),
+    priority: 2
+    params:
+        rname='pl:validator',
+        outdir=join(workpath,"rawQC"),
+    container: "docker://nciccbr/ccbr_fastqvalidator:v0.1.0"
+    shell: """
+    mkdir -p {params.outdir}
+    fastQValidator --file {input.R1} > {output.out1}
+    fastQValidator --file {input.R2} > {output.out2}
+    """
+
+
 rule rawfastqc:
     input:
         expand(join(workpath,"{name}.R1.fastq.gz"), name=samples),
