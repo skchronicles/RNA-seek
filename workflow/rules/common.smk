@@ -1,34 +1,9 @@
 from snakemake.utils import validate
+from scripts.common import abstract_location
 
-# this container defines the underlying OS for each job when using the workflow
+# This container defines the underlying OS for each job when using the workflow
 # with --use-conda --use-singularity
 container: "docker://continuumio/miniconda3"
-
-# Helper functions
-def check_existence(filename):
-    """Checks if file exists on filesystem
-    :param filename <str>: Name of file to check
-    """
-    if not os.path.exists(filename):
-        sys.exit("File: {} does not exists!".format(filename))
-
-
-def check_readaccess(filename):
-    """Checks permissions to see if user can read a file
-    :param filename <str>: Name of file to check
-    """
-    check_existence(filename)
-    if not os.access(filename,os.R_OK):
-        sys.exit("File: {} exists, but user cannot read from file due to permissions!".format(filename))
-
-
-def check_writeaccess(filename):
-    """Checks permissions to see if user can write to a file
-    :param filename <str>: Name of file to check
-    """
-    check_existence(filename)
-    if not os.access(filename,os.W_OK):
-        sys.exit("File: {} exists, but user cannot write to file due to permissions!".format(filename))
 
 
 # Rules common to RNA-seq pipeline, irrespective if the data is single-end or paired-end
@@ -148,6 +123,7 @@ rule rnaseq_multiqc:
         expand(join(workpath,preseq_dir,"{name}.ccurve"),name=samples),
         expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
         expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
+        qcconfig=abstract_location(config['bin'][pfamily]['CONFMULTIQC']),
     output:
         join(workpath,"Reports","multiqc_report.html"),
         join(workpath,"Reports", "multiqc_matrix.tsv"),
@@ -156,12 +132,11 @@ rule rnaseq_multiqc:
         workdir=join(workpath),
         outdir=join(workpath,"Reports"),
         logfiles=join(workpath,"Reports","multiqc_data","*.txt"),
-        qcconfig=config['bin'][pfamily]['CONFMULTIQC'],
         pyparser=join("workflow", "scripts", "pyparser.py"),
     threads: 2
     envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
     container: "docker://nciccbr/ccbr_multiqc_1.9:v0.0.1"
     shell: """
-    multiqc -f -c {params.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
+    multiqc -f -c {input.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
     python3 {params.pyparser} {params.logfiles} {params.outdir}
     """
