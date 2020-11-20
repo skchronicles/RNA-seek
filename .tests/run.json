@@ -290,6 +290,7 @@
                 "WINDOWSIZE": 4
             },
             "tool_versions": {
+                "ARRIBAVER": "arriba/1.2.0",
                 "BBTOOLSVER": "bbtools/38.87",
                 "BOWTIE2VER": "bowtie/2-2.3.4",
                 "BEDTOOLSVER": "bedtools/2.29.2",
@@ -768,6 +769,7 @@
             "ANNOTATEISOFORMS": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/annotate.isoforms.txt",
             "AVIASET": "mm10",
             "BEDREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/genes.ref.bed",
+            "FUSIONBLACKLIST": "s3://nciccbr/Resources/RNA-seq/blacklist_mm10_GRCm38_v2.0.0.tsv.gz",
             "EXONS": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_UCSCexons.bed",
             "FASTAWITHADAPTERSETC": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters_new.fa",
             "FASTQ_SCREEN_CONFIG": "/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf",
