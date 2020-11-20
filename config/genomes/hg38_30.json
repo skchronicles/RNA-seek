@@ -21,7 +21,8 @@
             "STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/hg38_30/STAR/2.7.0f/genes-",
             "ANNOTATEISOFORMS": "/data/CCBR_Pipeliner/db/PipeDB/Indices/hg38_30/annotate.isoforms.txt",
             "trimmomatic.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/adapters2.fa",
-            "GENOMEFILE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/hg38_30/ref.fa"
+            "GENOMEFILE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/hg38_30/ref.fa",
+            "FUSIONBLACKLIST": "s3://nciccbr/Resources/RNA-seq/blacklist_hg38_GRCh38_v2.0.0.tsv.gz"
         }
     }
 }
