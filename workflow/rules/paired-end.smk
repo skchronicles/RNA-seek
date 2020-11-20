@@ -1,4 +1,5 @@
 # Paired-end snakemake rules imported in the main Snakefile.
+from scripts.common import abstract_location
 
 # Pre Alignment Rules
 rule validator:
@@ -333,6 +334,66 @@ rule star2p:
         --peOverlapNbasesMin 10
     mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
     mv {params.prefix}.Log.final.out {workpath}/{log_dir}
+    """
+
+# TODOs:
+# Add profile for Arriba to cluster config (threads) are getting set to default
+# Create Docker Image for arriba
+#  - arriba is not in PATH
+#  - python in not in docker image
+# Generate new indices for STAR/2.7.6a
+#  - Not compatible with 2.7.0f
+#  - EXITING because of FATAL ERROR: Genome version: 2.7.0d is INCOMPATIBLE with running STAR version: 2.7.6a
+rule arriba:
+    input:
+        R1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+        R2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
+        qcrl=join(workpath,"QC","readlength.txt"),
+        blacklist=abstract_location(config['references'][pfamily]['FUSIONBLACKLIST']),
+    output:
+        fusions=join(workpath,"fusions","{name}_fusions.tsv"),
+        discarded=join(workpath,"fusions","{name}_fusions.discarded.tsv"),
+    params:
+        rname='pl:arriba',
+        prefix=join(workpath, star_dir, "{name}.p2"),
+        best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
+        # Exposed Parameters: modify config/genomes/{genome}.json to change default
+        stardir=config['references'][pfamily]['STARDIR'],
+        gtffile=config['references'][pfamily]['GTFFILE'],
+        reffa=config['references'][pfamily]['GENOME']
+    threads: 32
+    envmodules: config['bin'][pfamily]['tool_versions']['ARRIBAVER']
+    container: "docker://uhrigs/arriba:2.0.0"
+    shell: """
+    readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
+    STAR --runThreadN {threads} \
+        --genomeDir {params.stardir}${{readlength}} \
+        --genomeLoad NoSharedMemory \
+        --readFilesIn {input.R1} {input.R2} \
+        --readFilesCommand zcat \
+        --outStd BAM_Unsorted \
+        --outSAMtype BAM Unsorted \
+        --outSAMunmapped Within \
+        --outBAMcompression 0 \
+        --outFilterMultimapNmax 50 \
+        --peOverlapNbasesMin 10 \
+        --alignSplicedMateMapLminOverLmate 0.5 \
+        --alignSJstitchMismatchNmax 5 -1 5 5 \
+        --chimSegmentMin 10 \
+        --chimOutType WithinBAM HardClip \
+        --chimJunctionOverhangMin 10 \
+        --chimScoreDropMax 30 \
+        --chimScoreJunctionNonGTAG 0 \
+        --chimScoreSeparation 1 \
+        --chimSegmentReadGapMax 3 \
+        --chimMultimapNmax 50 \
+        |
+    arriba -x /dev/stdin \
+        -o {output.fusions} \
+        -O {output.discarded} \
+        -a {params.reffa} \
+        -g {params.gtffile} \
+        -b {input.blacklist} \
     """
 
 
