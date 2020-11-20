@@ -2,6 +2,7 @@
 	"bin": {
 		"rnaseq": {
 			"tool_versions": {
+				"ARRIBAVER": "arriba/1.2.0",
 				"BBTOOLSVER": "bbtools/38.87",
 				"BOWTIE2VER": "bowtie/2-2.3.4",
 				"BEDTOOLSVER": "bedtools/2.29.2",
@@ -43,7 +44,7 @@
 			"ALIGNMATESGAPMAX": 1000000,
 			"ALIGNSJDBOVERHANGMIN": 1,
 			"ALIGNSJOVERHANGMIN": 8,
-			"CONFMULTIQC": "resources/multiqc_config.yaml",
+			"CONFMULTIQC": "s3://nciccbr/Resources/RNA-seq/multiqc_config.yaml",
 			"FILTERINTRONMOTIFS": "RemoveNoncanonicalUnannotated",
 			"FILTERMISMATCHNMAX": 999,
 			"FILTERMISMATCHNOVERLMAX": 0.3,
