@@ -68,6 +68,9 @@ if paired_end:
             # STAR
             expand(join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),name=samples),
 
+            # Arriba
+            expand(join(workpath,"fusions","{name}_fusions.tsv"),name=samples),
+
             # Bam to stranded bigwigs
             expand(join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),name=samples),
             expand(join(workpath,bams_dir,"{name}.fwd.bw"),name=samples),
