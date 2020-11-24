@@ -767,6 +767,7 @@
             "ALVIEWGENOME": "mm10",
             "ANNOTATE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/annotate.genes.txt",
             "ANNOTATEISOFORMS": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/annotate.isoforms.txt",
+            "ARRIBA_STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/GENOME_REFs/mm10_major_chrs/STAR/2.7.6a/",
             "AVIASET": "mm10",
             "BEDREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/genes.ref.bed",
             "FUSIONBLACKLIST": "s3://nciccbr/Resources/RNA-seq/blacklist_mm10_GRCm38_v2.0.0.tsv.gz",
