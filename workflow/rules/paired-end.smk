@@ -176,7 +176,7 @@ rule kraken_pe:
         config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
     container: "docker://nciccbr/ccbr_kraken_v2.1.1:v0.0.1"
     shell: """
-    # Copy kraken2 db to /lscratch or /dev/shm (RAM-disk) to reduce filesytem strain
+    # Copy kraken2 db to /lscratch or /dev/shm (RAM-disk) to reduce filesystem strain
     cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
     kdb_base=$(basename {params.bacdb})
     kraken2 --db /lscratch/$SLURM_JOBID/${{kdb_base}} \
@@ -337,13 +337,7 @@ rule star2p:
     """
 
 # TODOs:
-# Add profile for Arriba to cluster config (threads) are getting set to default
-# Create Docker Image for arriba
-#  - arriba is not in PATH
-#  - python in not in docker image
-# Generate new indices for STAR/2.7.6a
-#  - Not compatible with 2.7.0f
-#  - EXITING because of FATAL ERROR: Genome version: 2.7.0d is INCOMPATIBLE with running STAR version: 2.7.6a
+# Add profile for Arriba to cluster config (threads) so threads don't get set to default
 rule arriba:
     input:
         R1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
@@ -355,19 +349,23 @@ rule arriba:
         discarded=join(workpath,"fusions","{name}_fusions.discarded.tsv"),
     params:
         rname='pl:arriba',
-        prefix=join(workpath, star_dir, "{name}.p2"),
-        best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
+        prefix=join(workpath, "fusions", "{name}.p2"),
         # Exposed Parameters: modify config/genomes/{genome}.json to change default
-        stardir=config['references'][pfamily]['STARDIR'],
+        stardir=config['references'][pfamily]['ARRIBA_STARDIR'],
         gtffile=config['references'][pfamily]['GTFFILE'],
         reffa=config['references'][pfamily]['GENOME']
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['ARRIBAVER']
-    container: "docker://uhrigs/arriba:2.0.0"
+    container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
     shell: """
-    readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
+    # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+    readlength=$(zcat {input.R1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+    echo "sjdbOverhang for STAR: ${{readlength}}"
+
     STAR --runThreadN {threads} \
-        --genomeDir {params.stardir}${{readlength}} \
+        --sjdbGTFfile {params.gtffile} \
+        --sjdbOverhang ${{readlength}} \
+        --genomeDir {params.stardir} \
         --genomeLoad NoSharedMemory \
         --readFilesIn {input.R1} {input.R2} \
         --readFilesCommand zcat \
@@ -387,6 +385,9 @@ rule arriba:
         --chimScoreSeparation 1 \
         --chimSegmentReadGapMax 3 \
         --chimMultimapNmax 50 \
+        --twopassMode Basic \
+        --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+        --outFileNamePrefix {params.prefix}. \
         |
     arriba -x /dev/stdin \
         -o {output.fusions} \
