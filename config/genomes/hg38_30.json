@@ -1,6 +1,7 @@
 {
     "references": {
         "rnaseq": {
+            "ARRIBA_STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/GENOME_REFs/hg38_major_chrs/STAR/2.7.6a/",
             "RRNALIST": "/data/CCBR_Pipeliner/db/PipeDB/Indices/hg38_30/hg38.rRNA_interval_list",
             "ORGANISM": "HUMAN",
             "KARYOBEDS": "/data/CCBR_Pipeliner/db/PipeDB/Indices/hg38_30/karyobeds/",
