@@ -1,0 +1,197 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import sys, os
+
+
+def exists(testpath):
+    """Checks if file exists on the local filesystem.
+    :param parser <argparse.ArgumentParser() object>: argparse parser object
+    :param testpath <str>: Name of file/directory to check
+    :return does_exist <boolean>: True when file/directory exists, False when file/directory does not exist
+    """
+    does_exist = True
+    if not os.path.exists(testpath):
+        does_exist = False # File or directory does not exist on the filesystem
+
+    return does_exist
+
+
+def permissions(parser, filename, *args, **kwargs):
+    """Checks permissions using os.access() to see the user is authorized to access a file/directory.
+    Check for existence, readability, writability and executability via:
+    os.F_OK: Tests existence
+    os.R_OK: Tests readability
+    os.W_OK: Tests writability
+    os.X_OK: Tests executility
+    :param parser <argparse.ArgumentParser() object>: argparse parser object
+    :param filename <str>: Name of file to check
+    :return filename <str>: if file exists and user can read from file
+    """
+    if not exists(filename):
+        parser.error("File '{}' does not exists! Failed to provided vaild input.".format(filename))
+
+    if not os.access(filename, *args, **kwargs):
+        parser.error("File '{}' exists, but cannot read file due to permissions!".format(filename))
+
+    return filename
+
+
+def initialize():
+    """Initialize the output directory and copy over required pipeline resources
+    """
+    pass
+
+
+def setup():
+    """Setup the pipeline for execution and creates config file from templates
+    """
+    pass
+
+
+def dryrun():
+    """Dryruns the pipeline to ensure there are no errors prior to runnning.
+    """
+    pass
+
+
+def run(sub_args):
+    """Initialize, setup and run the RNA-seek pipeline.
+    Calls initialize() to create output directory and copy over pipeline resources,
+    setup() to create the pipeline config file, dryrun() to ensure their are no issues
+    before running the pipeline, and finally run() to execute the Snakemake workflow.
+    :param sub_args <parser.parse_args() object>: Parsed arguments for run sub-command
+    """
+    print(sub_args)
+
+
+def unlock(sub_args):
+    """Unlocks a previous runs output directory. If snakemake fails ungracefully,
+    it maybe required to unlock the working directory before proceeding again.
+    This is rare but it does occasionally happen.
+    :param sub_args <parser.parse_args() object>: Parsed arguments for unlock sub-command
+    """
+    print(sub_args)
+
+
+def parsed_arguments():
+    """Parses user-provided command-line arguments. Requires argparse package.
+    """
+    import argparse
+
+    # Create a top-level parser
+    parser = argparse.ArgumentParser(description = 'RNA-seek: \
+                                                    a highly-reproducible RNA-seq pipeline')
+    # Create sub-command parser
+    subparsers = parser.add_subparsers()
+
+    # Options for the "run" sub-command
+    subparser_run = subparsers.add_parser('run',
+                                            help = 'Run the RNA-seek pipeline with your FastQ files.',
+                                            description = 'This section explains \
+                                                            concepts and options for \
+                                                            running the RNA-seek pipeline.\
+                                                            Visit "https://github.com/skchronicles/RNA-seek" \
+                                                            for more information.')
+    # Input FastQ files
+    subparser_run.add_argument('--input',
+                                # Check if the file exists and if it is readable
+                                type = lambda file: permissions(parser, file, os.R_OK),
+                                required = True,
+                                nargs = '+',
+                                help = '<Required> Input FastQ file(s) to process. \
+                                        One or multiple FastQ files can be provided. \
+                                        The pipeline supports single-end and pair-end RNA-seq data.\
+                                        Example: --input .tests/*.R?.fastq.gz')
+    # Output Directory (analysis working directory)
+    subparser_run.add_argument('--output',
+                                type = str,
+                                required = True,
+                                help = '<Required> Path to an output directory. \
+                                        This location is where the pipeline will create all of \
+                                        its output files. If the user-provided working directory \
+                                        has not been initialized, it will automatically be created. \
+                                        Example: --output /scratch/$USER/RNA_hg38')
+    # Reference Genome (to dynamically select reference files)
+    subparser_run.add_argument('--genome',
+                                type = str,
+                                required = True,
+                                choices = ['hg38', 'mm10'],
+                                help = '<Required> Reference Genome. \
+                                        This is the reference genome or assembly to used for selecting \
+                                        reference files. The pipeline currently supports human and mouse data. \
+                                        Please select from one of the following options: hg38 or mm10. \
+                                        hg38 uses the following annotation: Gencode Release 30. \
+                                        mm10 uses the following annotation: Gencode Release M21. \
+                                        Please note: hg38 is a human reference genome and \
+                                        mm10 is a mouse reference genome. \
+                                        Example: --genome hg38')
+    # Execution Method (run locally on a compute node, submit to SLURM job scheduler, etc.)
+    subparser_run.add_argument('--mode',
+                                type = str,
+                                required = False,
+                                default = "local",
+                                choices = ['local', 'slurm'],
+                                help = '<Optional> Execution Method [Default: local]. \
+                                        Defines the mode or method of execution. \
+                                        Vaild mode options include: local or slurm. \
+                                        local: uses local method of execution. \
+                                        local executions will run serially on compute \
+                                        instance. This is useful for testing, debugging, \
+                                        or when a users does not have access to a high \
+                                        performance computing environment. If this option is \
+                                        not provided, it will default to a local execution mode. \
+                                        slurm: uses slurm and singularity backend. \
+                                        The slurm execution method will submit jobs to a cluster. \
+                                        It is recommended running RNA-seek in this mode as execution will \
+                                        be significantly faster in a distributed environment. \
+                                        Example: --mode slurm')
+
+    # Dry-run (do not execute the workflow)
+    subparser_run.add_argument('--dry-run',
+                                action = 'store_true',
+                                required = False,
+                                default = False,
+                                help = '<Optional> Do not execute anything, \
+                                and only display what steps in the pipeline remain or will \
+                                be run [Default: False].')
+
+    # Options for the "run" sub-command
+    subparser_unlock = subparsers.add_parser('unlock',
+                                            help = 'Unlocks a previous runs output directory.',
+                                            description = 'If the pipeline fails ungracefully, it maybe \
+                                                            required to unlock the working directory before \
+                                                            proceeding again. \
+                                                            Please verify that the pipeline is not running before \
+                                                            running this command. If the pipeline is still running, \
+                                                            the workflow manager will report the working directory \
+                                                            is locked. This is normal behavior. Do NOT run this command \
+                                                            if the pipeline is still running.')
+    # Output Directory (analysis working directory)
+    subparser_unlock.add_argument('--output',
+                                type = str,
+                                required = True,
+                                help = "<Required> Path to a previous run's output directory to unlock. \
+                                        This will remove a lock on the working directory. \
+                                        Please verify that the pipeline is not running before \
+                                        running this command. \
+                                        Example: --output /scratch/$USER/RNA_hg38")
+
+
+    # Define run() as handler for sub-parser
+    subparser_run.set_defaults(func = run)
+    subparser_unlock.set_defaults(func = unlock)
+
+    # Parse command-line args
+    args = parser.parse_args()
+    return args
+
+def main():
+
+    # Collect args for sub-command
+    args = parsed_arguments()
+    # Mediator method to call sub-command's set handler function
+    args.func(args)
+
+
+if __name__ == '__main__':
+    main()
