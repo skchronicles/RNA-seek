@@ -19,10 +19,8 @@ def exists(testpath):
 def permissions(parser, filename, *args, **kwargs):
     """Checks permissions using os.access() to see the user is authorized to access a file/directory.
     Check for existence, readability, writability and executability via:
-    os.F_OK: Tests existence
-    os.R_OK: Tests readability
-    os.W_OK: Tests writability
-    os.X_OK: Tests executility
+    os.F_OK (tests existence),    os.R_OK: (tests readability),
+    os.W_OK: (tests writability), os.X_OK: (Tests executility).
     :param parser <argparse.ArgumentParser() object>: argparse parser object
     :param filename <str>: Name of file to check
     :return filename <str>: if file exists and user can read from file
@@ -36,19 +34,56 @@ def permissions(parser, filename, *args, **kwargs):
     return filename
 
 
-def initialize():
-    """Initialize the output directory and copy over required pipeline resources
+
+def _cp_r_safe_(source, target, resources = []):
+    """Private function: Given a list paths it will recursively copy each to the
+    target location. If a target path already exists, it will NOT over-write the
+    existing paths data.
+    :param resources <list[str]>: List of paths to copy over to target location
+    :params source <str>: Add a prefix PATH to each resource
+    :param target <str>: Target path to copy templates and required resources
     """
-    pass
+    from shutil import copytree
+
+    for resource in resources:
+        destination = os.path.join(target, resource)
+        if not exists(destination):
+            # Required resources do not exist
+            copytree(os.path.join(source, resource), destination)
 
 
-def setup():
+def initialize(sub_args, repo_path, output_path):
+    """Initialize the output directory and copy over required pipeline resources
+    :param repo_path <str>: Path to RNA-seek source code and its templates
+    :param output_path <str>: Pipeline output path, created if it does not exist
+    """
+    if not exists(output_path):
+        # Pipleine output directory does not exist on filesystem
+        os.makedirs(output_path)
+    elif exists(output_path) and os.path.isfile(output_path):
+        # Provided Path for pipleine output directory exists as file
+        raise OSError("""\n\tFatal: Failed to create provided pipeline output directory!
+        User provided --ouput PATH already exists on the filesystem as a file.
+        Please run {} again with a different --output PATH.
+        """.format(sys.argv[0])
+        )
+
+    # Copy over templates are other required resources
+    required_resources = ['workflow', 'resources', 'config']
+
+    _cp_r_safe_(source = repo_path, target = output_path, resources = required_resources)
+
+
+
+
+
+def setup(sub_args):
     """Setup the pipeline for execution and creates config file from templates
     """
     pass
 
 
-def dryrun():
+def dryrun(sub_args):
     """Dryruns the pipeline to ensure there are no errors prior to runnning.
     """
     pass
@@ -62,6 +97,13 @@ def run(sub_args):
     :param sub_args <parser.parse_args() object>: Parsed arguments for run sub-command
     """
     print(sub_args)
+
+    # Get PATH to RNA-seek git repository for copying over pipeline resources
+    git_repo = os.path.dirname(os.path.abspath(__file__))
+
+    # Initialize working directory, copy over required pipeline resources
+    initialize(sub_args, repo_path = git_repo, output_path = sub_args.output)
+
 
 
 def unlock(sub_args):
