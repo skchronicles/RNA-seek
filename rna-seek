@@ -1,13 +1,31 @@
 #!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
+"""RNA-seek: an highly reproducible and portable RNA-seq pipeline
+About:
+    This is the main entry for the RNA-seek pipeline.
+USAGE:
+	$ rna-seek <run|unlock> [OPTIONS]
+Example:
+    $ rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/RNA_hg38 --genome hg38 --mode local
+"""
+
 from __future__ import print_function
 import sys, os
+
+__author__ = 'Skyler Kuhn'
+__version__ = 'v0.0.1'
+__email__ = 'kuhnsa@nih.gov'
 
 
 def exists(testpath):
     """Checks if file exists on the local filesystem.
-    :param parser <argparse.ArgumentParser() object>: argparse parser object
-    :param testpath <str>: Name of file/directory to check
-    :return does_exist <boolean>: True when file/directory exists, False when file/directory does not exist
+    @param parser <argparse.ArgumentParser() object>:
+        argparse parser object
+    @param testpath <str>:
+        Name of file/directory to check
+    @return does_exist <boolean>:
+        True when file/directory exists, False when file/directory does not exist
     """
     does_exist = True
     if not os.path.exists(testpath):
@@ -17,13 +35,15 @@ def exists(testpath):
 
 
 def permissions(parser, filename, *args, **kwargs):
-    """Checks permissions using os.access() to see the user is authorized to access a file/directory.
-    Check for existence, readability, writability and executability via:
-    os.F_OK (tests existence),    os.R_OK: (tests readability),
-    os.W_OK: (tests writability), os.X_OK: (Tests executility).
-    :param parser <argparse.ArgumentParser() object>: argparse parser object
-    :param filename <str>: Name of file to check
-    :return filename <str>: if file exists and user can read from file
+    """Checks permissions using os.access() to see the user is authorized to access
+    a file/directory. Checks for existence, readability, writability and executability via:
+    os.F_OK (tests existence), os.R_OK (tests read), os.W_OK (tests write), os.X_OK (tests exec).
+    @param parser <argparse.ArgumentParser() object>:
+        Argparse parser object
+    @param filename <str>:
+        Name of file to check
+    @return filename <str>:
+        If file exists and user can read from file
     """
     if not exists(filename):
         parser.error("File '{}' does not exists! Failed to provided vaild input.".format(filename))
@@ -34,14 +54,16 @@ def permissions(parser, filename, *args, **kwargs):
     return filename
 
 
-
 def _cp_r_safe_(source, target, resources = []):
     """Private function: Given a list paths it will recursively copy each to the
     target location. If a target path already exists, it will NOT over-write the
     existing paths data.
-    :param resources <list[str]>: List of paths to copy over to target location
-    :params source <str>: Add a prefix PATH to each resource
-    :param target <str>: Target path to copy templates and required resources
+    @param resources <list[str]>:
+        List of paths to copy over to target location
+    @params source <str>:
+        Add a prefix PATH to each resource
+    @param target <str>:
+        Target path to copy templates and required resources
     """
     from shutil import copytree
 
@@ -52,14 +74,106 @@ def _cp_r_safe_(source, target, resources = []):
             copytree(os.path.join(source, resource), destination)
 
 
+def rename(filename):
+    """Dynamically renames FastQ file to have one of the following extensions: *.R1.fastq.gz, *.R2.fastq.gz
+    To automatically rename the fastq files, a few assumptions are made. If the extension of the
+    FastQ file cannot be infered, an exception is raised telling the user to fix the filename
+    of the fastq files.
+    @param filename <str>:
+        Original name of file to be renamed
+    @return filename <str>:
+        A renamed FastQ filename
+    """
+    import re
+
+    # Covers common extensions from SF, SRA, EBI, TCGA, and external sequencing providers
+    # key = regex to match string and value = how it will be renamed
+    extensions = {
+        # Matches: _R[12]_fastq.gz, _R[12].fastq.gz, _R[12]_fq.gz, etc.
+        ".R1.f(ast)?q.gz$": ".R1.fastq.gz",
+        ".R2.f(ast)?q.gz$": ".R2.fastq.gz",
+        # Matches: _R[12]_001_fastq_gz, _R[12].001.fastq.gz, _R[12]_001.fq.gz, etc.
+        # Capture lane information as named group
+        ".R1.(?P<lane>...).f(ast)?q.gz$": ".R1.fastq.gz",
+        ".R2.(?P<lane>...).f(ast)?q.gz$": ".R2.fastq.gz",
+        # Matches: _[12].fastq.gz, _[12].fq.gz, _[12]_fastq_gz, etc.
+        "_1.f(ast)?q.gz$": ".R1.fastq.gz",
+        "_2.f(ast)?q.gz$": ".R2.fastq.gz"
+    }
+
+    if filename.endswith('.R1.fastq.gz') or filename.endswith('.R2.fastq.gz'):
+        # Filename is already in the correct format
+        return filename
+
+    converted = False
+    for regex, new_ext in extensions.items():
+        matched = re.search(regex, filename)
+        if matched:
+            # regex matches with a pattern in extensions
+            converted = True
+            # Try to get substring for named group lane, retain this in new file extension
+            # Come back to this later, I am not sure if this is necessary
+            # That string maybe static (i.e. always the same)
+            # https://support.illumina.com/help/BaseSpace_OLH_009008/Content/Source/Informatics/BS/NamingConvention_FASTQ-files-swBS.htm#
+            try: new_ext = "_{}{}".format(matched.group('lane'), new_ext)
+            except IndexError: pass # Does not contain the named group lane
+
+            filename = re.sub(regex, new_ext, filename)
+            break # only rename once
+
+    if not converted:
+        raise NameError("""\n\tFatal: Failed to rename provided input '{}'!
+        Cannot determine the extension of the user provided input file.
+        Please rename the file list above before trying again.
+        Here is example of acceptable input file extensions:
+          sampleName.R1.fastq.gz      sampleName.R2.fastq.gz
+          sampleName_R1_001.fastq.gz  sampleName_R1_001.fastq.gz
+          sampleName_1.fastq.gz       sampleName_2.fastq.gz
+        Please also check that your input files are gzipped?
+        If they are not, please gzip them before proceeding again.
+        """.format(filename, sys.argv[0])
+        )
+
+    return filename
+
+
+def _sym_safe_(input_data, target):
+    """Creates re-named symlinks for each FastQ file provided
+    as input. If a symlink already exists, it will not try to create a new symlink.
+    @param input_data List[<str>]:
+        List of input files to symlink to target location
+    @param target <str>:
+        Target path to copy templates and required resources
+    """
+    for file in input_data:
+        filename = os.path.basename(file)
+        renamed = os.path.join(target, rename(filename))
+
+        if not exists(renamed):
+            # Create a symlink if it does not already exist
+            os.symlink(file, renamed)
+
+
+
 def initialize(sub_args, repo_path, output_path):
-    """Initialize the output directory and copy over required pipeline resources
-    :param repo_path <str>: Path to RNA-seek source code and its templates
-    :param output_path <str>: Pipeline output path, created if it does not exist
+    """Initialize the output directory and copy over required pipeline resources.
+    If user provides a output directory path that already exists on the filesystem
+    as a file (small chance of happening but possible), a OSError is raised. If the
+    output directory PATh already EXISTS, it will not try to create the directory.
+    If a resource also already exists in the output directory (i.e. output/workflow),
+    it will not try to copy over that directory. In the future, it maybe worth adding
+    an optional cli arg called --force, that can modifiy this behavior.
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for run sub-command
+    @param repo_path <str>:
+        Path to RNA-seek source code and its templates
+    @param output_path <str>:
+        Pipeline output path, created if it does not exist
     """
     if not exists(output_path):
         # Pipleine output directory does not exist on filesystem
         os.makedirs(output_path)
+
     elif exists(output_path) and os.path.isfile(output_path):
         # Provided Path for pipleine output directory exists as file
         raise OSError("""\n\tFatal: Failed to create provided pipeline output directory!
@@ -72,9 +186,7 @@ def initialize(sub_args, repo_path, output_path):
     required_resources = ['workflow', 'resources', 'config']
 
     _cp_r_safe_(source = repo_path, target = output_path, resources = required_resources)
-
-
-
+    _sym_safe_(input_data = sub_args.input, target = output_path)
 
 
 def setup(sub_args):
@@ -94,7 +206,8 @@ def run(sub_args):
     Calls initialize() to create output directory and copy over pipeline resources,
     setup() to create the pipeline config file, dryrun() to ensure their are no issues
     before running the pipeline, and finally run() to execute the Snakemake workflow.
-    :param sub_args <parser.parse_args() object>: Parsed arguments for run sub-command
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for run sub-command
     """
     print(sub_args)
 
@@ -110,7 +223,8 @@ def unlock(sub_args):
     """Unlocks a previous runs output directory. If snakemake fails ungracefully,
     it maybe required to unlock the working directory before proceeding again.
     This is rare but it does occasionally happen.
-    :param sub_args <parser.parse_args() object>: Parsed arguments for unlock sub-command
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for unlock sub-command
     """
     print(sub_args)
 
@@ -231,6 +345,7 @@ def main():
 
     # Collect args for sub-command
     args = parsed_arguments()
+
     # Mediator method to call sub-command's set handler function
     args.func(args)
 
