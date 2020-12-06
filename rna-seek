@@ -7,11 +7,11 @@ About:
 USAGE:
 	$ rna-seek <run|unlock> [OPTIONS]
 Example:
-    $ rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/RNA_hg38 --genome hg38 --mode local
+    $ rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/RNA_hg38 --genome hg38_30 --mode local
 """
 
 from __future__ import print_function
-import sys, os
+import sys, os, json
 
 __author__ = 'Skyler Kuhn'
 __version__ = 'v0.0.1'
@@ -140,7 +140,7 @@ def rename(filename):
 def _sym_safe_(input_data, target):
     """Creates re-named symlinks for each FastQ file provided
     as input. If a symlink already exists, it will not try to create a new symlink.
-    @param input_data List[<str>]:
+    @param input_data <list[<str>]>:
         List of input files to symlink to target location
     @param target <str>:
         Target path to copy templates and required resources
@@ -184,15 +184,52 @@ def initialize(sub_args, repo_path, output_path):
 
     # Copy over templates are other required resources
     required_resources = ['workflow', 'resources', 'config']
-
     _cp_r_safe_(source = repo_path, target = output_path, resources = required_resources)
+
+    # Create renamed symlinks to rawdata
     _sym_safe_(input_data = sub_args.input, target = output_path)
 
 
-def setup(sub_args):
-    """Setup the pipeline for execution and creates config file from templates
+def join_jsons(templates):
+    """Joins multiple JSON files to into one data structure
+    Used to join multiple template JSON files to create a global config dictionary.
+    @params templates <list[str]>:
+        List of template JSON files to join together
+    @return aggregated <dict>:
+        Dictionary containing the contents of all the input JSON files
     """
-    pass
+    aggregated = {}
+
+    for file in templates:
+        with open(file, 'r') as fh:
+            aggregated.update(json.load(fh))
+
+    return aggregated
+
+
+def setup(sub_args, repo_path, output_path):
+    """Setup the pipeline for execution and creates config file from templates
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for run sub-command
+    @param repo_path <str>:
+        Path to RNA-seek source code and its templates
+    @param output_path <str>:
+        Pipeline output path, created if it does not exist
+    """
+
+    required = {
+        # Template for project-level information
+        "project": os.path.join('config','templates', 'project.json'),
+        # Template for genomic reference files
+        # User provided argument --genome is used to select the template
+        "genome": os.path.join('config','genomes', sub_args.genome + '.json'),
+        # Template for tool information
+        "tools": os.path.join('config','templates', 'tools.json'),
+    }
+
+    # Global config file for pipeline, config.json
+    config = join_jsons(required.values())
+    print(json.dumps(config, indent = 4, sort_keys=True))
 
 
 def dryrun(sub_args):
@@ -216,6 +253,9 @@ def run(sub_args):
 
     # Initialize working directory, copy over required pipeline resources
     initialize(sub_args, repo_path = git_repo, output_path = sub_args.output)
+
+    # Step pipeline for execution, create config.json config file from templates
+    setup(sub_args, repo_path = git_repo, output_path = sub_args.output)
 
 
 
@@ -271,16 +311,16 @@ def parsed_arguments():
     subparser_run.add_argument('--genome',
                                 type = str,
                                 required = True,
-                                choices = ['hg38', 'mm10'],
+                                choices = ['hg38_30', 'mm10_M21'],
                                 help = '<Required> Reference Genome. \
                                         This is the reference genome or assembly to used for selecting \
                                         reference files. The pipeline currently supports human and mouse data. \
-                                        Please select from one of the following options: hg38 or mm10. \
+                                        Please select from one of the following options: hg38_30 or mm10_M21. \
                                         hg38 uses the following annotation: Gencode Release 30. \
                                         mm10 uses the following annotation: Gencode Release M21. \
-                                        Please note: hg38 is a human reference genome and \
-                                        mm10 is a mouse reference genome. \
-                                        Example: --genome hg38')
+                                        Please note: hg38_30 is a human reference genome and \
+                                        mm10_M21 is a mouse reference genome. \
+                                        Example: --genome hg38_30')
     # Execution Method (run locally on a compute node, submit to SLURM job scheduler, etc.)
     subparser_run.add_argument('--mode',
                                 type = str,
