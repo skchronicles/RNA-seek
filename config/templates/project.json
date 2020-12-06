@@ -28,11 +28,11 @@
 		"pipehome": "",
 		"pipeline": "RNA-seek",
 		"poc": "",
-		"rgid": {}
-	},
-	"samples": {},
-	"units": {},
-	"username": "",
-	"version": "",
-	"workpath": ""
+		"rgid": {},
+		"samples": {},
+		"units": {},
+		"username": "",
+		"version": "",
+		"workpath": ""
+	}
 }
