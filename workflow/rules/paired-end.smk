@@ -52,8 +52,10 @@ rule trim_pe:
         file1=join(workpath,"{name}.R1."+config['project']['filetype']),
         file2=join(workpath,"{name}.R2."+config['project']['filetype']),
     output:
-        out1=temp(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz")),
-        out2=temp(join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"))
+        #out1=temp(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz")),
+        #out2=temp(join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"))
+        out1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+        out2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz")
     params:
         rname='pl:trim_pe',
         # Exposed Parameters: modify config/templates/tools.json to change defaults
@@ -336,21 +338,24 @@ rule star2p:
     mv {params.prefix}.Log.final.out {workpath}/{log_dir}
     """
 
-# TODOs:
-# Add profile for Arriba to cluster config (threads) so threads don't get set to default
+
 rule arriba:
     input:
         R1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         R2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
-        qcrl=join(workpath,"QC","readlength.txt"),
         blacklist=abstract_location(config['references'][pfamily]['FUSIONBLACKLIST']),
+        cytoband=abstract_location(config['references'][pfamily]['FUSIONCYTOBAND']),
+        protdomain=abstract_location(config['references'][pfamily]['FUSIONPROTDOMAIN']),
     output:
         fusions=join(workpath,"fusions","{name}_fusions.tsv"),
         discarded=join(workpath,"fusions","{name}_fusions.discarded.tsv"),
+        figure=join(workpath,"fusions","{name}_fusions.arriba.pdf"),
     params:
         rname='pl:arriba',
         prefix=join(workpath, "fusions", "{name}.p2"),
         # Exposed Parameters: modify config/genomes/{genome}.json to change default
+        chimericbam="{name}.p2.arriba.Aligned.out.bam",
+        sortedbam="{name}.p2.arriba.Aligned.sortedByCoord.out.bam",
         stardir=config['references'][pfamily]['ARRIBA_STARDIR'],
         gtffile=config['references'][pfamily]['GTFFILE'],
         reffa=config['references'][pfamily]['GENOME']
@@ -388,13 +393,31 @@ rule arriba:
         --twopassMode Basic \
         --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
         --outFileNamePrefix {params.prefix}. \
-        |
+    | tee /lscratch/$SLURM_JOB_ID/{params.chimericbam} | \
     arriba -x /dev/stdin \
         -o {output.fusions} \
         -O {output.discarded} \
         -a {params.reffa} \
         -g {params.gtffile} \
         -b {input.blacklist} \
+
+    # Sorting and Indexing BAM files is required for Arriba's Visualization
+    samtools sort -@ {threads} \
+        -m 3G -T /lscratch/$SLURM_JOB_ID/samtools_tmp_{wildcards.name} \
+        -O bam /lscratch/$SLURM_JOB_ID/{params.chimericbam} \
+        > /lscratch/$SLURM_JOB_ID/{params.sortedbam}
+    rm /lscratch/$SLURM_JOB_ID/{params.chimericbam}
+    samtools index /lscratch/$SLURM_JOB_ID/{params.sortedbam} \
+        /lscratch/$SLURM_JOB_ID/{params.sortedbam}.bai
+
+    # Generate Gene Fusions Visualization
+    draw_fusions.R \
+        --fusions={output.fusions} \
+        --alignments=/lscratch/$SLURM_JOB_ID/{params.sortedbam} \
+        --output={output.figure} \
+        --annotation={params.gtffile} \
+        --cytobands={input.cytoband} \
+        --proteinDomains={input.protdomain}
     """
 
 
