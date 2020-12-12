@@ -140,6 +140,7 @@ def rename(filename):
 def _sym_safe_(input_data, target):
     """Creates re-named symlinks for each FastQ file provided
     as input. If a symlink already exists, it will not try to create a new symlink.
+    If relative source PATH is provided, it will be converted to an absolute PATH.
     @param input_data <list[<str>]>:
         List of input files to symlink to target location
     @param target <str>:
@@ -151,7 +152,7 @@ def _sym_safe_(input_data, target):
 
         if not exists(renamed):
             # Create a symlink if it does not already exist
-            os.symlink(file, renamed)
+            os.symlink(os.path.abspath(file), renamed)
 
 
 
