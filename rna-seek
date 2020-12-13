@@ -419,6 +419,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config['project']['git_commit_hash'] = git_hash
 
     # Save config to ouput directory
+    print("\nGenerating config file:")
     print(json.dumps(config, indent = 4, sort_keys=True))
     with open(os.path.join(output_path, 'config.json'), 'w') as fh:
         json.dump(config, fh, indent = 4, sort_keys = True)
@@ -426,10 +427,25 @@ def setup(sub_args, ifiles, repo_path, output_path):
     return config
 
 
-def dryrun(sub_args):
+def dryrun(outdir):
     """Dryruns the pipeline to ensure there are no errors prior to runnning.
+    @param outdir <str>:
+        Pipeline output PATH
+    @return dryrun_output <str>:
+        Byte string representation of dryrun command
     """
-    pass
+    import subprocess
+
+    dryrun_output = subprocess.check_output([
+        'snakemake', '-npr',
+        '--use-singularity',
+        '--singularity-args',
+        '--cores 2',
+        '--configfile=config.json'
+    ], cwd = outdir,
+    stderr=subprocess.STDOUT)
+
+    return dryrun_output
 
 
 def run(sub_args):
@@ -450,6 +466,10 @@ def run(sub_args):
 
     # Step pipeline for execution, create config.json config file from templates
     config = setup(sub_args, ifiles = input_files, repo_path = git_repo, output_path = sub_args.output)
+
+    # Dryrun pipeline
+    dryrun_output = dryrun(outdir = sub_args.output)
+    print("\nDry-running RNA-seek pipeline:\n{}".format(dryrun_output))
 
 
 
