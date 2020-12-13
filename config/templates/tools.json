@@ -14,6 +14,7 @@
 				"KRAKENVER": "kraken/2.0.8-beta",
 				"KRONATOOLSVER": "kronatools/2.7",
 				"MULTIQCVER": "multiqc/1.9",
+				"PARALLELVER": "parallel/20171222",
 				"PERLVER": "perl/5.24.3",
 				"PICARDVER": "picard/2.17.11",
 				"PRESEQVER": "preseq/2.0.3",
