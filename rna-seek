@@ -145,15 +145,20 @@ def _sym_safe_(input_data, target):
         List of input files to symlink to target location
     @param target <str>:
         Target path to copy templates and required resources
+    @return input_fastqs list[<str>]:
+        List of renamed input FastQs
     """
+    input_fastqs = [] # store renamed fastq file names
     for file in input_data:
         filename = os.path.basename(file)
         renamed = os.path.join(target, rename(filename))
+        input_fastqs.append(renamed)
 
         if not exists(renamed):
             # Create a symlink if it does not already exist
             os.symlink(os.path.abspath(file), renamed)
 
+    return input_fastqs
 
 
 def initialize(sub_args, repo_path, output_path):
@@ -163,13 +168,16 @@ def initialize(sub_args, repo_path, output_path):
     output directory PATh already EXISTS, it will not try to create the directory.
     If a resource also already exists in the output directory (i.e. output/workflow),
     it will not try to copy over that directory. In the future, it maybe worth adding
-    an optional cli arg called --force, that can modifiy this behavior.
+    an optional cli arg called --force, that can modifiy this behavior. Returns a list
+    of renamed FastQ files (i.e. renamed symlinks).
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for run sub-command
     @param repo_path <str>:
         Path to RNA-seek source code and its templates
     @param output_path <str>:
         Pipeline output path, created if it does not exist
+    @return inputs list[<str>]:
+        List of pipeline's input FastQ files
     """
     if not exists(output_path):
         # Pipleine output directory does not exist on filesystem
@@ -188,7 +196,9 @@ def initialize(sub_args, repo_path, output_path):
     _cp_r_safe_(source = repo_path, target = output_path, resources = required_resources)
 
     # Create renamed symlinks to rawdata
-    _sym_safe_(input_data = sub_args.input, target = output_path)
+    inputs = _sym_safe_(input_data = sub_args.input, target = output_path)
+
+    return inputs
 
 
 def join_jsons(templates):
@@ -208,7 +218,171 @@ def join_jsons(templates):
     return aggregated
 
 
-def setup(sub_args, repo_path, output_path):
+def add_user_information(config):
+    """Adds username and user's home directory to config.
+    @params config <dict>:
+        Config dictionary containing metadata to run pipeline
+    @return config <dict>:
+         Updated config dictionary containing user information (username and home directory)
+    """
+    # Get PATH to user's home directory
+    # Method is portable across unix-like OS and Windows
+    home = os.path.expanduser("~")
+
+    # Get username from home directory PATH
+    username = os.path.split(home)[-1]
+
+    # Update config with home directory and username
+    config['project']['userhome'] = home
+    config['project']['username'] = username
+
+    return config
+
+
+def get_nends(ifiles):
+    """Determines whether the dataset is paired-end or single-end.
+    If paired-end data, checks to see if both mates (R1 and R2) are present for each sample.
+    If single-end, nends is set to 1. Else if paired-end, nends is set to 2.
+    @params ifiles list[<str>]:
+        List containing pipeline input files (renamed symlinks)
+    @return nends_status <int>:
+         Integer reflecting nends status: 1 = se, 2 = pe
+    """
+    import re
+
+    # Determine if dataset contains paired-end data
+    paired_end  = False
+    nends_status = 1
+    for file in ifiles:
+        if file.endswith('.R2.fastq.gz'):
+            paired_end = True
+            nends_status = 2
+            break # dataset is paired-end
+
+    # Check to see if both mates (R1 and R2) are present paired-end data
+    if paired_end:
+        nends = {} # keep count of R1 and R2 for each sample
+        for file in ifiles:
+            # Split sample name on file extension
+            sample = re.split('\.R[12]\.fastq\.gz', os.path.basename(file))[0]
+            if sample not in nends:
+                nends[sample] = 0
+
+            nends[sample] += 1
+
+        # Check if samples contain both read mates
+        missing_mates = [sample for sample, count in nends.items() if count == 1]
+        if missing_mates:
+            # Missing an R1 or R2 for a provided input sample
+            raise NameError("""\n\tFatal: Detected pair-end data but user failed to provide
+               both mates (R1 and R2) for the following samples:\n\t\t{}\n
+            Please check that the basename for each sample is consistent across mates.
+            Here is an example of a consistent basename across mates:
+              consistent_basename.R1.fastq.gz
+              consistent_basename.R2.fastq.gz
+
+            Please do not run the pipeline with a mixture of single-end and paired-end
+            samples. This feature is currently not supported within {}, and it is
+            not recommended either. If this is a priority for your project, please run
+            paired-end samples and single-end samples separately (in two separate output directories).
+            If you feel like this functionality should exist, feel free to open an issue on Github.
+            """.format(missing_mates, sys.argv[0])
+            )
+
+    return nends_status
+
+
+def get_rawdata_bind_paths(input_files):
+    """
+    Gets rawdata bind paths of user provided fastq files.
+    @params input_files list[<str>]:
+        List containing user-provided input fastq files
+    @return bindpaths <set>:
+        Set of rawdata bind paths
+    """
+    bindpaths = []
+    for file in input_files:
+        # Get directory of input file
+        rawdata_src_path = os.path.dirname(os.path.abspath(file))
+        if rawdata_src_path not in bindpaths:
+            bindpaths.append(rawdata_src_path)
+
+    return bindpaths
+
+
+def add_sample_metadata(input_files, config, group=None):
+    """Adds sample metadata such as sample basename, label, and group information.
+    If sample sheet is provided, it will default to using information in that file.
+    If no sample sheet is provided, it will only add sample basenames and labels.
+    @params input_files list[<str>]:
+        List containing pipeline input fastq files
+    @params config <dict>:
+        Config dictionary containing metadata to run pipeline
+    @params group <str>:
+        Sample sheet containing basename, group, and label for each sample
+    @return config <dict>
+        Updated config with basenames, labels, and groups (if provided)
+    """
+    import re
+
+    # TODO: Add functionality for basecase when user has samplesheet
+    added = []
+    for file in input_files:
+        # Split sample name on file extension
+        sample = re.split('\.R[12]\.fastq\.gz', os.path.basename(file))[0]
+        if sample not in added:
+            # Only add PE sample information once
+            added.append(sample)
+            config['project']['groups']['rsamps'].append(sample)
+            config['project']['groups']['rlabels'].append(sample)
+
+    return config
+
+
+def add_rawdata_information(sub_args, config, ifiles):
+    """Adds information about rawdata provided to pipeline.
+    Determines whether the dataset is paired-end or single-end and finds the set of all
+    rawdata directories (needed for -B option when running singularity). If a user provides
+    paired-end data, checks to see if both mates (R1 and R2) are present for each sample.
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for run sub-command
+    @params ifiles list[<str>]:
+        List containing pipeline input files (renamed symlinks)
+    @params config <dict>:
+        Config dictionary containing metadata to run pipeline
+    @return config <dict>:
+         Updated config dictionary containing user information (username and home directory)
+    """
+    # Determine whether dataset is paired-end or single-ends
+    # Updates config['project']['nends']: 1 = single-end, 2 = paired-end
+    nends = get_nends(ifiles)  # Checks PE data for both mates (R1 and R2)
+    config['project']['nends'] = nends
+
+    # Finds the set of rawdata directories to bind
+    rawdata_paths = get_rawdata_bind_paths(input_files = sub_args.input)
+    config['project']['datapath'] = ','.join(rawdata_paths)
+
+    # Add each sample's basename, label and group info
+    config = add_sample_metadata(input_files = ifiles, config = config)
+
+    return config
+
+
+def get_repo_git_commit_hash(repo_path):
+    """Gets the git commit hash of the RNA-seek repo.
+    @param repo_path <str>:
+        Path to RNA-seek git repo
+    @return githash <str>:
+        Latest git commit hash
+    """
+    import subprocess
+
+    githash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd = repo_path).strip()
+
+    return githash
+
+
+def setup(sub_args, ifiles, repo_path, output_path):
     """Setup the pipeline for execution and creates config file from templates
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for run sub-command
@@ -216,6 +390,8 @@ def setup(sub_args, repo_path, output_path):
         Path to RNA-seek source code and its templates
     @param output_path <str>:
         Pipeline output path, created if it does not exist
+    @return config <dict>:
+         Config dictionary containing metadata to run the pipeline
     """
 
     required = {
@@ -230,7 +406,24 @@ def setup(sub_args, repo_path, output_path):
 
     # Global config file for pipeline, config.json
     config = join_jsons(required.values())
+    config = add_user_information(config)
+    config = add_rawdata_information(sub_args, config, ifiles)
+
+    # Add other cli collected info
+    config['project']['annotation'] = sub_args.genome
+    config['project']['version'] = __version__
+    config['project']['workpath'] = os.path.abspath(sub_args.output)
+
+    # Get latest git commit hash
+    git_hash = get_repo_git_commit_hash(repo_path)
+    config['project']['git_commit_hash'] = git_hash
+
+    # Save config to ouput directory
     print(json.dumps(config, indent = 4, sort_keys=True))
+    with open(os.path.join(output_path, 'config.json'), 'w') as fh:
+        json.dump(config, fh, indent = 4, sort_keys = True)
+
+    return config
 
 
 def dryrun(sub_args):
@@ -240,7 +433,7 @@ def dryrun(sub_args):
 
 
 def run(sub_args):
-    """Initialize, setup and run the RNA-seek pipeline.
+    """Initialize, setup, and run the RNA-seek pipeline.
     Calls initialize() to create output directory and copy over pipeline resources,
     setup() to create the pipeline config file, dryrun() to ensure their are no issues
     before running the pipeline, and finally run() to execute the Snakemake workflow.
@@ -253,10 +446,10 @@ def run(sub_args):
     git_repo = os.path.dirname(os.path.abspath(__file__))
 
     # Initialize working directory, copy over required pipeline resources
-    initialize(sub_args, repo_path = git_repo, output_path = sub_args.output)
+    input_files = initialize(sub_args, repo_path = git_repo, output_path = sub_args.output)
 
     # Step pipeline for execution, create config.json config file from templates
-    setup(sub_args, repo_path = git_repo, output_path = sub_args.output)
+    config = setup(sub_args, ifiles = input_files, repo_path = git_repo, output_path = sub_args.output)
 
 
 
