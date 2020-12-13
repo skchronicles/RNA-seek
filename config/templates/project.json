@@ -26,6 +26,7 @@
 		"pairs": {},
 		"pfamily": "rnaseq",
 		"pipehome": "",
+		"userhome": "",
 		"pipeline": "RNA-seek",
 		"poc": "",
 		"rgid": {},

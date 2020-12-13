@@ -520,6 +520,7 @@
         "pfamily": "rnaseq",
         "pi": "",
         "pipehome": "/spin1/scratch/Testing/INIT/Pipeliner",
+        "userhome": "/home/user",
         "pipeline": "initialqcrnaseq",
         "platform": "Illumina",
         "poc": "",
