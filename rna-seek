@@ -378,6 +378,9 @@ def get_repo_git_commit_hash(repo_path):
     import subprocess
 
     githash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd = repo_path).strip()
+    # Typecast to fix python3 TypeError (Object of type bytes is not JSON serializable)
+    # subprocess.check_output() returns a byte string
+    githash = str(githash)
 
     return githash
 
@@ -529,8 +532,8 @@ def run(sub_args):
     config = setup(sub_args, ifiles = input_files, repo_path = git_repo, output_path = sub_args.output)
 
     # Dryrun pipeline
-    dryrun_output = dryrun(outdir = sub_args.output)
-    print("\nDry-running RNA-seek pipeline:\n{}".format(dryrun_output))
+    dryrun_output = dryrun(outdir = sub_args.output) # python3 returns byte-string representation
+    print("\nDry-running RNA-seek pipeline:\n{}".format(dryrun_output.decode("utf-8")))
 
     # Run pipeline
     if not sub_args.dry_run:
