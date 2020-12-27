@@ -320,7 +320,7 @@ def add_sample_metadata(input_files, config, group=None):
         Config dictionary containing metadata to run pipeline
     @params group <str>:
         Sample sheet containing basename, group, and label for each sample
-    @return config <dict>
+    @return config <dict>:
         Updated config with basenames, labels, and groups (if provided)
     """
     import re
@@ -436,16 +436,79 @@ def dryrun(outdir):
     """
     import subprocess
 
-    dryrun_output = subprocess.check_output([
-        'snakemake', '-npr',
-        '--use-singularity',
-        '--singularity-args',
-        '--cores 2',
-        '--configfile=config.json'
-    ], cwd = outdir,
-    stderr=subprocess.STDOUT)
+    try:
+        dryrun_output = subprocess.check_output([
+            'snakemake', '-npr',
+            '--use-singularity',
+            '--cores', '4',
+            '--configfile=config.json'
+        ], cwd = outdir,
+        stderr=subprocess.STDOUT)
+
+    except subprocess.CalledProcessError as e:
+        sys.exit("{}\n{}".format(e, e.output))
 
     return dryrun_output
+
+
+def orchestrate(mode, outdir, additional_bind_paths, threads=2):
+    """Runs RNA-seek pipeline via selected executor: local or slurm.
+    If 'local' is selected, the pipeline is executed locally on a compute node/instance.
+    If 'slurm' is selected, jobs will be submited to the cluster using SLURM job scheduler.
+    Support for additional job schedulers (i.e. PBS, SGE, LSF) may be added in the future.
+    @param outdir <str>:
+        Pipeline output PATH
+    @param mode <str>:
+        Execution method or mode:
+            local runs serially a compute instance without sumbitting to the cluster.
+            slurm will submit jobs to the cluster using the SLURM job scheduler.
+    @return masterjob <subprocess.Popen() object>:
+    """
+    import subprocess
+
+    # Default PATHs to bind to the container's filesystem
+    bindpaths = "{},/data/CCBR_Pipeliner/db/PipeDB/,/lscratch,/fdb".format(outdir)
+    # Create log file for master job
+    logfh = open(os.path.join(outdir, 'snakemake.log'), 'w')
+    # Set ENV variable 'SINGULARITY_CACHEDIR' to output directory
+    my_env = {}; my_env.update(os.environ)
+    my_env['SINGULARITY_CACHEDIR'] = os.path.join(outdir, ".singularity")
+
+
+    if additional_bind_paths:
+        # Add Bind PATHs for rawdata directories
+        bindpaths = "{},{}".format(additional_bind_paths,bindpaths)
+
+    # Run on compute node or instance without submitting jobs to a scheduler
+    if mode == 'local':
+        # Run RNA-seek: instantiate main/master process
+        # Look into later: it maybe worth replacing Popen subprocess with a direct
+        # snakemake API call: https://snakemake.readthedocs.io/en/stable/api_reference/snakemake.html
+        masterjob = subprocess.Popen([
+                'snakemake', '-pr',
+                '--use-singularity',
+                '--singularity-args', "'-B {}'".format(bindpaths),
+                '--cores', threads,
+                '--configfile=config.json'
+            ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
+
+    # Submitting jobs to cluster via SLURM's job scheduler
+    elif mode == 'slurm':
+        # Run RNA-seek: instantiate main/master process
+        # Look into later: it maybe worth replacing Popen subprocess with a direct
+        # snakemake API call: https://snakemake.readthedocs.io/en/stable/api_reference/snakemake.html
+        # snakemake --latency-wait 120  -s $R/Snakefile -d $R --printshellcmds
+        #    --cluster-config $R/cluster.json --keep-going --restart-times 3
+        #    --cluster "sbatch --gres {cluster.gres} --cpus-per-task {cluster.threads} -p {cluster.partition} -t {cluster.time} --mem {cluster.mem} --job-name={params.rname}"
+        #    -j 500 --rerun-incomplete --stats $R/Reports/initialqc.stats -T
+        #    2>&1|tee -a $R/Reports/snakemake.log
+        print('Feature coming soon! Please select "local" execution mode for now.')
+        sys.exit()
+
+
+
+    return masterjob
+
 
 
 def run(sub_args):
@@ -471,7 +534,12 @@ def run(sub_args):
     dryrun_output = dryrun(outdir = sub_args.output)
     print("\nDry-running RNA-seek pipeline:\n{}".format(dryrun_output))
 
-
+    # Run pipelie
+    rawdata_bind_paths = config['project']['datapath']
+    masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = rawdata_bind_paths, threads = sub_args.threads)
+    print("\nRunning RNA-seek pipeline in '{}' mode...".format(sub_args.mode))
+    masterjob.wait()
+    print('RNA-seek pipeline has completed with exit-code: {}'.format(masterjob.returncode))
 
 def unlock(sub_args):
     """Unlocks a previous runs output directory. If snakemake fails ungracefully,
@@ -480,6 +548,7 @@ def unlock(sub_args):
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for unlock sub-command
     """
+    # cd /path/to/output; snakemake --unlock --cores 2 --configfile=config.json
     print(sub_args)
 
 
@@ -565,6 +634,16 @@ def parsed_arguments():
                                 and only display what steps in the pipeline remain or will \
                                 be run [Default: False].')
 
+    # Number of threads for the RNA-seek pipeline's main proceess
+    subparser_run.add_argument('--threads',
+                                type = int,
+                                required = False,
+                                default = 2,
+                                help = '<Optional> Max number of threads for each process. \
+                                It is recommended setting this vaule to the maximum number of CPUs \
+                                available on the host machine [Default: 2].')
+
+
     # Options for the "run" sub-command
     subparser_unlock = subparsers.add_parser('unlock',
                                             help = 'Unlocks a previous runs output directory.',
@@ -594,6 +673,7 @@ def parsed_arguments():
     # Parse command-line args
     args = parser.parse_args()
     return args
+
 
 def main():
 
