@@ -488,7 +488,7 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2):
                 'snakemake', '-pr',
                 '--use-singularity',
                 '--singularity-args', "'-B {}'".format(bindpaths),
-                '--cores', threads,
+                '--cores', str(threads),
                 '--configfile=config.json'
             ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
 
@@ -534,12 +534,14 @@ def run(sub_args):
     dryrun_output = dryrun(outdir = sub_args.output)
     print("\nDry-running RNA-seek pipeline:\n{}".format(dryrun_output))
 
-    # Run pipelie
-    rawdata_bind_paths = config['project']['datapath']
-    masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = rawdata_bind_paths, threads = sub_args.threads)
-    print("\nRunning RNA-seek pipeline in '{}' mode...".format(sub_args.mode))
-    masterjob.wait()
-    print('RNA-seek pipeline has completed with exit-code: {}'.format(masterjob.returncode))
+    # Run pipeline
+    if not sub_args.dry_run:
+        rawdata_bind_paths = config['project']['datapath']
+        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = rawdata_bind_paths, threads = sub_args.threads)
+        print("\nRunning RNA-seek pipeline in '{}' mode...".format(sub_args.mode))
+        masterjob.wait()
+        print('RNA-seek pipeline has completed with exit-code: {}'.format(masterjob.returncode))
+
 
 def unlock(sub_args):
     """Unlocks a previous runs output directory. If snakemake fails ungracefully,
