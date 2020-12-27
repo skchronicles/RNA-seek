@@ -505,8 +505,6 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2):
         print('Feature coming soon! Please select "local" execution mode for now.')
         sys.exit()
 
-
-
     return masterjob
 
 
@@ -551,7 +549,23 @@ def unlock(sub_args):
         Parsed arguments for unlock sub-command
     """
     # cd /path/to/output; snakemake --unlock --cores 2 --configfile=config.json
-    print(sub_args)
+    import subprocess
+
+    print("Unlocking the pipeline's output directory...")
+    outdir = sub_args.output
+
+    try:
+        unlock_output = subprocess.check_output([
+            'snakemake', '--unlock',
+            '--cores', '1',
+            '--configfile=config.json'
+        ], cwd = outdir,
+        stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        # Unlocking process returned a non-zero exit code
+        sys.exit("{}\n{}".format(e, e.output))
+
+    print("Successfully unlocked the pipeline's working directory!")
 
 
 def parsed_arguments():
