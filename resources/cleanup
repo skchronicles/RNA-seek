@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -eu
+
+# Required Positional Argument:
+# INPUT '[1]' = Pipeline output directory
+# INPUT '[2]' = Master Job ID of completed RNA-seek pipeline
+
+if [[ $# -ne 2 ]]; then
+    echo "Failed to provide all required arguments!"
+    echo -e "USAGE:\ncleanup /path/to/output/directory master_job_id"
+    exit 1
+fi
+
+# Move SLURM Output files to logfiles directory
+mv "$1"/slurm-*.out "$1"/logfiles/slurmfiles/
+
+sacct -j "$2" --format "JobID,Partition,Timelimit,Elapsed,NodeList,Submit,Start,End,State,Exitcode" \
+  | head -3 >> "$1"/logfiles/master.log
