@@ -449,6 +449,7 @@ def dryrun(outdir):
         stderr=subprocess.STDOUT)
 
     except subprocess.CalledProcessError as e:
+        print('Is snakemake in your PATH? Please check before proceeding again!')
         sys.exit("{}\n{}".format(e, e.output))
 
     return dryrun_output
@@ -471,8 +472,7 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2):
 
     # Default PATHs to bind to the container's filesystem
     bindpaths = "{},/data/CCBR_Pipeliner/db/PipeDB/,/lscratch,/fdb".format(outdir)
-    # Create log file for master job
-    logfh = open(os.path.join(outdir, 'snakemake.log'), 'w')
+
     # Set ENV variable 'SINGULARITY_CACHEDIR' to output directory
     my_env = {}; my_env.update(os.environ)
     my_env['SINGULARITY_CACHEDIR'] = os.path.join(outdir, ".singularity")
@@ -482,11 +482,17 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2):
         # Add Bind PATHs for rawdata directories
         bindpaths = "{},{}".format(additional_bind_paths,bindpaths)
 
+    if not exists(os.path.join(outdir, 'logfiles')):
+        # Create directory for logfiles
+        os.makedirs(os.path.join(outdir, 'logfiles'))
+
     # Run on compute node or instance without submitting jobs to a scheduler
     if mode == 'local':
         # Run RNA-seek: instantiate main/master process
         # Look into later: it maybe worth replacing Popen subprocess with a direct
         # snakemake API call: https://snakemake.readthedocs.io/en/stable/api_reference/snakemake.html
+        # Create log file for pipeline
+        logfh = open(os.path.join(outdir, 'logfiles', 'snakemake.log'), 'w')
         masterjob = subprocess.Popen([
                 'snakemake', '-pr',
                 '--use-singularity',
@@ -504,9 +510,15 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2):
         #    --cluster-config $R/cluster.json --keep-going --restart-times 3
         #    --cluster "sbatch --gres {cluster.gres} --cpus-per-task {cluster.threads} -p {cluster.partition} -t {cluster.time} --mem {cluster.mem} --job-name={params.rname}"
         #    -j 500 --rerun-incomplete --stats $R/Reports/initialqc.stats -T
-        #    2>&1|tee -a $R/Reports/snakemake.log
-        print('Feature coming soon! Please select "local" execution mode for now.')
-        sys.exit()
+        #    2>&1| tee -a $R/Reports/snakemake.log
+
+        # Create log file for master job information
+        logfh = open(os.path.join(outdir, 'logfiles', 'master.log'), 'w')
+        masterjob = subprocess.Popen([
+                str(os.path.join(outdir, 'resources', 'submit')), mode,
+                '-j', 'pl:rna-seek', '-b', "'{}'".format(bindpaths),
+                '-o', '{}'.format(outdir)
+            ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
 
     return masterjob
 
@@ -539,10 +551,13 @@ def run(sub_args):
     if not sub_args.dry_run:
         rawdata_bind_paths = config['project']['datapath']
         masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = rawdata_bind_paths, threads = sub_args.threads)
+
         print("\nRunning RNA-seek pipeline in '{}' mode...".format(sub_args.mode))
         masterjob.wait()
-        print('RNA-seek pipeline has completed with exit-code: {}'.format(masterjob.returncode))
-
+        if sub_args.mode == 'local':
+            print('RNA-seek pipeline has completed with exit-code: {}'.format(masterjob.returncode))
+        elif sub_args.mode == 'slurm':
+            print('RNA-seek pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
 
 def unlock(sub_args):
     """Unlocks a previous runs output directory. If snakemake fails ungracefully,
