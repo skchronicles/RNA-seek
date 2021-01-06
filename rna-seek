@@ -594,6 +594,10 @@ def parsed_arguments():
     # Create a top-level parser
     parser = argparse.ArgumentParser(description = 'RNA-seek: \
                                                     a highly-reproducible RNA-seq pipeline')
+
+    # Adding Verison information
+    parser.add_argument('--version', action = 'version', version='%(prog)s {}'.format(__version__))
+
     # Create sub-command parser
     subparsers = parser.add_subparsers()
 
