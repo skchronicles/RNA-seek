@@ -17,7 +17,7 @@ def Counts(fpattern, searchpath, anno, ftype, mycols):
 	    for f in files:
 	        x=pd.read_csv(join(searchpath,f),sep="\t",usecols=mycols+[col])
 	        samplename=f.split(".RSEM")[0]
-	        x.columns=mycols+[samplename+"_"+col]
+	        x.columns=mycols+[samplename]
 	        dflist.append(x)
 
 	    mergeddf=reduce(lambda a,b:pd.merge(a,b,how="outer",on=mycols),dflist)
