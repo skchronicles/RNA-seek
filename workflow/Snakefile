@@ -6,7 +6,7 @@ from os import listdir
 import os, sys
 
 # Global workflow variables
-configfile: 'config/config.yaml'              # config dictionary
+configfile: 'config.json'                     # rna-seek config file 
 samples=config['project']['groups']['rsamps'] # sample basenames
 pfamily=config['project']['pfamily']          # rnaseq
 workpath = config['project']['workpath']      # Parent Output directory
