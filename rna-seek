@@ -209,10 +209,12 @@ def join_jsons(templates):
     @return aggregated <dict>:
         Dictionary containing the contents of all the input JSON files
     """
+    # Get absolute PATH to templates in rna-seek git repo
+    repo_path = os.path.dirname(os.path.abspath(__file__))
     aggregated = {}
 
     for file in templates:
-        with open(file, 'r') as fh:
+        with open(os.path.join(repo_path, file), 'r') as fh:
             aggregated.update(json.load(fh))
 
     return aggregated
@@ -408,7 +410,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
     }
 
     # Global config file for pipeline, config.json
-    config = join_jsons(required.values())
+    config = join_jsons(required.values()) # uses templates in the rna-seek repo
     config = add_user_information(config)
     config = add_rawdata_information(sub_args, config, ifiles)
 
