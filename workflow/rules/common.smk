@@ -8,6 +8,13 @@ container: "docker://continuumio/miniconda3"
 
 # Rules common to RNA-seq pipeline, irrespective if the data is single-end or paired-end
 rule picard:
+    """
+    Data processing and quality-control step to add read groups and mark duplicate reads.
+    @Input:
+        Genomic BAM file (scatter)
+    @Output:
+        Read groups added, duplicate marked genomic BAM file (scatter)
+    """
     input:
         file1=join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam"),
     output:
@@ -35,6 +42,15 @@ rule picard:
 
 
 rule preseq:
+    """
+    Quality step to estimate library complexity. Low library complexity may indicate
+    an issue with library preparation or sample storage (FFPE samples) where very
+    little input RNA was over-amplified or the sample may be highly degraded.
+    @Input:
+        Sorted, duplicate marked genomic BAM file (scatter)
+    @Output:
+        Logfile containing library complexity information
+    """
     input:
         bam = join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
     output:
@@ -49,6 +65,18 @@ rule preseq:
 
 
 rule stats:
+    """
+    Quality step to run Picard CollectRnaSeqMetrics. This step collects alignment
+    metrics which are specific to cDNA fragments originating from RNA. It describes
+    the distribution of reads aligning to various sub-features like the percentage
+    of reads aligning to UTRs, intronic, coding, and intergenic regions. Other metrics
+    include the median coverage (depth), the ratios of 5 prime /3 prime-biases,
+    and the numbers of reads with the correct/incorrect strand designation.
+    @Input:
+        Sorted, duplicate marked genomic BAM file (scatter)
+    @Output:
+        Logfiles containing RNA-specific alignment metrics
+    """
     input:
         file1=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
     output:
@@ -78,6 +106,13 @@ rule stats:
 
 
 rule rsem_merge:
+    """Data processing step to merge the gene and isoform counts for each sample
+    into count matrices.
+    @Input:
+        List of per sample gene and isoform counts (gather)
+    @Output:
+        Expected Count, FPKM, and TPM count matrices for genes and isoforms
+    """
     input:
         files=expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"), name=samples),
         files2=expand(join(workpath,degall_dir,"{name}.RSEM.isoforms.results"), name=samples),
@@ -101,6 +136,14 @@ rule rsem_merge:
 
 
 rule rseqc:
+    """
+    Quality-control step to infer stranded-ness and read distributions over
+    specific genomic features.
+    @Input:
+        Sorted, duplicate marked genomic BAM file (scatter)
+    @Output:
+        RSeQC logfile containing strand information and read distributions
+    """
     input:
         file1=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
     output:
@@ -118,6 +161,16 @@ rule rseqc:
 
 
 rule rnaseq_multiqc:
+    """
+    Reporting step to aggregate sample statistics and quality-control information
+    across all samples. This is be the last step of the pipeline. The inputs listed
+    here are to ensure that this step runs last. During runtime, MultiQC will recurively
+    crawl through the working directory and parse files that it supports.
+    @Input:
+        List of files to ensure this step runs last (gather)
+    @Output:
+        Interactive MulitQC report and a QC metadata table
+    """
     input:
         expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
         expand(join(workpath,"FQscreen","{name}.R1.trim_screen.png"),name=samples),
