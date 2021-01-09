@@ -25,10 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: Linting
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+    - uses: docker://snakemake/snakemake:v5.24.2
     - name: Dry-run workflow
-      uses: snakemake/snakemake-github-action@v1.5.3
-      with:
-        directory: .
-        snakefile: workflow/Snakefile
-        args: "-npr -s workflow/Snakefile --configfile=.tests/run.json"
+    - run: docker run -v $PWD:/opt2 snakemake/snakemake:v5.24.2 python /opt2/rna-seek run --input /opt2/.tests/KO_S3.R1.fastq.gz /opt2/.tests/KO_S3.R2.fastq.gz /opt2/.tests/KO_S4.R1.fastq.gz /opt2/.tests/KO_S4.R2.fastq.gz /opt2/.tests/WT_S1.R1.fastq.gz /opt2/.tests/WT_S1.R2.fastq.gz /opt2/.tests/WT_S2.R1.fastq.gz /opt2/.tests/WT_S2.R2.fastq.gz --output /opt2/output --genome hg38_30 --mode local --dry-run
