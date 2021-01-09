@@ -82,8 +82,10 @@ rule rsem_merge:
         files=expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"), name=samples),
         files2=expand(join(workpath,degall_dir,"{name}.RSEM.isoforms.results"), name=samples),
     output:
-        join(workpath,degall_dir,"RSEM.genes.FPKM.all_samples.txt"),
-        join(workpath,degall_dir,"RSEM.isoforms.FPKM.all_samples.txt"),
+        gene_counts_matrix=join(workpath,degall_dir,"RSEM.genes.expected_count.all_samples.txt"),
+        gene_fpkm_matrix=join(workpath,degall_dir,"RSEM.genes.FPKM.all_samples.txt"),
+        isoform_fpkm_matrix=join(workpath,degall_dir,"RSEM.isoforms.FPKM.all_samples.txt"),
+        reformatted=join(workpath,degall_dir,"RSEM_genes_expected_counts.tsv"),
     params:
         rname='pl:rsem_merge',
         annotate=config['references'][pfamily]['ANNOTATE'],
@@ -93,6 +95,8 @@ rule rsem_merge:
     container: "docker://nciccbr/ccbr_python:v0.0.1"
     shell: """
     python {params.pythonscript} {params.annotate} {params.inputdir} {params.inputdir}
+    sed 's/\\t/|/1' {output.gene_counts_matrix} | \
+        sed '1 s/^gene_id|GeneName/symbol/' > {output.reformatted}
     """
 
 
