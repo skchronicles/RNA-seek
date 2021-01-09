@@ -3,13 +3,15 @@ from scripts.common import abstract_location
 
 # Pre Alignment Rules
 rule validator:
-    '''
-    Validates FastQ files to ensure they are not corrupted or incomplete prior
-    to running the entire workflow. This rule will only run if the --use-singularity
-    flag is provided to snakemake.
-    Input: Raw FastQ files
-    Output: Log file containing any warnings or errors about evaluated FastQ file
-    '''
+    """
+    Quality-control step to ensure the input FastQC files are not corrupted or
+    incomplete prior to running the entire workflow. Please note this rule will
+    only run if the --use-singularity flag is provided to snakemake.
+    @Input:
+        Raw FastQ file (scatter)
+    @Output:
+        Log file containing any warnings or errors on file
+    """
     input:
         R1=join(workpath,"{name}.R1.fastq.gz"),
         R2=join(workpath,"{name}.R2.fastq.gz"),
@@ -29,6 +31,15 @@ rule validator:
 
 
 rule rawfastqc:
+    """
+    Quality-control step to assess sequencing quality of the raw data prior removing
+    adapter sequences. FastQC generates a set of basic statistics to identify problems
+    that can arise during sequencing or library preparation.
+    @Input:
+        List of Raw FastQ files (gather)
+    @Output:
+        List of FastQC reports and zip file containing data quality information
+    """
     input:
         expand(join(workpath,"{name}.R1.fastq.gz"), name=samples),
         expand(join(workpath,"{name}.R2.fastq.gz"), name=samples)
@@ -48,6 +59,15 @@ rule rawfastqc:
 
 
 rule trim_pe:
+    """
+    Data-processing step to remove adapter sequences and perform quality trimming
+    prior to alignment the reference genome.  Adapters are composed of synthetic
+    sequences and should be removed prior to alignment.
+    @Input:
+        Raw FastQ file (scatter)
+    @Output:
+        Trimmed FastQ file
+    """
     input:
         file1=join(workpath,"{name}.R1."+config['project']['filetype']),
         file2=join(workpath,"{name}.R2."+config['project']['filetype']),
@@ -76,6 +96,15 @@ rule trim_pe:
 
 
 rule fastqc:
+    """
+    Quality-control step to assess sequencing quality of the raw data after removing
+    adapter sequences. This step is run after trim_pe rule. FastQC is run after adapter
+    trimming to evalute if the adapter sequences were properly removed.
+    @Input:
+        List of Trimmed FastQ files (gather)
+    @Output:
+        List of FastQC reports and zip file containing data quality information
+    """
     input:
         expand(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"), name=samples),
         expand(join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"), name=samples)
@@ -99,12 +128,15 @@ rule fastqc:
 
 
 rule bbmerge:
-    '''
-    Calculates a distribution of insert sizes after local assembly or merging
-    of each paired-end read. Please note this rule is only run with paired-end data.
-    Input: Trimmed FastQ files (scattered)
-    Output: Insert length histogram
-    '''
+    """
+    Quality-control step to calculates the distribution of insert sizes after local
+    assembly or merging of each paired-end read. Please note this rule is only run
+    with paired-end data.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        Insert length histogram
+    """
     input:
         R1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         R2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
@@ -123,6 +155,16 @@ rule bbmerge:
 
 
 rule fastq_screen:
+    """
+    Quality-control step to screen for different sources of contamination.
+    FastQ Screen compares your sequencing data to a set of different reference
+    genomes to determine if there is contamination. It allows a user to see if
+    the composition of your library matches what you expect.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        FastQ Screen report and logfiles
+    """
     input:
         file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         file2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
@@ -161,6 +203,16 @@ rule fastq_screen:
 
 
 rule kraken_pe:
+    """
+    Quality-control step to assess for potential sources of microbial contamination.
+    If there are high levels of microbial contamination, Kraken will provide an
+    estimation of the taxonomic composition. Kraken is used in conjunction with
+    Krona to produce an interactive reports.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        Kraken logfile and interative krona report
+    """
     input:
         fq1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         fq2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
@@ -193,6 +245,15 @@ rule kraken_pe:
 
 
 rule star1p:
+    """
+    Data processing step to align reads against reference genome using STAR in
+    two-pass mode. STAR is run in a two-pass mode for enhanced detection of reads
+    mapping to novel splice junctions. This rule represents the first pass of STAR.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        Logfile containing splice-junctions detected by STAR
+    """
     input:
         file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         file2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
@@ -249,6 +310,15 @@ rule star1p:
 
 
 rule sjdb:
+    """
+    Aggregation step to collect the set of all novel junctions that were detected
+    in the first-pass of STAR. These splice junctions will be used to re-build the
+    genomic indices.
+    @Input:
+        Logfiles containing splice-junctions (gather)
+    @Output:
+        Logfile containing the set of all splice junctions across all samples
+    """
     input:
         files=expand(join(workpath,star_dir,"{name}.SJ.out.tab"), name=samples)
     output:
@@ -266,6 +336,18 @@ rule sjdb:
 
 
 rule star2p:
+    """
+    Data processing step to align reads against reference genome using STAR in
+    two-pass mode. This step represents the second step of STAR. Here set of splice
+    all novel junctions that were detected in the first-pass of STAR are then inserted
+    into the genome indices. In this second-pass, all reads are re-mapped using
+    the annotated junctions from the GTF file and novel junctions that were
+    detected in the first-pass of STAR.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        Genomic and transcriptomic BAM file
+    """
     input:
         file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         file2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
@@ -340,6 +422,15 @@ rule star2p:
 
 
 rule arriba:
+    """
+    Data processing step to align reads against reference genome using STAR in
+    two-pass basic mode and call gene fusions using arriba.
+    detected in the first-pass of STAR.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        Predicted gene fusions and figures
+    """
     input:
         R1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         R2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
@@ -421,7 +512,16 @@ rule arriba:
     """
 
 
+# Post Alignment Rules
 rule qualibam:
+    """
+    Quality-control step to assess various post-alignment metrics and a secondary
+    method to calculate insert size.
+    @Input:
+        Sorted, duplicate marked genomic BAM file (scatter)
+    @Output:
+        Report containing post-aligment QC metrics
+    """
     input:
         bamfile=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
     output:
@@ -440,8 +540,14 @@ rule qualibam:
     """
 
 
-# Post Alignment Rules
 rule rsem:
+    """
+    Data processing step to quantify gene and isoform counts.
+    @Input:
+        Transcriptomic BAM file (scatter)
+    @Output:
+        Gene and isoform counts
+    """
     input:
         file1=join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),
         file2=join(workpath,rseqc_dir,"{name}.strand.info")
@@ -470,6 +576,13 @@ rule rsem:
 
 
 rule inner_distance:
+    """
+    Quality-control step to calculate inner distance of aligned read mates.
+    @Input:
+        Sorted, duplicate marked genomic BAM file (scatter)
+    @Output:
+        Logfile containing inner distances for the evaluated reads
+    """
     input:
         bam=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
     output:
@@ -487,6 +600,14 @@ rule inner_distance:
 
 
 rule bam2bw_rnaseq_pe:
+    """
+    Summarization step to convert a bam file into forward and reverse strand
+    bigwig files suitable for a genomic track viewer like IGV.
+    @Input:
+        Sorted, duplicate marked genomic BAM file (scatter)
+    @Output:
+        Forward and reverse strand BigWig files
+    """
     input:
         bam=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
         strandinfo=join(workpath,rseqc_dir,"{name}.strand.info")
