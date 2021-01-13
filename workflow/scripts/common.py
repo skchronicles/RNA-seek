@@ -40,6 +40,39 @@ def provided(samplelist, condition):
     return samplelist
 
 
+def s3_configured(uri):
+    '''
+    Determines if user can access s3 object using their credentials saved in
+    "~/.aws/credentials" or "~/.boto". This handles an edge case where a user
+    has aws configure on the target system but the AWS Access Key Id provided in
+    their config does not match s3 access policy. This usually occurs when a user
+    has setup aws but it is setup for another AWS account or one that does not
+    have an IAM role for our S3 bucket (nciccbr).
+    :param uri <str>: URI/URL to object in S3 bucket
+    :return accessible <boolean>:
+        True if user can access S3 object, False if user cannot access the object (403)
+    '''
+    import boto3
+    import botocore
+    import re
+
+    # Get bucket and key from s3 uri
+    parsed = re.match(r's3:\/\/(.+?)\/(.+)', uri)
+    bucket, key = parsed.groups()
+    accessible = True
+
+    try:
+        # Try to access object in s3 bucket
+        boto3.resource("s3").Object(bucket, key).load()
+    except botocore.exceptions.ClientError as e:
+        # User cannot access object in S3 bucket with the credentials
+        # stored in "~/.aws/credentials" or "~/.boto".
+        if e.response["Error"]["Code"] == "403":
+            accessible = False
+
+    return accessible
+
+
 def abstract_location(file_address, *args, **kwargs):
     '''
     Determines if a provided file or list of file(s) resides in a remote location.
@@ -67,7 +100,7 @@ def abstract_location(file_address, *args, **kwargs):
             import snakemake.remote.S3
             import botocore.session
 
-            if botocore.session.get_session().get_credentials():
+            if botocore.session.get_session().get_credentials() and s3_configured(uri):
                 # AWS cli or boto has been configured on target system
                 # See ~/.aws/credentials or ~/.boto
                 # https://boto.readthedocs.io/en/latest/boto_config_tut.html
