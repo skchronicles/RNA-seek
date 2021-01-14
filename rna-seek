@@ -34,6 +34,27 @@ def exists(testpath):
     return does_exist
 
 
+def exe_in_path(cmd, path=None):
+    """Checks if an executable is in $PATH
+    @param cmd <str>:
+        Name of executable to check
+    @param path <list>:
+        Optional list of PATHs to check [default: $PATH]
+    @return <boolean>:
+        True if exe in PATH, False if not in PATH
+    """
+    if path is None:
+        path = os.environ["PATH"].split(os.pathsep)
+
+    for prefix in path:
+        filename = os.path.join(prefix, cmd)
+        executable = os.access(filename, os.X_OK)
+        is_not_directory = os.path.isfile(filename)
+        if executable and is_not_directory:
+            return True
+    return False
+
+
 def permissions(parser, filename, *args, **kwargs):
     """Checks permissions using os.access() to see the user is authorized to access
     a file/directory. Checks for existence, readability, writability and executability via:
@@ -451,8 +472,20 @@ def dryrun(outdir):
         stderr=subprocess.STDOUT)
 
     except subprocess.CalledProcessError as e:
-        print('Is snakemake in your PATH? Please check before proceeding again!')
+        # Singularity is NOT in $PATH
+        # Tell user to load both main dependencies to avoid the OSError below
+        print('Are singularity and snakemake in your PATH? Please check before proceeding again!')
         sys.exit("{}\n{}".format(e, e.output))
+    except OSError as e:
+        # Catch: OSError: [Errno 2] No such file or directory
+        #  Occurs when command returns a non-zero exit-code
+        if e.errno == 2 and not exe_in_path('snakemake'):
+            # Failure caused because snakemake is NOT in $PATH
+            print('Is snakemake in your PATH? Please check before proceeding again!')
+            sys.exit("{}\n{}".format(e, e.output))
+        else:
+            # Failure caused by unknown cause, raise error
+            raise e
 
     return dryrun_output
 
@@ -471,6 +504,9 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2):
     @return masterjob <subprocess.Popen() object>:
     """
     import subprocess
+
+    # Bind PATH must be an absolute PATH
+    outdir = os.path.abspath(outdir)
 
     # Default PATHs to bind to the container's filesystem
     bindpaths = "{},/data/CCBR_Pipeliner/db/PipeDB/,/lscratch,/fdb".format(outdir)
