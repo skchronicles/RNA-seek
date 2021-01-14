@@ -50,7 +50,7 @@ RNA-seek pipeline is composed of a series of quality-control and data processing
 
 *Arriba* is used to predict gene-fusion events. The pre-built human and mouse reference genomes use Arriba blacklists to reduce the false-positive rate.
 
-![RNA-seq quantification pipeline](https://github.com/CCBR/pipeliner-docs/blob/master/docs/RNA-seq/images/RNA-seq_QC_Expression_Pipeline.svg) <sup>**Fig 1. An Overview of RNA-seek Pipeline.** Gene and isoform counts are quantified and a series of QC-checks are performed to assess the quality of the data. This pipeline stops at the generation of a raw counts matrix and gene-fusion calling. To run the pipeline, a user must select their raw data, a reference genome, and output directory (i.e., the location where the pipeline performs the analysis). Quality-control information is summarized across all samples in a MultiQC report.</sup> 
+![RNA-seq quantification pipeline](https://github.com/skchronicles/RNA-seek/blob/main/resources/RNA-seek_Pipeline.svg) <sup>**Fig 1. An Overview of RNA-seek Pipeline.** Gene and isoform counts are quantified and a series of QC-checks are performed to assess the quality of the data. This pipeline stops at the generation of a raw counts matrix and gene-fusion calling. To run the pipeline, a user must select their raw data, a reference genome, and output directory (i.e., the location where the pipeline performs the analysis). Quality-control information is summarized across all samples in a MultiQC report.</sup> 
 
 #### 2.2 Reference Genomes
 RNA-seek comes bundled with pre-built reference files for the following genomes:
@@ -108,7 +108,7 @@ module load singularity snakemake/5.24.1
 
 # @slurm: uses slurm and singularity execution method
 # The slurm MODE will submit jobs to the cluster.
-# It is recommended running hervx in this mode.
+# It is recommended running rna-seek in this mode.
 module load singularity snakemake/5.24.1
 ./rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/LOCAL_RNA --genome hg38_30 --mode slurm
 ```
