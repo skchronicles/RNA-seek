@@ -118,9 +118,18 @@ function submit(){
   # INPUT $4 = Singularity Bind paths
 
   # SLURM inherits the environment from which the job was launched
-  module purge || fatal "Environment modules not installed on target system."
-  module load singularity || fatal "Fail to load 'singularity', not installed on target system."
-  module load snakemake || fatal "Fail to load 'snakemake', not installed on target system."
+  # Try to purge modules all modules from environment
+  command -V module &> /dev/null && module purge
+
+  # Check if singularity in $PATH
+  # If not, try to module load singularity as a last resort
+  command -V singularity &> /dev/null || module load singularity || \
+    fatal "Fail to find or load 'singularity', not installed on target system."
+
+  # Check if snakemake in $PATH
+  # If not, try to module load snakemake as a last resort
+  command -V snakemake &> /dev/null || module load snakemake || \
+    fatal "Fail to find or load 'snakemake', not installed on target system."
 
   # Snakemake executor
   executor=${1}
@@ -146,7 +155,7 @@ function submit(){
             --printshellcmds --cluster-config "$3"/resources/cluster.json \
             --cluster "sbatch --gres {cluster.gres} --cpus-per-task {cluster.threads} -p {cluster.partition} -t {cluster.time} --mem {cluster.mem} --job-name={params.rname}" \
             --keep-going --restart-times 3 -j 500 --rerun-incomplete --stats "$3"/logfiles/runtime_statistics.json \
-            2>&1 | tee -a "$3"/logfiles/master.log)
+            --keep-remote 2>&1 | tee -a "$3"/logfiles/master.log)
           # Clean-up working directory after completion
           cleanup_id=$(sbatch -J "pl:clean" --dependency=afterany:${job_id} "$3"/resources/cleanup "$3" "$job_id")
         ;;
