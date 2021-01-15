@@ -14,7 +14,7 @@ from __future__ import print_function
 import sys, os, json
 
 __author__ = 'Skyler Kuhn'
-__version__ = 'v0.0.1'
+__version__ = 'v0.1.0-beta'
 __email__ = 'kuhnsa@nih.gov'
 
 
@@ -445,10 +445,11 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config['project']['git_commit_hash'] = git_hash
 
     # Save config to ouput directory
-    print("\nGenerating config file:")
-    print(json.dumps(config, indent = 4, sort_keys=True))
+    print("\nGenerating config file in '{}'... ".format(os.path.join(output_path, 'config.json')), end = "")
+    # print(json.dumps(config, indent = 4, sort_keys=True))
     with open(os.path.join(output_path, 'config.json'), 'w') as fh:
         json.dump(config, fh, indent = 4, sort_keys = True)
+    print("Done!")
 
     return config
 
@@ -561,7 +562,6 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2):
     return masterjob
 
 
-
 def run(sub_args):
     """Initialize, setup, and run the RNA-seek pipeline.
     Calls initialize() to create output directory and copy over pipeline resources,
@@ -570,7 +570,7 @@ def run(sub_args):
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for run sub-command
     """
-    print(sub_args)
+    # print(sub_args)
 
     # Get PATH to RNA-seek git repository for copying over pipeline resources
     git_repo = os.path.dirname(os.path.abspath(__file__))
@@ -596,6 +596,7 @@ def run(sub_args):
             print('RNA-seek pipeline has completed with exit-code: {}'.format(masterjob.returncode))
         elif sub_args.mode == 'slurm':
             print('RNA-seek pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
+
 
 def unlock(sub_args):
     """Unlocks a previous runs output directory. If snakemake fails ungracefully,
@@ -755,6 +756,9 @@ def main():
 
     # Collect args for sub-command
     args = parsed_arguments()
+
+    # Display version information
+    print('RNA-seek ({})'.format(__version__))
 
     # Mediator method to call sub-command's set handler function
     args.func(args)
