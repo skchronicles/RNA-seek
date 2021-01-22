@@ -60,7 +60,7 @@ RNA-seek comes bundled with pre-built reference files for the following genomes:
 | hg38_30  | Homo sapiens (human) | [GRCh38](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_28/GRCh38.primary_assembly.genome.fa.gz) | [Gencode Release 30](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_30/gencode.v30.annotation.gtf.gz) |
 | mm10_M21 | Mus musculus (mouse) | [GRCm38](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M18/GRCm38.primary_assembly.genome.fa.gz) | [Gencode Release M21](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M21/gencode.vM21.annotation.gtf.gz) |
 
-> Warning: This section contains FTP links for downloading each reference file.
+> Warning: This section contains FTP links for downloading each reference file.  Open the link in a new tab to start a download. 
 
 #### 2.3 Dependencies
 **Requires:** `singularity>=3.5`  `snakemake>=5.24`. Snakemake and singularity must be installed on the target system. 
