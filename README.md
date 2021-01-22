@@ -10,11 +10,11 @@ An open-source, reproducible, and scalable solution for analyzing RNA-seq data.
     2.1 [RNA-seek Pipeline](#21-RNA-seek-Pipeline)  
     2.2 [Reference Genomes](#22-Reference-Genomes)  
     2.3 [Dependencies](#23-Dependencies)  
-3. [Run RNA-seek pipeline](#3-Run-RNA-seek-pipeline)  
-    3.1 [Getting Started](#31-Getting-Started)  
-    3.2 [Using Singularity](#32-Using-Singularity)  
-    3.3 [Using Docker](#33-Using-Docker)  
-    3.4 [Biowulf](#34-Biowulf)
+    2.4 [Installation](#24-Installation) 
+3. [Run RNA-seek pipeline](#3-Run-RNA-seek-pipeline)   
+    3.1 [Using Singularity](#31-Using-Singularity)  
+    3.2 [Using Docker](#32-Using-Docker)  
+    3.3 [Biowulf](#33-Biowulf)
 4. [Contribute](#4-Contribute)
 5. [References](#5-References)
 
@@ -29,6 +29,9 @@ A bioinformatics pipeline is more than the sum of its data processing steps. A p
 
 #### 2.1 RNA-seek Pipeline
 RNA-seek pipeline is composed of a series of quality-control and data processing step. In the data processing steps, RNA-seek quantifies gene and isoform expression and predicts gene fusions. Please note that the detection of alternative splicing events and variant calling will be incorporated in a later release.
+
+
+![RNA-seq quantification pipeline](https://github.com/skchronicles/RNA-seek/blob/main/resources/RNA-seek_Pipeline.svg) <sup>**Fig 1. An Overview of RNA-seek Pipeline.** Gene and isoform counts are quantified and a series of QC-checks are performed to assess the quality of the data. This pipeline stops at the generation of a raw counts matrix and gene-fusion calling. To run the pipeline, a user must select their raw data, a reference genome, and output directory (i.e., the location where the pipeline performs the analysis). Quality-control information is summarized across all samples in a MultiQC report.</sup> 
 
 **Quality Control**   
 *FastQC* is used to assess the sequencing quality. FastQC is run twice, before and after adapter trimming. It generates a set of basic statistics to identify problems that can arise during sequencing or library preparation. FastQC will summarize per base and per read QC metrics such as quality scores and GC content. It will also summarize the distribution of sequence lengths and will report the presence of adapter sequences.
@@ -50,8 +53,6 @@ RNA-seek pipeline is composed of a series of quality-control and data processing
 
 *Arriba* is used to predict gene-fusion events. The pre-built human and mouse reference genomes use Arriba blacklists to reduce the false-positive rate.
 
-![RNA-seq quantification pipeline](https://github.com/skchronicles/RNA-seek/blob/main/resources/RNA-seek_Pipeline.svg) <sup>**Fig 1. An Overview of RNA-seek Pipeline.** Gene and isoform counts are quantified and a series of QC-checks are performed to assess the quality of the data. This pipeline stops at the generation of a raw counts matrix and gene-fusion calling. To run the pipeline, a user must select their raw data, a reference genome, and output directory (i.e., the location where the pipeline performs the analysis). Quality-control information is summarized across all samples in a MultiQC report.</sup> 
-
 #### 2.2 Reference Genomes
 Reference files are pulled from an S3 bucket to the compute instance or local filesystem prior to execution.  
 RNA-seek comes bundled with pre-built reference files for the following genomes:
@@ -63,13 +64,11 @@ RNA-seek comes bundled with pre-built reference files for the following genomes:
 > Warning: This section contains FTP links for downloading each reference file.  Open the link in a new tab to start a download. 
 
 #### 2.3 Dependencies
-**Requires:** `singularity>=3.5`  `snakemake>=5.24`. Snakemake and singularity must be installed on the target system. 
+**Requires:** `singularity>=3.5`  `snakemake>=5.24` 
 
-Snakemake orchestrates the execution of each step in the pipeline. To guarantee reproducibility, each step relies on pre-built images from [DockerHub](https://hub.docker.com/orgs/nciccbr/repositories). Snakemake uses singaularity to pull these images onto the local filesystem prior to job execution, and as so, snakemake and singularity are the only two dependencies.
+Snakemake and singularity must be installed on the target system. Snakemake orchestrates the execution of each step in the pipeline. To guarantee reproducibility, each step relies on pre-built images from [DockerHub](https://hub.docker.com/orgs/nciccbr/repositories). Snakemake uses singaularity to pull these images onto the local filesystem prior to job execution, and as so, snakemake and singularity are the only two dependencies.
 
-### 3. Run RNA-seek pipeline
-
-#### 3.1 Getting Started
+#### 2.4 Installation
 Please clone this repository to your local filesystem using the following command:
 ```bash
 # Clone Repository from Github
@@ -78,17 +77,19 @@ git clone https://github.com/skchronicles/RNA-seek.git
 cd RNA-seek/
 ```
 
-#### 3.2 Using Singularity
+### 3. Run RNA-seek pipeline
+
+#### 3.1 Using Singularity
 ```bash
 # Coming Soon!
 ```
 
-#### 3.3 Using Docker
+#### 3.2 Using Docker
 ```bash
 # Coming Soon!
 ```
 
-#### 3.4 Biowulf
+#### 3.3 Biowulf
 ```bash
 # rna-seek is configured to use different execution backends: local or slurm
 # view the help page for more information
