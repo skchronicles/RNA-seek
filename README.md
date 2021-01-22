@@ -53,13 +53,14 @@ RNA-seek pipeline is composed of a series of quality-control and data processing
 ![RNA-seq quantification pipeline](https://github.com/skchronicles/RNA-seek/blob/main/resources/RNA-seek_Pipeline.svg) <sup>**Fig 1. An Overview of RNA-seek Pipeline.** Gene and isoform counts are quantified and a series of QC-checks are performed to assess the quality of the data. This pipeline stops at the generation of a raw counts matrix and gene-fusion calling. To run the pipeline, a user must select their raw data, a reference genome, and output directory (i.e., the location where the pipeline performs the analysis). Quality-control information is summarized across all samples in a MultiQC report.</sup> 
 
 #### 2.2 Reference Genomes
+Reference files are pulled from an S3 bucket to the compute instance or local filesystem prior to execution.  
 RNA-seek comes bundled with pre-built reference files for the following genomes:
 | Name     | Species | Genome | Annotation |
 | -------- | ------- | ------------------ | -------- | 
-| hg38_30  | Homo sapiens (human) | [GRCh38](ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_28/GRCh38.primary_assembly.genome.fa.gz) | [Gencode Release 30](ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_30/gencode.v30.annotation.gtf.gz) |
-| mm10_M21 | Mus musculus (mouse) | [GRCm38](ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M18/GRCm38.primary_assembly.genome.fa.gz) | [Gencode Release M21](ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M21/gencode.vM21.annotation.gtf.gz) |
+| hg38_30  | Homo sapiens (human) | [GRCh38](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_28/GRCh38.primary_assembly.genome.fa.gz) | [Gencode Release 30](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_30/gencode.v30.annotation.gtf.gz) |
+| mm10_M21 | Mus musculus (mouse) | [GRCm38](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M18/GRCm38.primary_assembly.genome.fa.gz) | [Gencode Release M21](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M21/gencode.vM21.annotation.gtf.gz) |
 
-Reference files are pulled from an S3 bucket to the compute instance or local filesystem prior to execution. 
+> Warning: This section contains FTP links for downloading each reference file.
 
 #### 2.3 Dependencies
 **Requires:** `singularity>=3.5`  `snakemake>=5.24`. Snakemake and singularity must be installed on the target system. 
