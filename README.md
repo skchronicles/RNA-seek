@@ -23,7 +23,8 @@ RNA-sequencing (*RNA-seq*) has a wide variety of applications. This popular tran
 
 **RNA-seek** is a comprehensive, open-source RNA-seq pipeline that relies on technologies like [Docker<sup>20</sup>](https://www.docker.com/why-docker) and [Singularity<sup>21</sup>](https://singularity.lbl.gov/) to maintain the highest-level of reproducibility. The pipeline consists of a series of data processing and quality-control steps orchestrated by [Snakemake<sup>19</sup>](https://snakemake.readthedocs.io/en/stable/), a flexible and scalable workflow management system, to submit jobs to a cluster or cloud provider. 
 
-![RNA-seek_overview_diagram](https://github.com/skchronicles/RNA-seek/blob/main/resources/overview.svg) <sup>**Fig 1. RNA-seek can be run locally on a compute instance, on-premise using a cluster, or on the cloud using AWS. A user can define the method or mode of execution. The pipeline can submit jobs to a cluster using a job scheduler like SLURM, or run on AWS using Tibanna (feature coming soon!). A hybrid approach ensures the pipeline is accessible to all users. As an optional step, relevelant output files and metadata can be stored in object storage using HPC DME (NIH users) or Amazon S3 for archival purposes (coming soon!).**</sup> 
+![RNA-seek_overview_diagram](https://github.com/skchronicles/RNA-seek/blob/main/resources/overview.svg)  
+<sup>**Fig 1. Run locally on a compute instance, on-premise using a cluster, or on the cloud using AWS.** A user can define the method or mode of execution. The pipeline can submit jobs to a cluster using a job scheduler like SLURM, or run on AWS using Tibanna (feature coming soon!). A hybrid approach ensures the pipeline is accessible to all users. As an optional step, relevelant output files and metadata can be stored in object storage using HPC DME (NIH users) or Amazon S3 for archival purposes (coming soon!).</sup> 
 
 ### 2. Overview
 
