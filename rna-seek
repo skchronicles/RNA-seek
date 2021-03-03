@@ -177,7 +177,8 @@ def _sym_safe_(input_data, target):
 
         if not exists(renamed):
             # Create a symlink if it does not already exist
-            os.symlink(os.path.abspath(file), renamed)
+            # Follow source symlinks to resolve any binding issues
+            os.symlink(os.path.abspath(os.path.realpath(file)), renamed)
 
     return input_fastqs
 
@@ -326,7 +327,7 @@ def get_rawdata_bind_paths(input_files):
     bindpaths = []
     for file in input_files:
         # Get directory of input file
-        rawdata_src_path = os.path.dirname(os.path.abspath(file))
+        rawdata_src_path = os.path.dirname(os.path.abspath(os.path.realpath(file)))
         if rawdata_src_path not in bindpaths:
             bindpaths.append(rawdata_src_path)
 
