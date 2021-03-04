@@ -20,7 +20,7 @@ rule validator:
     container: "docker://nciccbr/ccbr_fastqvalidator:v0.1.0"
     shell: """
     mkdir -p {params.outdir}
-    fastQValidator --file {input.R1} > {output.out1}
+    fastQValidator --noeof --file {input.R1} > {output.out1}
     """
 
 
