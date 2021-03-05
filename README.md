@@ -1,6 +1,6 @@
 # RNA-seek
 
-![Build](https://github.com/skchronicles/RNA-seek/workflows/Tests/badge.svg)  [![GitHub issues](https://img.shields.io/github/issues/skchronicles/RNA-seek)](https://github.com/skchronicles/RNA-seek/issues)  [![GitHub license](https://img.shields.io/github/license/skchronicles/RNA-seek)](https://github.com/skchronicles/RNA-seek/blob/main/LICENSE)
+[![Build](https://github.com/skchronicles/RNA-seek/workflows/Tests/badge.svg)](https://github.com/skchronicles/RNA-seek/actions)  [![GitHub issues](https://img.shields.io/github/issues/skchronicles/RNA-seek)](https://github.com/skchronicles/RNA-seek/issues)  [![GitHub license](https://img.shields.io/github/license/skchronicles/RNA-seek)](https://github.com/skchronicles/RNA-seek/blob/main/LICENSE)
 
 An open-source, reproducible, and scalable solution for analyzing RNA-seq data.
 
