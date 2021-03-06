@@ -629,7 +629,7 @@ def unlock(sub_args):
 def parsed_arguments():
     """Parses user-provided command-line arguments. Requires argparse package.
     """
-    import argparse
+    import argparse, textwrap
 
     # Create a top-level parser
     parser = argparse.ArgumentParser(description = 'RNA-seek: \
@@ -639,56 +639,108 @@ def parsed_arguments():
     parser.add_argument('--version', action = 'version', version='%(prog)s {}'.format(__version__))
 
     # Create sub-command parser
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(help='List of available sub-commands')
 
     # Options for the "run" sub-command
+    # Grouped sub-parser arguments are currently not supported by argparse.
+    # https://bugs.python.org/issue9341
+    # Here is a work around to create more useful help message for named
+    # options that are required! Please note: if a required arg is added the
+    # description below should be updated (i.e. update usage and add new option)
+    required_run_options = textwrap.dedent("""\
+        usage: rna-seek run [-h] --input INPUT [INPUT ...]
+                                 --output OUTPUT
+                                 --genome {hg38_30, mm10_M21}
+                                 [--mode {local, slurm}]
+                                 [--dry-run]
+                                 [--threads THREADS]
+
+        This section explains concepts and options for running the RNA-seek pipeline.
+        Please visit "https://github.com/skchronicles/RNA-seek" for more details.
+
+        required arguments:
+          --input INPUT [INPUT ...]
+                              Input FastQ file(s) to process. One or
+                              multiple FastQ files can be provided. The pipeline
+                              supports single-end and pair-end RNA-seq data.
+                              Example: --input .tests/*.R?.fastq.gz
+          --output OUTPUT
+                              Path to an output directory. This location
+                              is where the pipeline will create all of its output
+                              files. If the user-provided working directory has not
+                              been initialized, it will automatically be created.
+                              Example: --output /scratch/$USER/RNA_hg38
+          --genome {hg38_30, mm10_M21}
+                              Reference Genome. This option defines which set of
+                              reference files the pipeline will use. The pipeline
+                              currently supports human and mouse data. Please select
+                              from one of the following options: hg38_30 or mm10_M21.
+                              hg38 uses the following annotation: Gencode Release 30.
+                              mm10 uses the following annotation: Gencode Release M21.
+                              Please note: hg38_30 is a human reference genome and mm10_M21
+                              is a mouse reference genome.
+                              Example: --genome hg38_30
+        """)
+
+    # Display example usage in epilog
+    run_epilog= textwrap.dedent("""\
+        example:
+          # Step 1.) Grab an interactive node (do not run on head node)
+          sinteractive --mem=8g --cpus-per-task=4
+          module purge
+          module load singularity snakemake/5.24.1
+
+          # Step 2A.) Dry run pipeline with provided test data
+          ./rna-seek run --input .tests/*.R?.fastq.gz \\
+                         --output /scratch/$USER/RNA_hg38 \\
+                         --genome hg38_30 \\
+                         --mode slurm \\
+                         --dry-run
+
+          # Step 2B.) Run RNA-seek pipeline
+          # The slurm mode will submit jobs to the cluster.
+          # It is recommended running rna-seek in this mode.
+          ./rna-seek run --input .tests/*.R?.fastq.gz \\
+                         --output /scratch/$USER/RNA_hg38 \\
+                         --genome hg38_30 \\
+                         --mode slurm
+        """)
+
+    # Supressing help message of required args to overcome no sub-parser named groups
     subparser_run = subparsers.add_parser('run',
                                             help = 'Run the RNA-seek pipeline with your FastQ files.',
-                                            description = 'This section explains \
-                                                            concepts and options for \
-                                                            running the RNA-seek pipeline.\
-                                                            Visit "https://github.com/skchronicles/RNA-seek" \
-                                                            for more information.')
+                                            usage = argparse.SUPPRESS,
+                                            formatter_class=argparse.RawDescriptionHelpFormatter,
+                                            description = required_run_options,
+                                            epilog  = run_epilog)
     # Input FastQ files
     subparser_run.add_argument('--input',
                                 # Check if the file exists and if it is readable
                                 type = lambda file: permissions(parser, file, os.R_OK),
                                 required = True,
                                 nargs = '+',
-                                help = '<Required> Input FastQ file(s) to process. \
-                                        One or multiple FastQ files can be provided. \
-                                        The pipeline supports single-end and pair-end RNA-seq data.\
-                                        Example: --input .tests/*.R?.fastq.gz')
+                                help = argparse.SUPPRESS)
+
     # Output Directory (analysis working directory)
     subparser_run.add_argument('--output',
                                 type = str,
                                 required = True,
-                                help = '<Required> Path to an output directory. \
-                                        This location is where the pipeline will create all of \
-                                        its output files. If the user-provided working directory \
-                                        has not been initialized, it will automatically be created. \
-                                        Example: --output /scratch/$USER/RNA_hg38')
+                                help = argparse.SUPPRESS)
+
     # Reference Genome (to dynamically select reference files)
     subparser_run.add_argument('--genome',
                                 type = str,
                                 required = True,
                                 choices = ['hg38_30', 'mm10_M21'],
-                                help = '<Required> Reference Genome. \
-                                        This is the reference genome or assembly to used for selecting \
-                                        reference files. The pipeline currently supports human and mouse data. \
-                                        Please select from one of the following options: hg38_30 or mm10_M21. \
-                                        hg38 uses the following annotation: Gencode Release 30. \
-                                        mm10 uses the following annotation: Gencode Release M21. \
-                                        Please note: hg38_30 is a human reference genome and \
-                                        mm10_M21 is a mouse reference genome. \
-                                        Example: --genome hg38_30')
+                                help = argparse.SUPPRESS)
+
     # Execution Method (run locally on a compute node, submit to SLURM job scheduler, etc.)
     subparser_run.add_argument('--mode',
                                 type = str,
                                 required = False,
                                 default = "local",
                                 choices = ['local', 'slurm'],
-                                help = '<Optional> Execution Method [Default: local]. \
+                                help = 'Execution Method [Default: local]. \
                                         Defines the mode or method of execution. \
                                         Vaild mode options include: local or slurm. \
                                         local: uses local method of execution. \
@@ -708,40 +760,65 @@ def parsed_arguments():
                                 action = 'store_true',
                                 required = False,
                                 default = False,
-                                help = '<Optional> Do not execute anything, \
+                                help = 'Do not execute anything, \
                                 and only display what steps in the pipeline remain or will \
-                                be run [Default: False].')
+                                be run.')
 
     # Number of threads for the RNA-seek pipeline's main proceess
     subparser_run.add_argument('--threads',
                                 type = int,
                                 required = False,
                                 default = 2,
-                                help = '<Optional> Max number of threads for each process. \
+                                help = 'Max number of threads for each process. \
                                 It is recommended setting this vaule to the maximum number of CPUs \
                                 available on the host machine [Default: 2].')
 
 
-    # Options for the "run" sub-command
+    # Options for the "unlock" sub-command
+    # Grouped sub-parser arguments are currently not supported.
+    # https://bugs.python.org/issue9341
+    # Here is a work around to create more useful help message for named
+    # options that are required! Please note: if a required arg is added the
+    # description below should be updated (i.e. update usage and add new option)
+    required_unlock_options = textwrap.dedent("""\
+        usage: rna-seek unlock [-h] --output OUTPUT
+
+        If the pipeline fails ungracefully, it maybe required to unlock the working
+        directory before proceeding again. Please verify that the pipeline is not
+        running before running this command. If the pipeline is still running, the
+        workflow manager will report the working directory is locked. This is normal
+        behavior. Do NOT run this command if the pipeline is still running.
+
+        required arguments:
+          --output OUTPUT
+                      Path to a previous run's output directory to
+                      unlock. This will remove a lock on the working directory.
+                      Please verify that the pipeline is not running before
+                      running this command.
+                      Example: --output /scratch/$USER/RNA_hg38
+
+        """)
+
+    # Display example usage in epilog
+    unlock_epilog= textwrap.dedent("""\
+        example:
+          # Unlock RNA-seek output directory
+          rna-seek unlock --output /scratch/$USER/RNA_hg38
+        """)
+
+    # Supressing help message of required args to overcome no sub-parser named groups
     subparser_unlock = subparsers.add_parser('unlock',
                                             help = 'Unlocks a previous runs output directory.',
-                                            description = 'If the pipeline fails ungracefully, it maybe \
-                                                            required to unlock the working directory before \
-                                                            proceeding again. \
-                                                            Please verify that the pipeline is not running before \
-                                                            running this command. If the pipeline is still running, \
-                                                            the workflow manager will report the working directory \
-                                                            is locked. This is normal behavior. Do NOT run this command \
-                                                            if the pipeline is still running.')
+                                            usage = argparse.SUPPRESS,
+                                            formatter_class=argparse.RawDescriptionHelpFormatter,
+                                            description = required_unlock_options,
+                                            epilog = unlock_epilog)
+
     # Output Directory (analysis working directory)
     subparser_unlock.add_argument('--output',
                                 type = str,
                                 required = True,
-                                help = "<Required> Path to a previous run's output directory to unlock. \
-                                        This will remove a lock on the working directory. \
-                                        Please verify that the pipeline is not running before \
-                                        running this command. \
-                                        Example: --output /scratch/$USER/RNA_hg38")
+                                help = argparse.SUPPRESS)
 
 
     # Define run() as handler for sub-parser
