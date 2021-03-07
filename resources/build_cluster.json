@@ -1,0 +1,24 @@
+{
+    "__default__": {
+        "mem": "8g",
+        "partition": "quick",
+        "threads": "1",
+        "time": "1:00:00"
+    },
+    "star": {
+        "mem": "48g",
+        "threads": "32",
+        "partition": "ccr,norm",
+        "time": "12:00:00"
+    },
+    "rsem": {
+        "mem": "48g",
+        "threads": "32",
+        "partition": "ccr,norm",
+        "time": "12:00:00"
+    },
+    "qualimapinfo": {
+        "mem": "20g",
+    }
+}
+
