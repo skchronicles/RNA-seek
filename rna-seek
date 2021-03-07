@@ -602,11 +602,11 @@ def run(sub_args):
 def unlock(sub_args):
     """Unlocks a previous runs output directory. If snakemake fails ungracefully,
     it maybe required to unlock the working directory before proceeding again.
-    This is rare but it does occasionally happen.
+    This is rare but it does occasionally happen. Maybe worth add a --force
+    option to delete the '.snakemake/' directory in the future.
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for unlock sub-command
     """
-    # cd /path/to/output; snakemake --unlock --cores 2 --configfile=config.json
     import subprocess
 
     print("Unlocking the pipeline's output directory...")
@@ -626,8 +626,25 @@ def unlock(sub_args):
     print("Successfully unlocked the pipeline's working directory!")
 
 
+def build(sub_args):
+    """Builds the reference files for the RNA-seek pipeline from a genomic FASTA
+    file and a GTF file. Disclaimer: hybrid genomes not supported.
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for unlock sub-command
+    """
+    print(sub_args)
+    pass
+
+
 def parsed_arguments():
-    """Parses user-provided command-line arguments. Requires argparse package.
+    """Parses user-provided command-line arguments. Requires argparse and textwrap
+    package. argparse was added to standard lib in python 3.2 and textwrap was added
+    in python 3.5. To create custom help formatting for subparsers a docstring is
+    used create the help message for required options. argparse does not support named
+    subparser groups, which is normally what would be used to accomphish this reformatting.
+    As so, the help message for require options must be suppressed. If a new required arg
+    is added to a subparser, it must be added to the docstring and the usage statement
+    also must be updated.
     """
     import argparse, textwrap
 
@@ -660,30 +677,30 @@ def parsed_arguments():
 
         required arguments:
           --input INPUT [INPUT ...]
-                              Input FastQ file(s) to process. One or
-                              multiple FastQ files can be provided. The pipeline
-                              supports single-end and pair-end RNA-seq data.
-                              Example: --input .tests/*.R?.fastq.gz
+                                Input FastQ file(s) to process. One or
+                                multiple FastQ files can be provided. The pipeline
+                                supports single-end and pair-end RNA-seq data.
+                                Example: --input .tests/*.R?.fastq.gz
           --output OUTPUT
-                              Path to an output directory. This location
-                              is where the pipeline will create all of its output
-                              files. If the user-provided working directory has not
-                              been initialized, it will automatically be created.
-                              Example: --output /scratch/$USER/RNA_hg38
+                                Path to an output directory. This location
+                                is where the pipeline will create all of its output
+                                files. If the user-provided working directory has not
+                                been initialized, it will automatically be created.
+                                Example: --output /scratch/$USER/RNA_hg38
           --genome {hg38_30, mm10_M21}
-                              Reference Genome. This option defines which set of
-                              reference files the pipeline will use. The pipeline
-                              currently supports human and mouse data. Please select
-                              from one of the following options: hg38_30 or mm10_M21.
-                              hg38 uses the following annotation: Gencode Release 30.
-                              mm10 uses the following annotation: Gencode Release M21.
-                              Please note: hg38_30 is a human reference genome and mm10_M21
-                              is a mouse reference genome.
-                              Example: --genome hg38_30
+                                Reference Genome. This option defines which set of
+                                reference files the pipeline will use. The pipeline
+                                currently supports human and mouse data. Please select
+                                from one of the following options: hg38_30 or mm10_M21.
+                                hg38 uses the following annotation: Gencode Release 30.
+                                mm10 uses the following annotation: Gencode Release M21.
+                                Please note: hg38_30 is a human reference genome, and
+                                mm10_M21 is a mouse reference genome.
+                                Example: --genome hg38_30
         """)
 
     # Display example usage in epilog
-    run_epilog= textwrap.dedent("""\
+    run_epilog = textwrap.dedent("""\
         example:
           # Step 1.) Grab an interactive node (do not run on head node)
           sinteractive --mem=8g --cpus-per-task=4
@@ -704,7 +721,10 @@ def parsed_arguments():
                          --output /scratch/$USER/RNA_hg38 \\
                          --genome hg38_30 \\
                          --mode slurm
-        """)
+
+        version:
+          {}
+        """.format(__version__))
 
     # Supressing help message of required args to overcome no sub-parser named groups
     subparser_run = subparsers.add_parser('run',
@@ -720,20 +740,17 @@ def parsed_arguments():
                                 required = True,
                                 nargs = '+',
                                 help = argparse.SUPPRESS)
-
     # Output Directory (analysis working directory)
     subparser_run.add_argument('--output',
                                 type = str,
                                 required = True,
                                 help = argparse.SUPPRESS)
-
     # Reference Genome (to dynamically select reference files)
     subparser_run.add_argument('--genome',
                                 type = str,
                                 required = True,
                                 choices = ['hg38_30', 'mm10_M21'],
                                 help = argparse.SUPPRESS)
-
     # Execution Method (run locally on a compute node, submit to SLURM job scheduler, etc.)
     subparser_run.add_argument('--mode',
                                 type = str,
@@ -754,7 +771,6 @@ def parsed_arguments():
                                         It is recommended running RNA-seek in this mode as execution will \
                                         be significantly faster in a distributed environment. \
                                         Example: --mode slurm')
-
     # Dry-run (do not execute the workflow)
     subparser_run.add_argument('--dry-run',
                                 action = 'store_true',
@@ -763,7 +779,6 @@ def parsed_arguments():
                                 help = 'Do not execute anything, \
                                 and only display what steps in the pipeline remain or will \
                                 be run.')
-
     # Number of threads for the RNA-seek pipeline's main proceess
     subparser_run.add_argument('--threads',
                                 type = int,
@@ -772,6 +787,109 @@ def parsed_arguments():
                                 help = 'Max number of threads for each process. \
                                 It is recommended setting this vaule to the maximum number of CPUs \
                                 available on the host machine [Default: 2].')
+
+
+    # Options for the "build" sub-command
+    # Grouped sub-parser arguments are currently not supported.
+    # https://bugs.python.org/issue9341
+    # Here is a work around to create more useful help message for named
+    # options that are required! Please note: if a required arg is added the
+    # description below should be updated (i.e. update usage and add new option)
+    required_build_options = textwrap.dedent("""\
+        usage: rna-seek build [-h] --ref-fa REF_FA
+                                   --ref-name REF_NAME
+                                   --ref-gtf REF_GTF
+                                   --gtf-ver GTF_VER
+                                   --output OUTPUT
+                                   [--dry-run]
+
+        Builds the reference files for the RNA-seek pipeline from a genomic
+        FASTA file and a GTF file. Disclaimer: If you have two GTF files,
+        eg. hybrid genomes (viral + host), then you need to create one FASTA
+        and one GTF file for the hybrid genome prior to running the rna-seek
+        build command.
+
+        required arguments:
+          --ref-fa REF_FA
+                      Genomic FASTA file of the reference genome. If you are
+                      downloading this from GENCODE, you should select the 'PRI'
+                      genomic FASTA file. This file will contain the primary
+                      genomic assembly (contains chromosomes and scaffolds).
+          --ref-name REF_NAME
+                      Name of the input reference genome. This is the
+                      common name of the reference genome. Here is a list
+                      of common examples for different model organisms:
+                      mm10, hg38, rn6, danRer11, dm6, canFam3, sacCer3, ce11.
+          --ref-gtf REF_GTF
+                      Annotation file or GTF file for the reference genome.
+          --gtf-ver GTF_VER
+                      Version of the annotation file or GTF file provided.
+                      If you are using a GTF file from GENCODE, use the release
+                      number or version (i.e. 'M25' for mouse or '37' for human).
+                      Visit gencodegenes.org for more details.
+          --output OUTPUT
+                      Path to an output directory. This location
+                      is where the pipeline will create all of its output
+                      files. If the user-provided working directory has not
+                      been initialized, it will automatically be created.
+        """)
+
+    # Display example usage in epilog
+    build_epilog = textwrap.dedent("""\
+        example:
+          # Build RNA-seek reference files
+          rna-seek build --ref-fa GRCm39.primary_assembly.genome.fa \\
+                         --ref-name mm39 \\
+                         --ref-gtf gencode.vM26.annotation.gtf \\
+                         --gtf-ver M26 \\
+                         --output /scratch/$USER/refs/mm39_M26
+
+        version:
+          {}
+        """.format(__version__))
+
+    # Supressing help message of required args to overcome no sub-parser named groups
+    subparser_build = subparsers.add_parser('build',
+                                            help = 'Builds the reference files for the RNA-seek pipeline.',
+                                            usage = argparse.SUPPRESS,
+                                            formatter_class=argparse.RawDescriptionHelpFormatter,
+                                            description = required_build_options,
+                                            epilog = build_epilog)
+    # Input Genomic FASTA file
+    subparser_build.add_argument('--ref-fa',
+                                # Check if the file exists and if it is readable
+                                type = lambda file: permissions(parser, file, os.R_OK),
+                                required = True,
+                                help = argparse.SUPPRESS)
+    # Reference Genome Name
+    subparser_build.add_argument('--ref-name',
+                                type = str,
+                                required = True,
+                                help = argparse.SUPPRESS)
+    # Input Reference GTF file
+    subparser_build.add_argument('--ref-gtf',
+                                # Check if the file exists and if it is readable
+                                type = lambda file: permissions(parser, file, os.R_OK),
+                                required = True,
+                                help = argparse.SUPPRESS)
+    # Reference GTF Version
+    subparser_build.add_argument('--gtf-ver',
+                                type = str,
+                                required = True,
+                                help = argparse.SUPPRESS)
+    # Output Directory (build working directory)
+    subparser_build.add_argument('--output',
+                                type = str,
+                                required = True,
+                                help = argparse.SUPPRESS)
+    # Dry-run build workflow (do not execute the workflow)
+    subparser_build.add_argument('--dry-run',
+                                action = 'store_true',
+                                required = False,
+                                default = False,
+                                help = 'Do not execute anything, \
+                                and only display what steps in the pipeline remain or will \
+                                be run.')
 
 
     # Options for the "unlock" sub-command
@@ -800,11 +918,14 @@ def parsed_arguments():
         """)
 
     # Display example usage in epilog
-    unlock_epilog= textwrap.dedent("""\
+    unlock_epilog = textwrap.dedent("""\
         example:
           # Unlock RNA-seek output directory
           rna-seek unlock --output /scratch/$USER/RNA_hg38
-        """)
+
+        version:
+          {}
+        """.format(__version__))
 
     # Supressing help message of required args to overcome no sub-parser named groups
     subparser_unlock = subparsers.add_parser('unlock',
@@ -813,17 +934,16 @@ def parsed_arguments():
                                             formatter_class=argparse.RawDescriptionHelpFormatter,
                                             description = required_unlock_options,
                                             epilog = unlock_epilog)
-
     # Output Directory (analysis working directory)
     subparser_unlock.add_argument('--output',
                                 type = str,
                                 required = True,
                                 help = argparse.SUPPRESS)
 
-
-    # Define run() as handler for sub-parser
+    # Define handlers for each sub-parser
     subparser_run.set_defaults(func = run)
     subparser_unlock.set_defaults(func = unlock)
+    subparser_build.set_defaults(func = build)
 
     # Parse command-line args
     args = parser.parse_args()
