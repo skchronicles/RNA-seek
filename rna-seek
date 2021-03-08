@@ -187,7 +187,7 @@ def initialize(sub_args, repo_path, output_path):
     """Initialize the output directory and copy over required pipeline resources.
     If user provides a output directory path that already exists on the filesystem
     as a file (small chance of happening but possible), a OSError is raised. If the
-    output directory PATh already EXISTS, it will not try to create the directory.
+    output directory PATH already EXISTS, it will not try to create the directory.
     If a resource also already exists in the output directory (i.e. output/workflow),
     it will not try to copy over that directory. In the future, it maybe worth adding
     an optional cli arg called --force, that can modifiy this behavior. Returns a list
@@ -455,7 +455,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
     return config
 
 
-def dryrun(outdir):
+def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Snakefile')):
     """Dryruns the pipeline to ensure there are no errors prior to runnning.
     @param outdir <str>:
         Pipeline output PATH
@@ -467,9 +467,10 @@ def dryrun(outdir):
     try:
         dryrun_output = subprocess.check_output([
             'snakemake', '-npr',
+            '-s', str(snakefile),
             '--use-singularity',
             '--cores', '4',
-            '--configfile=config.json'
+            '--configfile={}'.format(config)
         ], cwd = outdir,
         stderr=subprocess.STDOUT)
 
@@ -492,7 +493,7 @@ def dryrun(outdir):
     return dryrun_output
 
 
-def orchestrate(mode, outdir, additional_bind_paths, threads=2):
+def orchestrate(mode, outdir, additional_bind_paths, threads=2, submission_script='submit', masterjob='pl:rna-seek'):
     """Runs RNA-seek pipeline via selected executor: local or slurm.
     If 'local' is selected, the pipeline is executed locally on a compute node/instance.
     If 'slurm' is selected, jobs will be submited to the cluster using SLURM job scheduler.
@@ -503,6 +504,16 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2):
         Execution method or mode:
             local runs serially a compute instance without sumbitting to the cluster.
             slurm will submit jobs to the cluster using the SLURM job scheduler.
+    @param additional_bind_paths <str>:
+        Additional paths to bind to container filesystem (i.e. input file paths)
+    @param threads <str>:
+        Number of threads to use for local execution method
+    @param submission_script <str>:
+        Path to master jobs submission script:
+            rna-seek run =   /path/to/output/resources/submit
+            rna-seek build = /path/to/output/resources/builder
+    @param masterjob <str>:
+        Name of the master job
     @return masterjob <subprocess.Popen() object>:
     """
     import subprocess
@@ -554,10 +565,12 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2):
 
         # Create log file for master job information
         logfh = open(os.path.join(outdir, 'logfiles', 'master.log'), 'w')
+        # submission_script for rna-seek run is /path/to/output/resources/submit
+        # submission_script for rna-seek build is /path/to/output/resources/builder
         masterjob = subprocess.Popen([
-                str(os.path.join(outdir, 'resources', 'submit')), mode,
-                '-j', 'pl:rna-seek', '-b', "'{}'".format(bindpaths),
-                '-o', '{}'.format(outdir)
+                str(os.path.join(outdir, 'resources', str(submission_script))), mode,
+                '-j', str(masterjob), '-b', str(bindpaths),
+                '-o', str(outdir)
             ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
 
     return masterjob
@@ -571,7 +584,6 @@ def run(sub_args):
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for run sub-command
     """
-    # print(sub_args)
 
     # Get PATH to RNA-seek git repository for copying over pipeline resources
     git_repo = os.path.dirname(os.path.abspath(__file__))
@@ -626,14 +638,121 @@ def unlock(sub_args):
     print("Successfully unlocked the pipeline's working directory!")
 
 
+def _sym_refs(input_data, target):
+    """Creates re-named symlinks for each reference file provided
+    as input. If a symlink already exists, it will not try to create a new symlink.
+    If relative source PATH is provided, it will be converted to an absolute PATH.
+    If a symlink is provided the canocial path of the symlink is found.
+    @param input_data <list[<str>]>:
+        List of input files to symlink to target location
+    @param target <str>:
+        Target path to create sylink (output directory)
+    @return canocial_input_paths list[<str>]:
+        List of canocical paths for the list of input files (added to singularity bindpaths)
+    """
+    # Find canocial paths of input files for adding to singularity bindpaths
+    canocial_input_paths = []
+    for file in input_data:
+        target_name = os.path.join(os.path.abspath(target), os.path.basename(file))
+        source_name = os.path.abspath(os.path.realpath(file))
+        canocial_input_paths.append(os.path.dirname(source_name))
+
+        if not exists(target_name):
+            # Create a symlink if it does not already exist
+            # Follow source symlinks to resolve any binding issues
+            os.symlink(source_name, target_name)
+
+    return list(set(canocial_input_paths))
+
+
+def _configure(sub_args, filename, git_repo):
+    """Private function for configure_build() that creates the build.yml
+    from user inputs.
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for unlock sub-command
+    @params filename <str>:
+        Ouput filename of build config YAML file
+    @param git_repo <str>:
+        Path to rna-seek github repository installation
+    """
+    # Save config to ouput directory
+    print("\nGenerating config file in '{}'... ".format(filename), end = "")
+    # Creates config file /path/to/output/config/build.yml
+    with open(filename, 'w') as fh:
+        fh.write('GENOME: "{}"\n'.format(sub_args.ref_name))
+        fh.write('REFFA: "{}"\n'.format(os.path.join(sub_args.output, os.path.basename(sub_args.ref_fa))))
+        fh.write('GTFFILE: "{}"\n'.format(os.path.join(sub_args.output, os.path.basename(sub_args.ref_gtf))))
+        fh.write('GTFVER: "{}"\n'.format(sub_args.gtf_ver))
+        fh.write('OUTDIR: "{}"\n'.format(sub_args.output))
+        fh.write('SCRIPTSDIR: "{}/workflow/scripts/builder"\n'.format(sub_args.output))
+        fh.write('BUILD_HOME: "{}"\n'.format(git_repo))
+        fh.write('READLENGTHS:\n')
+        read_lengths = ['50', '75', '100', '125', '150']
+        for rl in read_lengths:
+            fh.write('  - {}\n'.format(rl))
+    print("Done!")
+
+
+def configure_build(sub_args, git_repo, output_path):
+    """Setups up working directory for build option and creates config file (build.yml)
+    @param git_repo <str>:
+        Path to rna-seek github repository installation
+    @param output_path <str>:
+        Path to build output directory
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for unlock sub-command
+    @return additional_bind_paths list[<str>]:
+        List of canocical paths for the list of input files to be added singularity bindpath
+    """
+
+    if not exists(output_path):
+        # Pipleine output directory does not exist on filesystem
+        os.makedirs(output_path)
+
+    elif exists(output_path) and os.path.isfile(output_path):
+        # Provided Path for pipleine output directory exists as file
+        raise OSError("""\n\tFatal: Failed to create provided pipeline output directory!
+        User provided --ouput PATH already exists on the filesystem as a file.
+        Please run {} again with a different --output PATH.
+        """.format(sys.argv[0])
+        )
+
+    # Copy over templates are other required resources
+    required_resources = ['workflow', 'resources', 'config']
+    _cp_r_safe_(source = git_repo, target = output_path, resources = required_resources)
+    _configure(sub_args = sub_args, filename = os.path.join(output_path, 'config', 'build.yml'), git_repo = git_repo)
+    additional_bind_paths = _sym_refs(input_data = [sub_args.ref_fa, sub_args.ref_gtf], target = output_path)
+
+    return additional_bind_paths
+
+
 def build(sub_args):
     """Builds the reference files for the RNA-seek pipeline from a genomic FASTA
     file and a GTF file. Disclaimer: hybrid genomes not supported.
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for unlock sub-command
     """
-    print(sub_args)
-    pass
+
+    # Get PATH to RNA-seek git repository for copying over pipeline resources
+    git_repo = os.path.dirname(os.path.abspath(__file__))
+
+    # Build Output directory
+    output_path = os.path.abspath(sub_args.output)
+
+    # Configure build output directory: initialize, copy resources, generate config file
+    additional_bind_paths = configure_build(sub_args = sub_args, git_repo = git_repo, output_path = output_path)
+
+    # Dryrun pipeline
+    dryrun_output = dryrun(outdir = output_path, config = os.path.join('config', 'build.yml'), snakefile = os.path.join('workflow', 'rules', 'build.smk'))
+
+    # python3 returns byte-string representation
+    print("\nDry-running RNA-seek Reference building pipeline:\n{}".format(dryrun_output.decode("utf-8")))
+
+    # Run RNA-seek reference building pipeline
+    if not sub_args.dry_run:
+        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = additional_bind_paths, submission_script = 'builder', masterjob = 'pl:build')
+        masterjob.wait()
+        print('RNA-seek reference building pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
 
 
 def parsed_arguments():
