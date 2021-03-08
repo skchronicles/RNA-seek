@@ -741,6 +741,7 @@ def build(sub_args):
 
     # Configure build output directory: initialize, copy resources, generate config file
     additional_bind_paths = configure_build(sub_args = sub_args, git_repo = git_repo, output_path = output_path)
+    additional_bind_paths =  ','.join(additional_bind_paths)
 
     # Dryrun pipeline
     dryrun_output = dryrun(outdir = output_path, config = os.path.join('config', 'build.yml'), snakefile = os.path.join('workflow', 'rules', 'build.smk'))
