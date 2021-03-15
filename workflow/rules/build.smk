@@ -311,6 +311,7 @@ rule jsonmaker:
 		bigdict["references"]["rnaseq"]["GENOMEFILE"]=input.fa
 		bigdict["references"]["rnaseq"]["GENOME"]=input.fa
 		bigdict["references"]["rnaseq"]["GTFFILE"]=input.gtf
+		bigdict["references"]["rnaseq"]["GENOME_STARDIR"]=outdir+"STAR/2.7.0f/genome"
 		bigdict["references"]["rnaseq"]["STARDIR"]=outdir+"STAR/2.7.0f/genes-"
 		bigdict["references"]["rnaseq"]["STARREF"]=outdir+"STAR/2.7.0f/genes-"
 		bigdict["references"]["rnaseq"]["ANNOTATE"]=outdir+"annotate.genes.txt"
