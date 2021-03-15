@@ -1,6 +1,11 @@
+from __future__ import print_function
+import sys
+
+gtf=sys.argv[1]
+
 annotate_genes={a[0]:a for a in map(lambda x:x.strip().replace('"','').split("  "),open("annotate.genes.txt").readlines())}
 
-for l in list(filter(lambda x:x[2]=="gene",filter(lambda x:not x[0].startswith("#"),list(map(lambda x:x.strip().split("\t"),open("genes.gtf").readlines()))))):
+for l in list(filter(lambda x:x[2]=="gene",filter(lambda x:not x[0].startswith("#"),list(map(lambda x:x.strip().split("\t"),open(gtf).readlines()))))):
 	newl=[]
 	newl.append(l[0])
 	newl.append(l[3])
