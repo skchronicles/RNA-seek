@@ -5,7 +5,13 @@
         "threads": "1",
         "time": "1:00:00"
     },
-    "star": {
+    "star_rl": {
+        "mem": "48g",
+        "threads": "32",
+        "partition": "ccr,norm",
+        "time": "12:00:00"
+    },
+    "star_genome": {
         "mem": "48g",
         "threads": "32",
         "partition": "ccr,norm",
