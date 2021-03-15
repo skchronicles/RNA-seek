@@ -1,4 +1,7 @@
-configfile:"config/build.yml"
+from os.path import join, basename
+
+# Global Workflow variables
+configfile:join("config","build.yml")
 GENOME=config["GENOME"].strip().replace(' ', '')
 READLENGTHS=config["READLENGTHS"]
 REFFA=config["REFFA"]
@@ -11,37 +14,50 @@ workdir:OUTDIR
 
 rule all:
 	input:
+		expand("{genome}_{gtfver}.json",genome=GENOME, gtfver=GTFVER),
+		expand("STAR/2.7.0f/genes-{readlength}/SA",readlength=READLENGTHS),
+		expand("{genome}.rRNA_interval_list",genome=GENOME),
 		expand("rsemref/{genome}.transcripts.ump",genome=GENOME),
 		"annotate.isoforms.txt",
 		"annotate.genes.txt",
 		"refFlat.txt",
 		"geneinfo.bed",
-		expand("STAR/2.7.0f/genes-{readlength}/SA",readlength=READLENGTHS),
-		expand("{genome}.rRNA_interval_list",genome=GENOME),
 		"karyoplot_gene_coordinates.txt",
 		"qualimap_info.txt",
-		"karyobeds/karyobed.bed",
-		expand("{genome}_{gtfver}.json",genome=GENOME, gtfver=GTFVER)
+		"karyobeds/karyobed.bed"
 
 
 rule rsem:
+    """
+    Builds reference files for RSEM to quantify gene and isoform counts.
+    @Input:
+        Genomic FASTA file
+		Annotation file in GTF format
+    @Output:
+        Generates 'reference_name.grp', 'reference_name.ti',
+    	'reference_name.transcripts.fa', 'reference_name.seq',
+    	'reference_name.chrlist', 'reference_name.idx.fa',
+    	'reference_name.n2g.idx.fa', 'reference_name.grp',
+		'reference_name.ti', 'reference_name.seq', and
+    	'reference_name.chrlist' which are used by RSEM internally.
+		'reference_name.transcripts.fa' contains the extracted reference
+    	transcripts in Multi-FASTA format.
+	"""
 	input:
 		fa=REFFA,
 		gtf=GTFFILE
-	params:
-		genome=GENOME
-	threads: 32
 	output:
-		"rsemref/{sample}.transcripts.ump"
-	shell:'''
-if [ ! -d rsemref ]; then mkdir rsemref; fi
-cd rsemref
-if [ ! -f {input.gtf} ]; then ln -s ../{input.gtf} .; fi
-if [ ! -f {input.fa} ]; then ln -s ../{input.fa} .; fi
-module load rsem/1.3.0
-rsem-prepare-reference -p {threads} --gtf {input.gtf} {input.fa} {params.genome}
-rsem-generate-ngvector {params.genome}.transcripts.fa {params.genome}.transcripts
-'''
+		join("rsemref",{sample}.transcripts.ump")
+	threads: 32
+	params:
+		rname='bl:rsem',
+		genome=GENOME,
+		prefix=join("rsemref", GENOME)
+	container: "docker://nciccbr/ccbr_rsem_1.3.1:v032219"
+	shell: """
+	rsem-prepare-reference -p {threads} --gtf {input.gtf} {input.fa} {params.prefix}
+	rsem-generate-ngvector {params.prefix}.transcripts.fa {params.prefix}.transcripts
+	"""
 
 
 rule annotate:
@@ -76,7 +92,7 @@ rule star:
 	output:
 		SA="STAR/2.7.0f/genes-{readlength}/SA"
 	shell:'''
-# Creat Index for each readlength 
+# Creat Index for each readlength
 rl={wildcards.readlength}
 rl=$((rl-1))
 
@@ -91,7 +107,7 @@ STAR \
 --genomeFastaFiles {input.fa} \
 --sjdbGTFfile {input.gtf} \
 --sjdbOverhang $rl \
---outTmpDir tmp_{wildcards.readlength} 
+--outTmpDir tmp_{wildcards.readlength}
 '''
 
 
