@@ -2,13 +2,15 @@
 
 # Pre Alignment Rules
 rule validator:
-    '''
-    Validates FastQ files to ensure they are not corrupted or incomplete prior
-    to running the entire workflow. This rule will only run if the --use-singularity
-    flag is provided to snakemake.
-    Input: Raw FastQ files
-    Output: Log file containing any warnings or errors about evaluated FastQ file
-    '''
+    """
+    Quality-control step to ensure the input FastQC files are not corrupted or
+    incomplete prior to running the entire workflow. Please note this rule will
+    only run if the --use-singularity flag is provided to snakemake.
+    @Input:
+        Raw FastQ file (scatter)
+    @Output:
+        Log file containing any warnings or errors on file
+    """
     input:
         R1=join(workpath,"{name}.R1.fastq.gz"),
     output:
@@ -25,6 +27,15 @@ rule validator:
 
 
 rule rawfastqc:
+    """
+    Quality-control step to assess sequencing quality of the raw data prior removing
+    adapter sequences. FastQC generates a set of basic statistics to identify problems
+    that can arise during sequencing or library preparation.
+    @Input:
+        List of Raw FastQ files (gather)
+    @Output:
+        List of FastQC reports and zip file containing data quality information
+    """
     input:
         expand(join(workpath,"{name}.R1.fastq.gz"), name=samples)
     output:
@@ -42,6 +53,15 @@ rule rawfastqc:
 
 
 rule trim_se:
+    """
+    Data-processing step to remove adapter sequences and perform quality trimming
+    prior to alignment the reference genome.  Adapters are composed of synthetic
+    sequences and should be removed prior to alignment.
+    @Input:
+        Raw FastQ file (scatter)
+    @Output:
+        Trimmed FastQ file
+    """
     input:
         infq=join(workpath,"{name}.R1."+config['project']['filetype']),
     output:
@@ -65,6 +85,15 @@ rule trim_se:
 
 
 rule fastqc:
+    """
+    Quality-control step to assess sequencing quality of the raw data after removing
+    adapter sequences. This step is run after trim_pe rule. FastQC is run after adapter
+    trimming to evalute if the adapter sequences were properly removed.
+    @Input:
+        List of Trimmed FastQ files (gather)
+    @Output:
+        List of FastQC reports and zip file containing data quality information
+    """
     input:
         expand(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"), name=samples)
     output:
@@ -85,6 +114,16 @@ rule fastqc:
     """
 
 rule fastq_screen:
+    """
+    Quality-control step to screen for different sources of contamination.
+    FastQ Screen compares your sequencing data to a set of different reference
+    genomes to determine if there is contamination. It allows a user to see if
+    the composition of your library matches what you expect.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        FastQ Screen report and logfiles
+    """
     input:
         file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
     output:
@@ -116,6 +155,16 @@ rule fastq_screen:
 
 
 rule kraken_se:
+    """
+    Quality-control step to assess for potential sources of microbial contamination.
+    If there are high levels of microbial contamination, Kraken will provide an
+    estimation of the taxonomic composition. Kraken is used in conjunction with
+    Krona to produce an interactive reports.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        Kraken logfile and interative krona report
+    """
     input:
         fq=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
     output:
@@ -148,6 +197,15 @@ rule kraken_se:
 
 
 rule star1p:
+    """
+    Data processing step to align reads against reference genome using STAR in
+    two-pass mode. STAR is run in a two-pass mode for enhanced detection of reads
+    mapping to novel splice junctions. This rule represents the first pass of STAR.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        Logfile containing splice-junctions detected by STAR
+    """
     input:
         file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         qcrl=join(workpath,"QC","readlength.txt"),
@@ -159,7 +217,8 @@ rule star1p:
         prefix=join(workpath, star_dir, "{name}"),
         best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
         # Exposed Parameters: modify config/genomes/{genome}.json to change default
-        stardir=config['references'][pfamily]['STARDIR'],
+        stardir=config['references'][pfamily]['GENOME_STARDIR'],
+        gtffile=config['references'][pfamily]['GTFFILE'],
         # Exposed STAR Parameters: modify config/templates/tools.json to change defaults
         filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
         samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
@@ -176,10 +235,13 @@ rule star1p:
         adapter2=config['bin'][pfamily]['ADAPTER2'],
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-    container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
+    container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
     shell: """
-    readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
-    STAR --genomeDir {params.stardir}${{readlength}} \
+    # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+    readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+    echo "sjdbOverhang for STAR: ${{readlength}}"
+
+    STAR --genomeDir {params.stardir} \
         --outFilterIntronMotifs {params.filterintronmotifs} \
         --outSAMstrandField {params.samstrandfield}  \
         --outFilterType {params.filtertype} \
@@ -197,11 +259,23 @@ rule star1p:
         --outFileNamePrefix {params.prefix}. \
         --outSAMtype BAM Unsorted \
         --alignEndsProtrude 10 ConcordantPair \
-        --peOverlapNbasesMin 10
+        --peOverlapNbasesMin 10 \
+        --sjdbGTFfile {params.gtffile} \
+        --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+        --sjdbOverhang ${{readlength}}
     """
 
 
 rule sjdb:
+    """
+    Aggregation step to collect the set of all novel junctions that were detected
+    in the first-pass of STAR. These splice junctions will be used to re-build the
+    genomic indices.
+    @Input:
+        Logfiles containing splice-junctions (gather)
+    @Output:
+        Logfile containing the set of all splice junctions across all samples
+    """
     input:
         files=expand(join(workpath,star_dir,"{name}.SJ.out.tab"), name=samples),
     output:
@@ -218,6 +292,18 @@ rule sjdb:
 
 
 rule star2p:
+    """
+    Data processing step to align reads against reference genome using STAR in
+    two-pass mode. This step represents the second step of STAR. Here set of splice
+    all novel junctions that were detected in the first-pass of STAR are then inserted
+    into the genome indices. In this second-pass, all reads are re-mapped using
+    the annotated junctions from the GTF file and novel junctions that were
+    detected in the first-pass of STAR.
+    @Input:
+        Trimmed FastQ files (scatter)
+    @Output:
+        Genomic and transcriptomic BAM file
+    """
     input:
         file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
         tab=join(workpath,star_dir,"uniq.filtered.SJ.out.tab"),
@@ -233,7 +319,8 @@ rule star2p:
         prefix=join(workpath, star_dir, "{name}.p2"),
         best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
         # Exposed Parameters: modify config/genomes/{genome}.json to change default
-        stardir=config['references'][pfamily]['STARDIR'],
+        stardir=config['references'][pfamily]['GENOME_STARDIR'],
+        gtffile=config['references'][pfamily]['GTFFILE'],
         # Exposed STAR Parameters: modify config/templates/tools.json to change defaults
         filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
         samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
@@ -251,14 +338,16 @@ rule star2p:
         outsamunmapped=config['bin'][pfamily]['OUTSAMUNMAPPED'],
         wigtype=config['bin'][pfamily]['WIGTYPE'],
         wigstrand=config['bin'][pfamily]['WIGSTRAND'],
-        gtffile=config['references'][pfamily]['GTFFILE'],
         nbjuncs=config['bin'][pfamily]['NBJUNCS'],
     threads:32
     envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-    container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
+    container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
     shell: """
-    readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
-    STAR --genomeDir {params.stardir}${{readlength}} \
+    # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+    readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+    echo "sjdbOverhang for STAR: ${{readlength}}"
+
+    STAR --genomeDir {params.stardir} \
         --outFilterIntronMotifs {params.filterintronmotifs} \
         --outSAMstrandField {params.samstrandfield} \
         --outFilterType {params.filtertype} \
@@ -283,7 +372,10 @@ rule star2p:
         --quantMode TranscriptomeSAM GeneCounts \
         --outSAMtype BAM SortedByCoordinate \
         --alignEndsProtrude 10 ConcordantPair \
-        --peOverlapNbasesMin 10
+        --peOverlapNbasesMin 10 \
+        --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+        --sjdbOverhang ${{readlength}}
+
     mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
     mv {params.prefix}.Log.final.out {workpath}/{log_dir}
     """
@@ -291,6 +383,13 @@ rule star2p:
 
 # Post Alignment Rules
 rule rsem:
+    """
+    Data processing step to quantify gene and isoform counts.
+    @Input:
+        Transcriptomic BAM file (scatter)
+    @Output:
+        Gene and isoform counts
+    """
     input:
         file1=join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),
         file2=join(workpath,rseqc_dir,"{name}.strand.info")
@@ -319,6 +418,14 @@ rule rsem:
 
 
 rule bam2bw_rnaseq_se:
+    """
+    Summarization step to convert a bam file into forward and reverse strand
+    bigwig files suitable for a genomic track viewer like IGV.
+    @Input:
+        Sorted, duplicate marked genomic BAM file (scatter)
+    @Output:
+        Forward and reverse strand BigWig files
+    """
     input:
         bam=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
         strandinfo=join(workpath,rseqc_dir,"{name}.strand.info")
