@@ -136,7 +136,7 @@ rule star_rl:
 		--sjdbGTFfile {input.gtf} \
 		--sjdbOverhang $rl \
 		--outFileNamePrefix STAR/2.7.0f/build_{wildcards.readlength}_ \
-		--outTmpDir STAR/2.7.0f/tmp_{wildcards.readlength}
+		--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_{wildcards.readlength}
 	"""
 
 
@@ -173,7 +173,7 @@ rule star_genome:
 		--genomeDir STAR/2.7.0f/genome \
 		--genomeFastaFiles {input.fa} \
 		--outFileNamePrefix STAR/2.7.0f/build_genome_ \
-		--outTmpDir STAR/2.7.0f/tmp_genome
+		--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_genome
 	"""
 
 
