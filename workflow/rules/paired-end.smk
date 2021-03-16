@@ -266,7 +266,8 @@ rule star1p:
         prefix=join(workpath, star_dir, "{name}"),
         best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
         # Exposed Parameters: modify config/genomes/{genome}.json to change default
-        stardir=config['references'][pfamily]['STARDIR'],
+        stardir=config['references'][pfamily]['GENOME_STARDIR'],
+        gtffile=config['references'][pfamily]['GTFFILE'],
         # Exposed Parameters: modify config/templates/tools.json to change defaults
         filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
         samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
@@ -283,10 +284,13 @@ rule star1p:
         adapter2=config['bin'][pfamily]['ADAPTER2'],
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-    container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
+    container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
     shell: """
-    readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
-    STAR --genomeDir {params.stardir}${{readlength}} \
+    # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+    readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+    echo "sjdbOverhang for STAR: ${{readlength}}"
+
+    STAR --genomeDir {params.stardir} \
         --outFilterIntronMotifs {params.filterintronmotifs} \
         --outSAMstrandField {params.samstrandfield} \
         --outFilterType {params.filtertype} \
@@ -305,7 +309,10 @@ rule star1p:
         --outFileNamePrefix {params.prefix}. \
         --outSAMtype BAM Unsorted \
         --alignEndsProtrude 10 ConcordantPair \
-        --peOverlapNbasesMin 10
+        --peOverlapNbasesMin 10 \
+        --sjdbGTFfile {params.gtffile} \
+        --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+        --sjdbOverhang ${{readlength}}
     """
 
 
@@ -364,7 +371,8 @@ rule star2p:
         prefix=join(workpath, star_dir, "{name}.p2"),
         best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
         # Exposed Parameters: modify config/genomes/{genome}.json to change default
-        stardir=config['references'][pfamily]['STARDIR'],
+        stardir=config['references'][pfamily]['GENOME_STARDIR'],
+        gtffile=config['references'][pfamily]['GTFFILE'],
         # Exposed Parameters: modify config/templates/tools.json to change defaults
         filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
         samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
@@ -382,14 +390,16 @@ rule star2p:
         outsamunmapped=config['bin'][pfamily]['OUTSAMUNMAPPED'],
         wigtype=config['bin'][pfamily]['WIGTYPE'],
         wigstrand=config['bin'][pfamily]['WIGSTRAND'],
-        gtffile=config['references'][pfamily]['GTFFILE'],
         nbjuncs=config['bin'][pfamily]['NBJUNCS'],
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-    container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
+    container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
     shell: """
-    readlength=$(python {params.best_rl_script} {input.qcrl} {params.stardir})
-    STAR --genomeDir {params.stardir}${{readlength}} \
+    # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+    readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+    echo "sjdbOverhang for STAR: ${{readlength}}"
+
+    STAR --genomeDir {params.stardir} \
         --outFilterIntronMotifs {params.filterintronmotifs} \
         --outSAMstrandField {params.samstrandfield}  \
         --outFilterType {params.filtertype} \
@@ -415,7 +425,10 @@ rule star2p:
         --quantMode TranscriptomeSAM GeneCounts \
         --outSAMtype BAM SortedByCoordinate \
         --alignEndsProtrude 10 ConcordantPair \
-        --peOverlapNbasesMin 10
+        --peOverlapNbasesMin 10 \
+        --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+        --sjdbOverhang ${{readlength}}
+
     mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
     mv {params.prefix}.Log.final.out {workpath}/{log_dir}
     """
@@ -447,7 +460,7 @@ rule arriba:
         # Exposed Parameters: modify config/genomes/{genome}.json to change default
         chimericbam="{name}.p2.arriba.Aligned.out.bam",
         sortedbam="{name}.p2.arriba.Aligned.sortedByCoord.out.bam",
-        stardir=config['references'][pfamily]['ARRIBA_STARDIR'],
+        stardir=config['references'][pfamily]['GENOME_STARDIR'],
         gtffile=config['references'][pfamily]['GTFFILE'],
         reffa=config['references'][pfamily]['GENOME']
     threads: 32
