@@ -10,7 +10,7 @@ def Counts(fpattern, searchpath, anno, ftype, mycols):
 	Get each samples FPKM vaules from RSEMs *.RSEM.genes.results and *.RSEM.isoform.results
 	"""
 	# Collect RSEM Results
-	files = list(filter(lambda x: fpattern in x,os.listdir(searchpath)))
+	files = sorted(list(filter(lambda x: fpattern in x,os.listdir(searchpath))))
 	# print(files)
 	for col in ["expected_count","TPM","FPKM"]:
 	    dflist = []
