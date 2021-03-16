@@ -313,7 +313,7 @@
                 "RSEQCVER": "rseqc/2.6.4",
                 "RVER": "R/3.5",
                 "SAMTOOLSVER": "samtools/1.6",
-                "STARVER": "STAR/2.7.0f",
+                "STARVER": "STAR/2.7.6a",
                 "SUBREADVER": "subread/1.5.2",
                 "TRIMMOMATICVER": "trimmomatic/0.33",
                 "UCSCVER": "ucsc/405"
@@ -801,6 +801,7 @@
             "SNPEFF_GENOME": "GRCm38.86",
             "SNPSITES": "/data/CCBR_Pipeliner/db/PipeDB/lib/mm10_allstrains_dbSNP142.vcf.gz",
             "STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/STAR/2.7.0f/genes-",
+            "GENOME_STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/GENOME_REFs/mm10_major_chrs/STAR/2.7.6a/",
             "STARFUSIONLIB": "/data/CCBR_Pipeliner/db/PipeDB/lib/Mouse_gencode_M20_CTAT_lib_Mar272019.plug-n-play/ctat_genome_lib_build_dir",
             "STARREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/STAR/2.5.2b/genes-",
             "adapter.file": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.ngsqc.dat",
