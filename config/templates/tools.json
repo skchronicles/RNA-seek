@@ -24,7 +24,7 @@
 				"RSEQCVER": "rseqc/2.6.4",
 				"RVER": "R/3.5",
 				"SAMTOOLSVER": "samtools/1.6",
-				"STARVER": "STAR/2.7.0f",
+				"STARVER": "STAR/2.7.6a",
 				"SUBREADVER": "subread/1.5.2",
 				"UCSCVER": "ucsc/405"
 			},
