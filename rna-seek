@@ -638,18 +638,25 @@ def unlock(sub_args):
     print("Successfully unlocked the pipeline's working directory!")
 
 
-def _sym_refs(input_data, target):
-    """Creates re-named symlinks for each reference file provided
+def _sym_refs(input_data, target, make_copy = False):
+    """Creates symlinks for each reference file provided
     as input. If a symlink already exists, it will not try to create a new symlink.
     If relative source PATH is provided, it will be converted to an absolute PATH.
-    If a symlink is provided the canocial path of the symlink is found.
+    If a symlink is provided in input_data, the canocial path of the symlink is found
+    to avoid any future singularity binding issues. A physical copy of the data can
+    be created by setting make_copy to True (default behavior is to create a symlink).
+    copy of a file can be created
     @param input_data <list[<str>]>:
         List of input files to symlink to target location
     @param target <str>:
         Target path to create sylink (output directory)
+    @param make_copy <boolean>:
+        Create a physical copy of data (Default: False)
     @return canocial_input_paths list[<str>]:
         List of canocical paths for the list of input files (added to singularity bindpaths)
     """
+    from shutil import copy
+
     # Find canocial paths of input files for adding to singularity bindpaths
     canocial_input_paths = []
     for file in input_data:
@@ -658,9 +665,13 @@ def _sym_refs(input_data, target):
         canocial_input_paths.append(os.path.dirname(source_name))
 
         if not exists(target_name):
-            # Create a symlink if it does not already exist
-            # Follow source symlinks to resolve any binding issues
-            os.symlink(source_name, target_name)
+            if not make_copy:
+                # Create a symlink if it does not already exist
+                # Follow source symlinks to resolve any binding issues
+                os.symlink(source_name, target_name)
+            else:
+                # Create a physical copy if it does not already exist
+                copy(file, os.path.abspath(target))
 
     return list(set(canocial_input_paths))
 
@@ -721,7 +732,7 @@ def configure_build(sub_args, git_repo, output_path):
     required_resources = ['workflow', 'resources', 'config']
     _cp_r_safe_(source = git_repo, target = output_path, resources = required_resources)
     _configure(sub_args = sub_args, filename = os.path.join(output_path, 'config', 'build.yml'), git_repo = git_repo)
-    additional_bind_paths = _sym_refs(input_data = [sub_args.ref_fa, sub_args.ref_gtf], target = output_path)
+    additional_bind_paths = _sym_refs(input_data = [sub_args.ref_fa, sub_args.ref_gtf], target = output_path, make_copy = True)
 
     return additional_bind_paths
 
@@ -751,7 +762,7 @@ def build(sub_args):
 
     # Run RNA-seek reference building pipeline
     if not sub_args.dry_run:
-        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = additional_bind_paths, submission_script = 'builder', masterjob = 'pl:build')
+        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = [], submission_script = 'builder', masterjob = 'pl:build')
         masterjob.wait()
         print('RNA-seek reference building pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
 
