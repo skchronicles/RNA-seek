@@ -15,10 +15,10 @@ workdir:OUTDIR
 rule all:
 	input:
 		expand("{genome}_{gtfver}.json",genome=GENOME, gtfver=GTFVER),
-		expand("STAR/2.7.0f/genes-{readlength}/SA",readlength=READLENGTHS),
+		expand("STAR/2.7.6a/genes-{readlength}/SA",readlength=READLENGTHS),
 		expand("{genome}.rRNA_interval_list",genome=GENOME),
 		expand("rsemref/{genome}.transcripts.ump",genome=GENOME),
-		"STAR/2.7.0f/genome/SA",
+		"STAR/2.7.6a/genome/SA",
 		"annotate.isoforms.txt",
 		"annotate.genes.txt",
 		"refFlat.txt",
@@ -119,11 +119,11 @@ rule star_rl:
 		fa=REFFA,
 		gtf=GTFFILE
 	output:
-		join("STAR", "2.7.0f", "genes-{readlength}", "SA")
+		join("STAR", "2.7.6a", "genes-{readlength}", "SA")
 	threads: 32
 	params:
 		rname='bl:star_rl',
-	container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
+	container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
 	shell: """
 	# Create Index for read length
 	rl=$(({wildcards.readlength}-1))
@@ -131,11 +131,11 @@ rule star_rl:
 	STAR \
 		--runThreadN {threads} \
 		--runMode genomeGenerate \
-		--genomeDir STAR/2.7.0f/genes-{wildcards.readlength} \
+		--genomeDir STAR/2.7.6a/genes-{wildcards.readlength} \
 		--genomeFastaFiles {input.fa} \
 		--sjdbGTFfile {input.gtf} \
 		--sjdbOverhang $rl \
-		--outFileNamePrefix STAR/2.7.0f/build_{wildcards.readlength}_ \
+		--outFileNamePrefix STAR/2.7.6a/build_{wildcards.readlength}_ \
 		--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_{wildcards.readlength}
 	"""
 
@@ -161,18 +161,18 @@ rule star_genome:
 		fa=REFFA,
 		gtf=GTFFILE
 	output:
-		join("STAR", "2.7.0f", "genome", "SA")
+		join("STAR", "2.7.6a", "genome", "SA")
 	threads: 32
 	params:
 		rname='bl:star_genome',
-	container: "docker://nciccbr/ccbr_star_2.7.0f:v0.0.2"
+	container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
 	shell: """
 	STAR \
 		--runThreadN {threads} \
 		--runMode genomeGenerate \
-		--genomeDir STAR/2.7.0f/genome \
+		--genomeDir STAR/2.7.6a/genome \
 		--genomeFastaFiles {input.fa} \
-		--outFileNamePrefix STAR/2.7.0f/build_genome_ \
+		--outFileNamePrefix STAR/2.7.6a/build_genome_ \
 		--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_genome
 	"""
 
@@ -305,30 +305,53 @@ rule jsonmaker:
 		outdir=params.workdir
 		if not outdir.endswith("/"):
 			outdir+="/"
-		bigdict=dict()
-		bigdict["references"]= {}
-		bigdict["references"]["rnaseq"]={}
-		bigdict["references"]["rnaseq"]["GENOMEFILE"]=input.fa
-		bigdict["references"]["rnaseq"]["GENOME"]=input.fa
-		bigdict["references"]["rnaseq"]["GTFFILE"]=input.gtf
-		bigdict["references"]["rnaseq"]["GENOME_STARDIR"]=outdir+"STAR/2.7.0f/genome"
-		bigdict["references"]["rnaseq"]["STARDIR"]=outdir+"STAR/2.7.0f/genes-"
-		bigdict["references"]["rnaseq"]["STARREF"]=outdir+"STAR/2.7.0f/genes-"
-		bigdict["references"]["rnaseq"]["ANNOTATE"]=outdir+"annotate.genes.txt"
-		bigdict["references"]["rnaseq"]["ANNOTATEISOFORMS"]=outdir+"annotate.isoforms.txt"
-		bigdict["references"]["rnaseq"]["REFFLAT"]=outdir+"refFlat.txt"
-		bigdict["references"]["rnaseq"]["BEDREF"]=outdir+"genes.ref.bed"
-		bigdict["references"]["rnaseq"]["GENEINFO"]=outdir+"geneinfo.bed"
-		bigdict["references"]["rnaseq"]["QUALIMAP_INFO"]=outdir+"qualimap_info.txt"
-		bigdict["references"]["rnaseq"]["KARYOBEDS"]=outdir+"karyobeds/"
-		bigdict["references"]["rnaseq"]["KARYOPLOTER"]=outdir+"karyoplot_gene_coordinates.txt"
-		bigdict["references"]["rnaseq"]["RSEMREF"]=outdir+"rsemref/"+params.genome
-		bigdict["references"]["rnaseq"]["RRNALIST"]=outdir+params.genome+".rRNA_interval_list"
-		bigdict["references"]["rnaseq"]["FASTQ_SCREEN_CONFIG"]="/data/CCBR_Pipeliner/db/PipeDB/lib/fastq_screen.conf"
-		bigdict["references"]["rnaseq"]["FASTAWITHADAPTERSETC"]="/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters_new.fa"
-		bigdict["references"]["rnaseq"]["adapter.file"]="/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.ngsqc.dat"
-		bigdict["references"]["rnaseq"]["trimmomatic.adapters"]="/data/CCBR_Pipeliner/db/PipeDB/dev/adapters2.fa"
-		bigdict["references"]["rnaseq"]["fastqc.adapters"]="/data/CCBR_Pipeliner/db/PipeDB/dev/fastqc.adapters"
-		bigdict["references"]["rnaseq"]["ORGANISM"]="CUSTOM"
+		refdict = {}
+		refdict["references"] = {}
+		refdict["references"]["rnaseq"] = {}
+		refdict["references"]["rnaseq"]["GENOMEFILE"] = input.fa
+		refdict["references"]["rnaseq"]["GENOME"] = input.fa
+		refdict["references"]["rnaseq"]["GTFFILE"] = input.gtf
+		refdict["references"]["rnaseq"]["GENOME_STARDIR"] = outdir+"STAR/2.7.6a/genome"
+		refdict["references"]["rnaseq"]["STARDIR"] = outdir+"STAR/2.7.6a/genes-"
+		refdict["references"]["rnaseq"]["ANNOTATE"] = outdir+"annotate.genes.txt"
+		refdict["references"]["rnaseq"]["ANNOTATEISOFORMS"] = outdir+"annotate.isoforms.txt"
+		refdict["references"]["rnaseq"]["REFFLAT"] = outdir+"refFlat.txt"
+		refdict["references"]["rnaseq"]["BEDREF"] = outdir+"genes.ref.bed"
+		refdict["references"]["rnaseq"]["GENEINFO"] = outdir+"geneinfo.bed"
+		refdict["references"]["rnaseq"]["QUALIMAP_INFO"] = outdir+"qualimap_info.txt"
+		refdict["references"]["rnaseq"]["KARYOBEDS"] = outdir+"karyobeds/"
+		refdict["references"]["rnaseq"]["KARYOPLOTER"] = outdir+"karyoplot_gene_coordinates.txt"
+		refdict["references"]["rnaseq"]["RSEMREF"] = outdir+"rsemref/"+params.genome
+		refdict["references"]["rnaseq"]["RRNALIST"] = outdir+params.genome+".rRNA_interval_list"
+		refdict["references"]["rnaseq"]["ORGANISM"] = wildcards.genome
+
+		# Try to infer which Arriba reference files to add a user defined reference genome
+		if 'hg19' in params.genome.lower() or \
+		'hs37d' in params.genome.lower() or \
+		'grch37' in params.genome.lower():
+			refdict["references"]["rnaseq"]["FUSIONBLACKLIST"] = \
+			"s3://nciccbr/Resources/RNA-seq/arriba/blacklist_hg19_hs37d5_GRCh37_v2.0.0.tsv.gz"
+			refdict["references"]["rnaseq"]["FUSIONCYTOBAND"] = \
+			"s3://nciccbr/Resources/RNA-seq/arriba/cytobands_hg19_hs37d5_GRCh37_v2.0.0.tsv"
+			refdict["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = \
+			"s3://nciccbr/Resources/RNA-seq/arriba/protein_domains_hg19_hs37d5_GRCh37_v2.0.0.gff3"
+		elif 'hg38' in params.genome.lower() or \
+		'hs38d' in params.genome.lower() or \
+		'grch38' in params.genome.lower():
+			refdict["references"]["rnaseq"]["FUSIONBLACKLIST"] = \
+			"s3://nciccbr/Resources/RNA-seq/arriba/blacklist_hg38_GRCh38_v2.0.0.tsv.gz"
+			refdict["references"]["rnaseq"]["FUSIONCYTOBAND"] = \
+			"s3://nciccbr/Resources/RNA-seq/arriba/cytobands_hg38_GRCh38_v2.0.0.tsv"
+			refdict["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = \
+			"s3://nciccbr/Resources/RNA-seq/arriba/protein_domains_hg38_GRCh38_v2.0.0.gff3"
+		elif 'mm10' in params.genome.lower() or \
+		'grcm38' in params.genome.lower():
+			refdict["references"]["rnaseq"]["FUSIONBLACKLIST"] = \
+			"s3://nciccbr/Resources/RNA-seq/arriba/blacklist_mm10_GRCm38_v2.0.0.tsv.gz"
+			refdict["references"]["rnaseq"]["FUSIONCYTOBAND"] = \
+			"s3://nciccbr/Resources/RNA-seq/arriba/cytobands_mm10_GRCm38_v2.0.0.tsv"
+			refdict["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = \
+			"s3://nciccbr/Resources/RNA-seq/arriba/protein_domains_mm10_GRCm38_v2.0.0.gff3"
+
 		with open(output.json, 'w') as fp:
-			json.dump(bigdict, fp, indent=4)
+			json.dump(refdict, fp, indent=4)
