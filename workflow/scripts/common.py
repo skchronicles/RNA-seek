@@ -26,6 +26,29 @@ def check_writeaccess(filename):
         sys.exit("File: {} exists, but user cannot write to file due to permissions!".format(filename))
 
 
+def references(config, pipeline, reflist):
+    '''
+    Checks if a set of required reference files were provided. Some rules depend
+    on a set of required reference files that may only exist for specific reference
+    genomes. An example of this would be blasklists arriba. The blacklist are manually
+    curated and only exist for a few reference genomes (mm10, hg38, hg19).
+    If one of the required reference files does not exist, then it will return
+    an empty list.
+    '''
+
+    _all = True
+    for ref in reflist:
+        try: tmp = config['references'][pipeline][ref]
+        # Check if ref exists in config
+        except KeyError:
+            _all = False
+            break
+        # Check if ref is empty key string
+        if not tmp: _all = False
+
+    return _all
+
+
 def provided(samplelist, condition):
     '''
     Determines if optional rules should run. If an empty list is provided to rule all,
