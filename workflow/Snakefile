@@ -1,12 +1,12 @@
 from snakemake.workflow import workflow as wf_api
 from snakemake.utils import R
-from scripts.common import provided
+from scripts.common import provided, references
 from os.path import join
 from os import listdir
 import os, sys
 
 # Global workflow variables
-configfile: 'config.json'                     # rna-seek config file 
+configfile: 'config.json'                     # rna-seek config file
 samples=config['project']['groups']['rsamps'] # sample basenames
 pfamily=config['project']['pfamily']          # rnaseq
 workpath = config['project']['workpath']      # Parent Output directory
@@ -69,7 +69,7 @@ if paired_end:
             expand(join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),name=samples),
 
             # Arriba
-            expand(join(workpath,"fusions","{name}_fusions.tsv"),name=samples),
+            expand(join(workpath,"fusions","{name}_fusions.tsv"),name=provided(samples, references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROTDOMAIN']))),
 
             # Bam to stranded bigwigs
             expand(join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),name=samples),
@@ -157,8 +157,9 @@ elif not paired_end:
             join(workpath,"Reports","multiqc_report.html"),
 
 
+# Rules common to single-end or paired-end data
+include: "rules/common.smk"
 # Include single-end and paired-specific rules
-include: "rules/common.smk"  # rules common to single-end or paired-end data
 if paired_end:
     # rules common to paired-end data
     include: "rules/paired-end.smk"

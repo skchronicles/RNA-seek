@@ -1,5 +1,5 @@
 # Paired-end snakemake rules imported in the main Snakefile.
-from scripts.common import abstract_location
+from scripts.common import abstract_location, references
 
 # Pre Alignment Rules
 rule validator:
@@ -433,96 +433,101 @@ rule star2p:
     mv {params.prefix}.Log.final.out {workpath}/{log_dir}
     """
 
+# Optional rule to run which is dependent on manually curated blacklist file
+# that only exists for a hg19, mm10, and hg38. The blacklist is used to filter
+# out known false positives.
+if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROTDOMAIN']):
+    rule arriba:
+        """
+        Optional data processing step to align reads against reference genome using STAR in
+        two-pass basic mode and call gene fusions using arriba. This rule is only run if the
+        config contains the required reference files (most important of which is the blacklist).
+        If these files are not provided, Arriba is not run.
+        detected in the first-pass of STAR.
+        @Input:
+            Trimmed FastQ files (scatter)
+        @Output:
+            Predicted gene fusions and figures
+        """
+        input:
+            R1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+            R2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
+            blacklist=abstract_location(config['references'][pfamily]['FUSIONBLACKLIST']),
+            cytoband=abstract_location(config['references'][pfamily]['FUSIONCYTOBAND']),
+            protdomain=abstract_location(config['references'][pfamily]['FUSIONPROTDOMAIN']),
+        output:
+            fusions=join(workpath,"fusions","{name}_fusions.tsv"),
+            discarded=join(workpath,"fusions","{name}_fusions.discarded.tsv"),
+            figure=join(workpath,"fusions","{name}_fusions.arriba.pdf"),
+        params:
+            rname='pl:arriba',
+            prefix=join(workpath, "fusions", "{name}.p2"),
+            # Exposed Parameters: modify config/genomes/{genome}.json to change default
+            chimericbam="{name}.p2.arriba.Aligned.out.bam",
+            sortedbam="{name}.p2.arriba.Aligned.sortedByCoord.out.bam",
+            stardir=config['references'][pfamily]['GENOME_STARDIR'],
+            gtffile=config['references'][pfamily]['GTFFILE'],
+            reffa=config['references'][pfamily]['GENOME']
+        threads: 32
+        envmodules: config['bin'][pfamily]['tool_versions']['ARRIBAVER']
+        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        shell: """
+        # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+        readlength=$(zcat {input.R1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+        echo "sjdbOverhang for STAR: ${{readlength}}"
 
-rule arriba:
-    """
-    Data processing step to align reads against reference genome using STAR in
-    two-pass basic mode and call gene fusions using arriba.
-    detected in the first-pass of STAR.
-    @Input:
-        Trimmed FastQ files (scatter)
-    @Output:
-        Predicted gene fusions and figures
-    """
-    input:
-        R1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
-        R2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
-        blacklist=abstract_location(config['references'][pfamily]['FUSIONBLACKLIST']),
-        cytoband=abstract_location(config['references'][pfamily]['FUSIONCYTOBAND']),
-        protdomain=abstract_location(config['references'][pfamily]['FUSIONPROTDOMAIN']),
-    output:
-        fusions=join(workpath,"fusions","{name}_fusions.tsv"),
-        discarded=join(workpath,"fusions","{name}_fusions.discarded.tsv"),
-        figure=join(workpath,"fusions","{name}_fusions.arriba.pdf"),
-    params:
-        rname='pl:arriba',
-        prefix=join(workpath, "fusions", "{name}.p2"),
-        # Exposed Parameters: modify config/genomes/{genome}.json to change default
-        chimericbam="{name}.p2.arriba.Aligned.out.bam",
-        sortedbam="{name}.p2.arriba.Aligned.sortedByCoord.out.bam",
-        stardir=config['references'][pfamily]['GENOME_STARDIR'],
-        gtffile=config['references'][pfamily]['GTFFILE'],
-        reffa=config['references'][pfamily]['GENOME']
-    threads: 32
-    envmodules: config['bin'][pfamily]['tool_versions']['ARRIBAVER']
-    container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
-    shell: """
-    # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
-    readlength=$(zcat {input.R1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
-    echo "sjdbOverhang for STAR: ${{readlength}}"
+        STAR --runThreadN {threads} \
+            --sjdbGTFfile {params.gtffile} \
+            --sjdbOverhang ${{readlength}} \
+            --genomeDir {params.stardir} \
+            --genomeLoad NoSharedMemory \
+            --readFilesIn {input.R1} {input.R2} \
+            --readFilesCommand zcat \
+            --outStd BAM_Unsorted \
+            --outSAMtype BAM Unsorted \
+            --outSAMunmapped Within \
+            --outBAMcompression 0 \
+            --outFilterMultimapNmax 50 \
+            --peOverlapNbasesMin 10 \
+            --alignSplicedMateMapLminOverLmate 0.5 \
+            --alignSJstitchMismatchNmax 5 -1 5 5 \
+            --chimSegmentMin 10 \
+            --chimOutType WithinBAM HardClip \
+            --chimJunctionOverhangMin 10 \
+            --chimScoreDropMax 30 \
+            --chimScoreJunctionNonGTAG 0 \
+            --chimScoreSeparation 1 \
+            --chimSegmentReadGapMax 3 \
+            --chimMultimapNmax 50 \
+            --twopassMode Basic \
+            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --outFileNamePrefix {params.prefix}. \
+        | tee /lscratch/$SLURM_JOB_ID/{params.chimericbam} | \
+        arriba -x /dev/stdin \
+            -o {output.fusions} \
+            -O {output.discarded} \
+            -a {params.reffa} \
+            -g {params.gtffile} \
+            -b {input.blacklist} \
 
-    STAR --runThreadN {threads} \
-        --sjdbGTFfile {params.gtffile} \
-        --sjdbOverhang ${{readlength}} \
-        --genomeDir {params.stardir} \
-        --genomeLoad NoSharedMemory \
-        --readFilesIn {input.R1} {input.R2} \
-        --readFilesCommand zcat \
-        --outStd BAM_Unsorted \
-        --outSAMtype BAM Unsorted \
-        --outSAMunmapped Within \
-        --outBAMcompression 0 \
-        --outFilterMultimapNmax 50 \
-        --peOverlapNbasesMin 10 \
-        --alignSplicedMateMapLminOverLmate 0.5 \
-        --alignSJstitchMismatchNmax 5 -1 5 5 \
-        --chimSegmentMin 10 \
-        --chimOutType WithinBAM HardClip \
-        --chimJunctionOverhangMin 10 \
-        --chimScoreDropMax 30 \
-        --chimScoreJunctionNonGTAG 0 \
-        --chimScoreSeparation 1 \
-        --chimSegmentReadGapMax 3 \
-        --chimMultimapNmax 50 \
-        --twopassMode Basic \
-        --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
-        --outFileNamePrefix {params.prefix}. \
-    | tee /lscratch/$SLURM_JOB_ID/{params.chimericbam} | \
-    arriba -x /dev/stdin \
-        -o {output.fusions} \
-        -O {output.discarded} \
-        -a {params.reffa} \
-        -g {params.gtffile} \
-        -b {input.blacklist} \
+        # Sorting and Indexing BAM files is required for Arriba's Visualization
+        samtools sort -@ {threads} \
+            -m 3G -T /lscratch/$SLURM_JOB_ID/samtools_tmp_{wildcards.name} \
+            -O bam /lscratch/$SLURM_JOB_ID/{params.chimericbam} \
+            > /lscratch/$SLURM_JOB_ID/{params.sortedbam}
+        rm /lscratch/$SLURM_JOB_ID/{params.chimericbam}
+        samtools index /lscratch/$SLURM_JOB_ID/{params.sortedbam} \
+            /lscratch/$SLURM_JOB_ID/{params.sortedbam}.bai
 
-    # Sorting and Indexing BAM files is required for Arriba's Visualization
-    samtools sort -@ {threads} \
-        -m 3G -T /lscratch/$SLURM_JOB_ID/samtools_tmp_{wildcards.name} \
-        -O bam /lscratch/$SLURM_JOB_ID/{params.chimericbam} \
-        > /lscratch/$SLURM_JOB_ID/{params.sortedbam}
-    rm /lscratch/$SLURM_JOB_ID/{params.chimericbam}
-    samtools index /lscratch/$SLURM_JOB_ID/{params.sortedbam} \
-        /lscratch/$SLURM_JOB_ID/{params.sortedbam}.bai
-
-    # Generate Gene Fusions Visualization
-    draw_fusions.R \
-        --fusions={output.fusions} \
-        --alignments=/lscratch/$SLURM_JOB_ID/{params.sortedbam} \
-        --output={output.figure} \
-        --annotation={params.gtffile} \
-        --cytobands={input.cytoband} \
-        --proteinDomains={input.protdomain}
-    """
+        # Generate Gene Fusions Visualization
+        draw_fusions.R \
+            --fusions={output.fusions} \
+            --alignments=/lscratch/$SLURM_JOB_ID/{params.sortedbam} \
+            --output={output.figure} \
+            --annotation={params.gtffile} \
+            --cytobands={input.cytoband} \
+            --proteinDomains={input.protdomain}
+        """
 
 
 # Post Alignment Rules
