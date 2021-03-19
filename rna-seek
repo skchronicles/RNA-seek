@@ -925,7 +925,7 @@ def parsed_arguments():
                                 help = argparse.SUPPRESS)
     # Output Directory (analysis working directory)
     subparser_run.add_argument('--output',
-                                type = str,
+                                type = lambda option: os.path.abspath(os.path.expanduser(option)),
                                 required = True,
                                 help = argparse.SUPPRESS)
     # Reference Genome (to dynamically select reference files)
@@ -1062,7 +1062,7 @@ def parsed_arguments():
                                 help = argparse.SUPPRESS)
     # Output Directory (build working directory)
     subparser_build.add_argument('--output',
-                                type = str,
+                                type = lambda option: os.path.abspath(os.path.expanduser(option)),
                                 required = True,
                                 help = argparse.SUPPRESS)
     # Dry-run build workflow (do not execute the workflow)
