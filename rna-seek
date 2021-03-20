@@ -316,6 +316,29 @@ def get_nends(ifiles):
     return nends_status
 
 
+def get_fastq_screen_paths(fastq_screen_confs, match = 'DATABASE', file_index = -1):
+    """Parses fastq_screen.conf files to get the paths of each fastq_screen database.
+    This path contains bowtie2 indices for reference genome to screen against.
+    The paths are added as singularity bind points.
+    @param fastq_screen_confs list[<str>]:
+        Name of fastq_screen config files to parse
+    @param match <string>:
+        Keyword to indicate a line match [default: 'DATABASE']
+    @param file_index <int>:
+        Index of line line containing the fastq_screen database path
+    @return list[<str>]:
+        Returns a list of fastq_screen database paths
+    """
+    databases = []
+    for file in fastq_screen_confs:
+        with open(file, 'r') as fh:
+            for line in fh:
+                if line.startswith(match):
+                        db_path = line.strip().split()[file_index]
+                        databases.append(db_path)
+    return databases
+
+
 def get_rawdata_bind_paths(input_files):
     """
     Gets rawdata bind paths of user provided fastq files.
@@ -530,12 +553,11 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2, submission_scrip
     outdir = os.path.abspath(outdir)
 
     # Default PATHs to bind to the container's filesystem
-    bindpaths = "{},/data/CCBR_Pipeliner/db/PipeDB/,/lscratch,/fdb".format(outdir)
+    bindpaths = "{},/lscratch".format(outdir)
 
     # Set ENV variable 'SINGULARITY_CACHEDIR' to output directory
     my_env = {}; my_env.update(os.environ)
     my_env['SINGULARITY_CACHEDIR'] = os.path.join(outdir, ".singularity")
-
 
     if additional_bind_paths:
         # Add Bind PATHs for rawdata directories
@@ -584,6 +606,53 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2, submission_scrip
     return masterjob
 
 
+def resolve_additional_bind_paths(search_paths):
+    """Finds additional singularity bind paths from a list of random paths. Paths are
+    indexed with a compostite key containing the first two directories of an absolute
+    file path to avoid issues related to shared names across the /gpfs shared network
+    filesystem. For each indexed list of file paths, a common path is found. Assumes
+    that the paths provided are absolute paths, the rna-seek build sub command creates
+    resource file index with absolute filenames.
+    @param search_paths list[<str>]:
+        List of absolute file paths to find common bind paths from
+    @return common_paths list[<str>]:
+        Returns a list of common shared file paths to create additional singularity bind paths
+    """
+    common_paths = []
+    indexed_paths = {}
+
+    for ref in search_paths:
+        # Skip over resources with remote URI and
+        # skip over strings that are not file PATHS as
+        # RNA-seek build creates absolute resource PATHS
+        if ref.lower().startswith('sftp://') or \
+        ref.lower().startswith('s3://') or \
+        ref.lower().startswith('gs://') or \
+        not ref.lower().startswith(os.sep):
+            continue
+
+        # Break up path into directory tokens
+        path_list = os.path.abspath(ref).split(os.sep)
+        try: # Create composite index from first two directories
+            # Avoids issues created by shared /gpfs/ PATHS
+            index = path_list[1:3]
+            index = tuple(index)
+        except IndexError:
+            index = path_list[1] # ref startswith /
+        if index not in indexed_paths:
+            indexed_paths[index] = []
+        # Create an INDEX to find common PATHS for each root child directory
+        # like /scratch or /data. This prevents issues when trying to find the
+        # common path betweeen these two different directories (resolves to /)
+        indexed_paths[index].append(str(os.sep).join(path_list))
+
+    for index, paths in indexed_paths.items():
+        # Find common paths for each path index
+        common_paths.append(os.path.dirname(os.path.commonprefix(paths)))
+
+    return list(set(common_paths))
+
+
 def run(sub_args):
     """Initialize, setup, and run the RNA-seek pipeline.
     Calls initialize() to create output directory and copy over pipeline resources,
@@ -608,8 +677,18 @@ def run(sub_args):
 
     # Run pipeline
     if not sub_args.dry_run:
+        # Resolve all Singularity Bindpaths
         rawdata_bind_paths = config['project']['datapath']
-        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = rawdata_bind_paths, threads = sub_args.threads)
+        # Get FastQ Screen Database paths
+        # and other reference genome file paths
+        fqscreen_cfg1=config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG']
+        fqscreen_cfg2=config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG2']
+        fq_screen_paths = get_fastq_screen_paths([fqscreen_cfg1, fqscreen_cfg2])
+        kraken_db_path = [config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB']]
+        genome_bind_paths = resolve_additional_bind_paths(config['references']['rnaseq'].values() + fq_screen_paths + kraken_db_path)
+        all_bind_paths = "{},{}".format(",".join(genome_bind_paths), rawdata_bind_paths)
+
+        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = all_bind_paths, threads = sub_args.threads)
 
         print("\nRunning RNA-seek pipeline in '{}' mode...".format(sub_args.mode))
         masterjob.wait()
@@ -925,7 +1004,7 @@ def parsed_arguments():
                                 help = argparse.SUPPRESS)
     # Output Directory (analysis working directory)
     subparser_run.add_argument('--output',
-                                type = lambda option: os.path.abspath(os.path.expanduser(option)),
+                                type = str,
                                 required = True,
                                 help = argparse.SUPPRESS)
     # Reference Genome (to dynamically select reference files)
@@ -1062,7 +1141,7 @@ def parsed_arguments():
                                 help = argparse.SUPPRESS)
     # Output Directory (build working directory)
     subparser_build.add_argument('--output',
-                                type = lambda option: os.path.abspath(os.path.expanduser(option)),
+                                type = str,
                                 required = True,
                                 help = argparse.SUPPRESS)
     # Dry-run build workflow (do not execute the workflow)
