@@ -2,6 +2,7 @@
     "references": {
         "rnaseq": {
             "GENOME_STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/GENOME_REFs/mm10_major_chrs/STAR/2.7.6a/",
+            "TINREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/transcripts.protein_coding_only.bed12",
             "RRNALIST": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/mm10.rRNA_interval_list",
             "ORGANISM": "MOUSE",
             "KARYOBEDS": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/karyobeds/",

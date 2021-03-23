@@ -90,6 +90,7 @@ if paired_end:
             expand(join(workpath,rseqc_dir,"{name}.strand.info"),name=samples),
             expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
             expand(join(workpath,rseqc_dir,"{name}.inner_distance_freq.txt"),name=samples),
+            expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
 
             # RSEM merge and counts
             expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
@@ -141,6 +142,9 @@ elif not paired_end:
             # Bam to stranded bigwigs
             expand(join(workpath,bams_dir,"{name}.fwd.bw"),name=samples),
             expand(join(workpath,bams_dir,"{name}.rev.bw"),name=samples),
+
+            # RSeQC
+            expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
 
             # RSEM
             expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
