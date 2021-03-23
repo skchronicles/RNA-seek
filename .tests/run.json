@@ -804,6 +804,7 @@
             "GENOME_STARDIR": "/data/CCBR_Pipeliner/db/PipeDB/Indices/GENOME_REFs/mm10_major_chrs/STAR/2.7.6a/",
             "STARFUSIONLIB": "/data/CCBR_Pipeliner/db/PipeDB/lib/Mouse_gencode_M20_CTAT_lib_Mar272019.plug-n-play/ctat_genome_lib_build_dir",
             "STARREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_basic/STAR/2.5.2b/genes-",
+            "TINREF": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/transcripts.protein_coding_only.bed12",
             "adapter.file": "/data/CCBR_Pipeliner/db/PipeDB/dev/TruSeq_and_nextera_adapters.ngsqc.dat",
             "fastqc.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/fastqc.adapters",
             "trimmomatic.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/adapters2.fa"
