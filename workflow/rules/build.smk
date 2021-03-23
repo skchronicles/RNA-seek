@@ -25,7 +25,8 @@ rule all:
 		"geneinfo.bed",
 		"karyoplot_gene_coordinates.txt",
 		"qualimap_info.txt",
-		"karyobeds/karyobed.bed"
+		"karyobeds/karyobed.bed",
+		"transcripts.protein_coding_only.bed12"
 
 
 rule rsem:
@@ -251,6 +252,51 @@ rule karyo_beds:
 	"""
 
 
+rule tin_ref:
+    """
+    Builds RSeQC tin.py reference file containing all canocical protein coding genes.
+    @Input:
+		Annotation file in GTF format
+    @Output:
+        Generates 'transcripts.protein_coding_only.bed12' which is used by RSeQC tin.py internally.
+	"""
+	input:
+		gtf=GTFFILE
+	output:
+		"transcripts.protein_coding_only.bed12"
+	params:
+		rname='bl:tin_ref',
+		gtf2protein=join(SCRIPTSDIR, "gtf2protein_coding_genes.py"),
+		gene2transcripts=join(SCRIPTSDIR, "gene2transcripts_add_length.py"),
+	container: "docker://nciccbr/ccbr_build_rnaseq:v0.0.1"
+	shell: """
+	python {params.gtf2protein} {input.gtf} > protein_coding_genes.lst
+	gtfToGenePred -genePredExt {input.gtf} genes.gtf.genePred
+	genePredToBed genes.gtf.genePred genes.gtf.genePred.bed
+
+	awk -F '\\t' -v OFS='\\t' '{{print $12,$1}}' genes.gtf.genePred \
+		| sort -k1,1n > gene2transcripts
+
+	while read gene; do
+		grep "${{gene}}" gene2transcripts;
+	done < protein_coding_genes.lst > gene2transcripts.protein_coding_only
+
+	python {params.gene2transcripts} gene2transcripts.protein_coding_only genes.gtf.genePred.bed \
+		> gene2transcripts.protein_coding_only.with_len
+
+	sort -k1,1 -k3,3nr gene2transcripts.protein_coding_only.with_len | \
+		awk -F '\\t' '{{if (!seen[$1]) {{seen[$1]++; print $2}}}}' > protein_coding_only.txt
+
+	while read transcript; do
+		grep -m1 "${{transcript}}" genes.gtf.genePred.bed;
+	done < <(awk -F '.' '{{print $1}}' protein_coding_only.txt) > transcripts.protein_coding_only.bed12
+
+	rm -f "protein_coding_genes.lst" "genes.gtf.genePred" "genes.gtf.genePred.bed" \
+		"gene2transcripts" "gene2transcripts.protein_coding_only" "protein_coding_only.txt" \
+		"gene2transcripts.protein_coding_only.with_len" "protein_coding_only.txt"
+	"""
+
+
 rule qualimapinfo:
     """
     Builds QualiMap2 reference file used by Counts QC. It is a four-column
@@ -324,6 +370,7 @@ rule jsonmaker:
 		refdict["references"]["rnaseq"]["RSEMREF"] = outdir+"rsemref/"+params.genome
 		refdict["references"]["rnaseq"]["RRNALIST"] = outdir+params.genome+".rRNA_interval_list"
 		refdict["references"]["rnaseq"]["ORGANISM"] = wildcards.genome
+		refdict["references"]["rnaseq"]["TINREF"] = outdir+"transcripts.protein_coding_only.bed12"
 
 		# Try to infer which Arriba reference files to add a user defined reference genome
 		if 'hg19' in params.genome.lower() or \
