@@ -18,9 +18,9 @@ rule picard:
     input:
         file1=join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam"),
     output:
-        outstar2=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
-        outstar2b=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bai"),
-        outstar3=join(workpath,log_dir,"{name}.star.duplic")
+        bam=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
+        bai=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam.bai"),
+        metrics=join(workpath,log_dir,"{name}.star.duplic")
     params:
         rname='pl:picard',
         sampleName="{name}",
@@ -34,10 +34,10 @@ rule picard:
     java -Xmx110g -XX:ParallelGCThreads=5 -jar ${{PICARDJARPATH}}/picard.jar MarkDuplicates \
         I=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
         O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam \
-        TMP_DIR=/lscratch/$SLURM_JOBID CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT METRICS_FILE={output.outstar3};
-    mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam {output.outstar2};
-    mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bai {output.outstar2b};
-    sed -i 's/MarkDuplicates/picard.sam.MarkDuplicates/g' {output.outstar3};
+        TMP_DIR=/lscratch/$SLURM_JOBID CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT METRICS_FILE={output.metrics};
+    mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam {output.bam};
+    mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bai {output.bai};
+    sed -i 's/MarkDuplicates/picard.sam.MarkDuplicates/g' {output.metrics};
     """
 
 
@@ -160,6 +160,37 @@ rule rseqc:
     """
 
 
+rule tin:
+    """
+    Quality-control step to infer RNA integrity at the transcript level.
+    TINs (transcript integrity numbers) are calculated for all canoncial
+    protein-coding transcripts. TIN is analogous to a computionally derived
+    RIN value. From the docs: requires a sort and indexed bam file.
+    @Input:
+        Sorted, duplicate marked genomic BAM file (scatter)
+    @Output:
+        RSeQC logfiles containing transcript integrity number information
+    """
+    input:
+        bam=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
+        bai=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam.bai"),
+        control=join(workpath,rseqc_dir,"{name}.Rdist.info")
+    output:
+        out1=join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.tin.xls"),
+        out2=join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt")
+    params:
+        bedref=config['references'][pfamily]['TINREF'],
+        outdir=join(workpath,rseqc_dir),
+        rname="pl:tin",
+    envmodules: config['bin'][pfamily]['tool_versions']['RSEQCVER'],
+    container: "docker://nciccbr/ccbr_rseqc_3.0.0:v032219"
+    shell: """
+    # tin.py writes to current working directory
+    cd {params.outdir}
+    tin.py -i {input.bam} -r {params.bedref}
+    """
+
+
 rule rnaseq_multiqc:
     """
     Reporting step to aggregate sample statistics and quality-control information
@@ -180,6 +211,7 @@ rule rnaseq_multiqc:
         expand(join(workpath,preseq_dir,"{name}.ccurve"),name=samples),
         expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
         expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
+        expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
         qcconfig=abstract_location(config['bin'][pfamily]['CONFMULTIQC']),
     output:
         join(workpath,"Reports","multiqc_report.html"),
