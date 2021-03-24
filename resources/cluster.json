@@ -73,6 +73,11 @@
 		"threads": "32",
 		"time": "4-00:00:00"
 	},
+	"star_basic": {
+		"mem": "110g",
+		"threads": "32",
+		"time": "4-00:00:00"
+	},
 	"arriba": {
 		"gres": "lscratch:256",
 		"mem": "110g",
