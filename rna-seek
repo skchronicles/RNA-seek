@@ -472,6 +472,10 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config['project']['version'] = __version__
     config['project']['workpath'] = os.path.abspath(sub_args.output)
 
+    # Add optional cli workflow steps
+    config['options'] = {}
+    config['options']['star_2_pass_basic'] = sub_args.star_2_pass_basic
+
     # Get latest git commit hash
     git_hash = get_repo_git_commit_hash(repo_path)
     config['project']['git_commit_hash'] = git_hash
@@ -924,6 +928,7 @@ def parsed_arguments():
                                  --genome {hg38_30, mm10_M21}
                                  [--mode {local, slurm}]
                                  [--dry-run]
+                                 [--star-2-pass-basic]
                                  [--threads THREADS]
 
         This section explains concepts and options for running the RNA-seek pipeline.
@@ -1041,6 +1046,20 @@ def parsed_arguments():
                                 help = 'Do not execute anything, \
                                 and only display what steps in the pipeline remain or will \
                                 be run.')
+
+    # Run STAR 2-pass-basic
+    subparser_run.add_argument('--star-2-pass-basic',
+                                action = 'store_true',
+                                required = False,
+                                default = False,
+                                help = 'Run STAR in per sample 2-pass mapping mode. \
+                                It is recommended to use this option when processing a set of \
+                                unrelated samples. It is not adivsed to use this option for a study with multiple \
+                                related samples. By default, the pipeline ultilizes a multi sample 2-pass mapping \
+                                approach where the set of splice junctions detected across all samples are provided to \
+                                the second pass of STAR. This option overrides the default behavior so each sample will \
+                                be processed in a per sample two-pass basic mode.')
+
     # Number of threads for the RNA-seek pipeline's main proceess
     subparser_run.add_argument('--threads',
                                 type = int,
