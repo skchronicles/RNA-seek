@@ -194,191 +194,284 @@ rule kraken_se:
         ktImportTaxonomy - -o {output.kronahtml}
     """
 
+if config['options']['star_2_pass_basic']:
+    # Run STAR with per-sample 2-pass mapping using '--twopassMode Basic' option
+    # STAR will perform the 1st pass mapping, then it will automatically extract
+    # splice junctions, insert them into the genome index, and, finally, re-map
+    # all reads in the 2nd mapping pass.
+    rule star_basic:
+        """
+        Data processing step to align reads against reference genome using STAR in
+        per sample two-pass basic mode. STAR will perform the 1st pass mapping, then
+        it will automatically extract splice junctions, insert them into the genome
+        index, and, finally, re-map all reads in the 2nd mapping pass. Agian, Splice
+        junctions are detected at a per sample level.
+        @Input:
+            Trimmed FastQ files (scatter)
+        @Output:
+            Genomic and transcriptomic BAM file
+        """
+        input:
+            file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+            qcrl=join(workpath,"QC","readlength.txt"),
+        output:
+            out1=temp(join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam")),
+            out2=join(workpath,star_dir,"{name}.p2.ReadsPerGene.out.tab"),
+            out3=join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),
+            out4=join(workpath,star_dir,"{name}.p2.SJ.out.tab"),
+            out5=join(workpath,log_dir,"{name}.p2.Log.final.out"),
+        params:
+            rname='pl:star_basic',
+            prefix=join(workpath, star_dir, "{name}.p2"),
+            best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
+            # Exposed Parameters: modify config/genomes/{genome}.json to change default
+            stardir=config['references'][pfamily]['GENOME_STARDIR'],
+            gtffile=config['references'][pfamily]['GTFFILE'],
+            # Exposed STAR Parameters: modify config/templates/tools.json to change defaults
+            filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
+            samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
+            filtertype=config['bin'][pfamily]['FILTERTYPE'],
+            filtermultimapnmax=config['bin'][pfamily]['FILTERMULTIMAPNMAX'],
+            alignsjoverhangmin=config['bin'][pfamily]['ALIGNSJOVERHANGMIN'],
+            alignsjdboverhangmin=config['bin'][pfamily]['ALIGNSJDBOVERHANGMIN'],
+            filtermismatchnmax=config['bin'][pfamily]['FILTERMISMATCHNMAX'],
+            filtermismatchnoverlmax=config['bin'][pfamily]['FILTERMISMATCHNOVERLMAX'],
+            alignintronmin=config['bin'][pfamily]['ALIGNINTRONMIN'],
+            alignintronmax=config['bin'][pfamily]['ALIGNINTRONMAX'],
+            alignmatesgapmax=config['bin'][pfamily]['ALIGNMATESGAPMAX'],
+            adapter1=config['bin'][pfamily]['ADAPTER1'],
+            adapter2=config['bin'][pfamily]['ADAPTER2'],
+            outsamunmapped=config['bin'][pfamily]['OUTSAMUNMAPPED'],
+            wigtype=config['bin'][pfamily]['WIGTYPE'],
+            wigstrand=config['bin'][pfamily]['WIGSTRAND'],
+            nbjuncs=config['bin'][pfamily]['NBJUNCS'],
+        threads:32
+        envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
+        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        shell: """
+        # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+        readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+        echo "sjdbOverhang for STAR: ${{readlength}}"
+
+        STAR --genomeDir {params.stardir} \
+            --outFilterIntronMotifs {params.filterintronmotifs} \
+            --outSAMstrandField {params.samstrandfield} \
+            --outFilterType {params.filtertype} \
+            --outFilterMultimapNmax {params.filtermultimapnmax} \
+            --alignSJoverhangMin {params.alignsjoverhangmin} \
+            --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
+            --outFilterMismatchNmax {params.filtermismatchnmax} \
+            --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
+            --alignIntronMin {params.alignintronmin} \
+            --alignIntronMax {params.alignintronmax} \
+            --alignMatesGapMax {params.alignmatesgapmax} \
+            --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
+            --readFilesIn {input.file1} --readFilesCommand zcat \
+            --runThreadN {threads} \
+            --outFileNamePrefix {params.prefix}. \
+            --outSAMunmapped {params.outsamunmapped} \
+            --outWigType {params.wigtype} \
+            --outWigStrand {params.wigstrand} \
+            --twopassMode Basic \
+            --sjdbGTFfile {params.gtffile} \
+            --limitSjdbInsertNsj {params.nbjuncs} \
+            --quantMode TranscriptomeSAM GeneCounts \
+            --outSAMtype BAM SortedByCoordinate \
+            --alignEndsProtrude 10 ConcordantPair \
+            --peOverlapNbasesMin 10 \
+            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --sjdbOverhang ${{readlength}}
+
+        mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
+        mv {params.prefix}.Log.final.out {workpath}/{log_dir}
+        """
+else:
+    # Run STAR with multi-sample 2-pass mapping
+    # For a study with multiple samples, it is recommended to collect 1st pass
+    # splice junctions from all samples and provide them to the second pass of STAR
+    rule star1p:
+        """
+        Data processing step to align reads against reference genome using STAR in
+        two-pass mode. STAR is run in a two-pass mode for enhanced detection of reads
+        mapping to novel splice junctions. This rule represents the first pass of STAR.
+        @Input:
+            Trimmed FastQ files (scatter)
+        @Output:
+            Logfile containing splice-junctions detected by STAR
+        """
+        input:
+            file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+            qcrl=join(workpath,"QC","readlength.txt"),
+        output:
+            out1=join(workpath,star_dir,"{name}.SJ.out.tab"),
+            out3=temp(join(workpath,star_dir,"{name}.Aligned.out.bam")),
+        params:
+            rname='pl:star1p',
+            prefix=join(workpath, star_dir, "{name}"),
+            best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
+            # Exposed Parameters: modify config/genomes/{genome}.json to change default
+            stardir=config['references'][pfamily]['GENOME_STARDIR'],
+            gtffile=config['references'][pfamily]['GTFFILE'],
+            # Exposed STAR Parameters: modify config/templates/tools.json to change defaults
+            filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
+            samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
+            filtertype=config['bin'][pfamily]['FILTERTYPE'],
+            filtermultimapnmax=config['bin'][pfamily]['FILTERMULTIMAPNMAX'],
+            alignsjoverhangmin=config['bin'][pfamily]['ALIGNSJOVERHANGMIN'],
+            alignsjdboverhangmin=config['bin'][pfamily]['ALIGNSJDBOVERHANGMIN'],
+            filtermismatchnmax=config['bin'][pfamily]['FILTERMISMATCHNMAX'],
+            filtermismatchnoverlmax=config['bin'][pfamily]['FILTERMISMATCHNOVERLMAX'],
+            alignintronmin=config['bin'][pfamily]['ALIGNINTRONMIN'],
+            alignintronmax=config['bin'][pfamily]['ALIGNINTRONMAX'],
+            alignmatesgapmax=config['bin'][pfamily]['ALIGNMATESGAPMAX'],
+            adapter1=config['bin'][pfamily]['ADAPTER1'],
+            adapter2=config['bin'][pfamily]['ADAPTER2'],
+        threads: 32
+        envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
+        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        shell: """
+        # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+        readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+        echo "sjdbOverhang for STAR: ${{readlength}}"
+
+        STAR --genomeDir {params.stardir} \
+            --outFilterIntronMotifs {params.filterintronmotifs} \
+            --outSAMstrandField {params.samstrandfield}  \
+            --outFilterType {params.filtertype} \
+            --outFilterMultimapNmax {params.filtermultimapnmax} \
+            --alignSJoverhangMin {params.alignsjoverhangmin} \
+            --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
+            --outFilterMismatchNmax {params.filtermismatchnmax} \
+            --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
+            --alignIntronMin {params.alignintronmin} \
+            --alignIntronMax {params.alignintronmax} \
+            --alignMatesGapMax {params.alignmatesgapmax} \
+            --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
+            --readFilesIn {input.file1} --readFilesCommand zcat \
+            --runThreadN {threads} \
+            --outFileNamePrefix {params.prefix}. \
+            --outSAMtype BAM Unsorted \
+            --alignEndsProtrude 10 ConcordantPair \
+            --peOverlapNbasesMin 10 \
+            --sjdbGTFfile {params.gtffile} \
+            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --sjdbOverhang ${{readlength}}
+        """
 
 
-rule star1p:
-    """
-    Data processing step to align reads against reference genome using STAR in
-    two-pass mode. STAR is run in a two-pass mode for enhanced detection of reads
-    mapping to novel splice junctions. This rule represents the first pass of STAR.
-    @Input:
-        Trimmed FastQ files (scatter)
-    @Output:
-        Logfile containing splice-junctions detected by STAR
-    """
-    input:
-        file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
-        qcrl=join(workpath,"QC","readlength.txt"),
-    output:
-        out1=join(workpath,star_dir,"{name}.SJ.out.tab"),
-        out3=temp(join(workpath,star_dir,"{name}.Aligned.out.bam")),
-    params:
-        rname='pl:star1p',
-        prefix=join(workpath, star_dir, "{name}"),
-        best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
-        # Exposed Parameters: modify config/genomes/{genome}.json to change default
-        stardir=config['references'][pfamily]['GENOME_STARDIR'],
-        gtffile=config['references'][pfamily]['GTFFILE'],
-        # Exposed STAR Parameters: modify config/templates/tools.json to change defaults
-        filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
-        samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
-        filtertype=config['bin'][pfamily]['FILTERTYPE'],
-        filtermultimapnmax=config['bin'][pfamily]['FILTERMULTIMAPNMAX'],
-        alignsjoverhangmin=config['bin'][pfamily]['ALIGNSJOVERHANGMIN'],
-        alignsjdboverhangmin=config['bin'][pfamily]['ALIGNSJDBOVERHANGMIN'],
-        filtermismatchnmax=config['bin'][pfamily]['FILTERMISMATCHNMAX'],
-        filtermismatchnoverlmax=config['bin'][pfamily]['FILTERMISMATCHNOVERLMAX'],
-        alignintronmin=config['bin'][pfamily]['ALIGNINTRONMIN'],
-        alignintronmax=config['bin'][pfamily]['ALIGNINTRONMAX'],
-        alignmatesgapmax=config['bin'][pfamily]['ALIGNMATESGAPMAX'],
-        adapter1=config['bin'][pfamily]['ADAPTER1'],
-        adapter2=config['bin'][pfamily]['ADAPTER2'],
-    threads: 32
-    envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-    container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
-    shell: """
-    # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
-    readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
-    echo "sjdbOverhang for STAR: ${{readlength}}"
-
-    STAR --genomeDir {params.stardir} \
-        --outFilterIntronMotifs {params.filterintronmotifs} \
-        --outSAMstrandField {params.samstrandfield}  \
-        --outFilterType {params.filtertype} \
-        --outFilterMultimapNmax {params.filtermultimapnmax} \
-        --alignSJoverhangMin {params.alignsjoverhangmin} \
-        --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
-        --outFilterMismatchNmax {params.filtermismatchnmax} \
-        --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
-        --alignIntronMin {params.alignintronmin} \
-        --alignIntronMax {params.alignintronmax} \
-        --alignMatesGapMax {params.alignmatesgapmax} \
-        --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
-        --readFilesIn {input.file1} --readFilesCommand zcat \
-        --runThreadN {threads} \
-        --outFileNamePrefix {params.prefix}. \
-        --outSAMtype BAM Unsorted \
-        --alignEndsProtrude 10 ConcordantPair \
-        --peOverlapNbasesMin 10 \
-        --sjdbGTFfile {params.gtffile} \
-        --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
-        --sjdbOverhang ${{readlength}}
-    """
+    rule sjdb:
+        """
+        Aggregation step to collect the set of all novel junctions that were detected
+        in the first-pass of STAR. These splice junctions will be used to re-build the
+        genomic indices.
+        @Input:
+            Logfiles containing splice-junctions (gather)
+        @Output:
+            Logfile containing the set of all splice junctions across all samples
+        """
+        input:
+            files=expand(join(workpath,star_dir,"{name}.SJ.out.tab"), name=samples),
+        output:
+            out1=join(workpath,star_dir,"uniq.filtered.SJ.out.tab"),
+        params:
+            rname='pl:sjdb'
+        shell: """
+        cat {input.files} | \
+            sort | uniq | \
+            awk -F '\\t' '{{if ($5>0 && $6==1) {{print}}}}'| \
+            cut -f1-4 | sort | uniq | \
+        grep \"^chr\"|grep -v \"^chrM\" > {output.out1}
+        """
 
 
-rule sjdb:
-    """
-    Aggregation step to collect the set of all novel junctions that were detected
-    in the first-pass of STAR. These splice junctions will be used to re-build the
-    genomic indices.
-    @Input:
-        Logfiles containing splice-junctions (gather)
-    @Output:
-        Logfile containing the set of all splice junctions across all samples
-    """
-    input:
-        files=expand(join(workpath,star_dir,"{name}.SJ.out.tab"), name=samples),
-    output:
-        out1=join(workpath,star_dir,"uniq.filtered.SJ.out.tab"),
-    params:
-        rname='pl:sjdb'
-    shell: """
-    cat {input.files} | \
-        sort | uniq | \
-        awk -F '\\t' '{{if ($5>0 && $6==1) {{print}}}}'| \
-        cut -f1-4 | sort | uniq | \
-    grep \"^chr\"|grep -v \"^chrM\" > {output.out1}
-    """
+    rule star2p:
+        """
+        Data processing step to align reads against reference genome using STAR in
+        two-pass mode. This step represents the second step of STAR. Here set of splice
+        all novel junctions that were detected in the first-pass of STAR are then inserted
+        into the genome indices. In this second-pass, all reads are re-mapped using
+        the annotated junctions from the GTF file and novel junctions that were
+        detected in the first-pass of STAR.
+        @Input:
+            Trimmed FastQ files (scatter)
+        @Output:
+            Genomic and transcriptomic BAM file
+        """
+        input:
+            file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+            tab=join(workpath,star_dir,"uniq.filtered.SJ.out.tab"),
+            qcrl=join(workpath,"QC","readlength.txt"),
+        output:
+            out1=temp(join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam")),
+            out2=join(workpath,star_dir,"{name}.p2.ReadsPerGene.out.tab"),
+            out3=join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),
+            out4=join(workpath,star_dir,"{name}.p2.SJ.out.tab"),
+            out5=join(workpath,log_dir,"{name}.p2.Log.final.out"),
+        params:
+            rname='pl:star2p',
+            prefix=join(workpath, star_dir, "{name}.p2"),
+            best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
+            # Exposed Parameters: modify config/genomes/{genome}.json to change default
+            stardir=config['references'][pfamily]['GENOME_STARDIR'],
+            gtffile=config['references'][pfamily]['GTFFILE'],
+            # Exposed STAR Parameters: modify config/templates/tools.json to change defaults
+            filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
+            samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
+            filtertype=config['bin'][pfamily]['FILTERTYPE'],
+            filtermultimapnmax=config['bin'][pfamily]['FILTERMULTIMAPNMAX'],
+            alignsjoverhangmin=config['bin'][pfamily]['ALIGNSJOVERHANGMIN'],
+            alignsjdboverhangmin=config['bin'][pfamily]['ALIGNSJDBOVERHANGMIN'],
+            filtermismatchnmax=config['bin'][pfamily]['FILTERMISMATCHNMAX'],
+            filtermismatchnoverlmax=config['bin'][pfamily]['FILTERMISMATCHNOVERLMAX'],
+            alignintronmin=config['bin'][pfamily]['ALIGNINTRONMIN'],
+            alignintronmax=config['bin'][pfamily]['ALIGNINTRONMAX'],
+            alignmatesgapmax=config['bin'][pfamily]['ALIGNMATESGAPMAX'],
+            adapter1=config['bin'][pfamily]['ADAPTER1'],
+            adapter2=config['bin'][pfamily]['ADAPTER2'],
+            outsamunmapped=config['bin'][pfamily]['OUTSAMUNMAPPED'],
+            wigtype=config['bin'][pfamily]['WIGTYPE'],
+            wigstrand=config['bin'][pfamily]['WIGSTRAND'],
+            nbjuncs=config['bin'][pfamily]['NBJUNCS'],
+        threads:32
+        envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
+        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        shell: """
+        # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+        readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+        echo "sjdbOverhang for STAR: ${{readlength}}"
 
+        STAR --genomeDir {params.stardir} \
+            --outFilterIntronMotifs {params.filterintronmotifs} \
+            --outSAMstrandField {params.samstrandfield} \
+            --outFilterType {params.filtertype} \
+            --outFilterMultimapNmax {params.filtermultimapnmax} \
+            --alignSJoverhangMin {params.alignsjoverhangmin} \
+            --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
+            --outFilterMismatchNmax {params.filtermismatchnmax} \
+            --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
+            --alignIntronMin {params.alignintronmin} \
+            --alignIntronMax {params.alignintronmax} \
+            --alignMatesGapMax {params.alignmatesgapmax} \
+            --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
+            --readFilesIn {input.file1} --readFilesCommand zcat \
+            --runThreadN {threads} \
+            --outFileNamePrefix {params.prefix}. \
+            --outSAMunmapped {params.outsamunmapped} \
+            --outWigType {params.wigtype} \
+            --outWigStrand {params.wigstrand} \
+            --sjdbFileChrStartEnd {input.tab} \
+            --sjdbGTFfile {params.gtffile} \
+            --limitSjdbInsertNsj {params.nbjuncs} \
+            --quantMode TranscriptomeSAM GeneCounts \
+            --outSAMtype BAM SortedByCoordinate \
+            --alignEndsProtrude 10 ConcordantPair \
+            --peOverlapNbasesMin 10 \
+            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --sjdbOverhang ${{readlength}}
 
-rule star2p:
-    """
-    Data processing step to align reads against reference genome using STAR in
-    two-pass mode. This step represents the second step of STAR. Here set of splice
-    all novel junctions that were detected in the first-pass of STAR are then inserted
-    into the genome indices. In this second-pass, all reads are re-mapped using
-    the annotated junctions from the GTF file and novel junctions that were
-    detected in the first-pass of STAR.
-    @Input:
-        Trimmed FastQ files (scatter)
-    @Output:
-        Genomic and transcriptomic BAM file
-    """
-    input:
-        file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
-        tab=join(workpath,star_dir,"uniq.filtered.SJ.out.tab"),
-        qcrl=join(workpath,"QC","readlength.txt"),
-    output:
-        out1=temp(join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam")),
-        out2=join(workpath,star_dir,"{name}.p2.ReadsPerGene.out.tab"),
-        out3=join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),
-        out4=join(workpath,star_dir,"{name}.p2.SJ.out.tab"),
-        out5=join(workpath,log_dir,"{name}.p2.Log.final.out"),
-    params:
-        rname='pl:star2p',
-        prefix=join(workpath, star_dir, "{name}.p2"),
-        best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
-        # Exposed Parameters: modify config/genomes/{genome}.json to change default
-        stardir=config['references'][pfamily]['GENOME_STARDIR'],
-        gtffile=config['references'][pfamily]['GTFFILE'],
-        # Exposed STAR Parameters: modify config/templates/tools.json to change defaults
-        filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
-        samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
-        filtertype=config['bin'][pfamily]['FILTERTYPE'],
-        filtermultimapnmax=config['bin'][pfamily]['FILTERMULTIMAPNMAX'],
-        alignsjoverhangmin=config['bin'][pfamily]['ALIGNSJOVERHANGMIN'],
-        alignsjdboverhangmin=config['bin'][pfamily]['ALIGNSJDBOVERHANGMIN'],
-        filtermismatchnmax=config['bin'][pfamily]['FILTERMISMATCHNMAX'],
-        filtermismatchnoverlmax=config['bin'][pfamily]['FILTERMISMATCHNOVERLMAX'],
-        alignintronmin=config['bin'][pfamily]['ALIGNINTRONMIN'],
-        alignintronmax=config['bin'][pfamily]['ALIGNINTRONMAX'],
-        alignmatesgapmax=config['bin'][pfamily]['ALIGNMATESGAPMAX'],
-        adapter1=config['bin'][pfamily]['ADAPTER1'],
-        adapter2=config['bin'][pfamily]['ADAPTER2'],
-        outsamunmapped=config['bin'][pfamily]['OUTSAMUNMAPPED'],
-        wigtype=config['bin'][pfamily]['WIGTYPE'],
-        wigstrand=config['bin'][pfamily]['WIGSTRAND'],
-        nbjuncs=config['bin'][pfamily]['NBJUNCS'],
-    threads:32
-    envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-    container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
-    shell: """
-    # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
-    readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
-    echo "sjdbOverhang for STAR: ${{readlength}}"
-
-    STAR --genomeDir {params.stardir} \
-        --outFilterIntronMotifs {params.filterintronmotifs} \
-        --outSAMstrandField {params.samstrandfield} \
-        --outFilterType {params.filtertype} \
-        --outFilterMultimapNmax {params.filtermultimapnmax} \
-        --alignSJoverhangMin {params.alignsjoverhangmin} \
-        --alignSJDBoverhangMin {params.alignsjdboverhangmin} \
-        --outFilterMismatchNmax {params.filtermismatchnmax} \
-        --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
-        --alignIntronMin {params.alignintronmin} \
-        --alignIntronMax {params.alignintronmax} \
-        --alignMatesGapMax {params.alignmatesgapmax} \
-        --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
-        --readFilesIn {input.file1} --readFilesCommand zcat \
-        --runThreadN {threads} \
-        --outFileNamePrefix {params.prefix}. \
-        --outSAMunmapped {params.outsamunmapped} \
-        --outWigType {params.wigtype} \
-        --outWigStrand {params.wigstrand} \
-        --sjdbFileChrStartEnd {input.tab} \
-        --sjdbGTFfile {params.gtffile} \
-        --limitSjdbInsertNsj {params.nbjuncs} \
-        --quantMode TranscriptomeSAM GeneCounts \
-        --outSAMtype BAM SortedByCoordinate \
-        --alignEndsProtrude 10 ConcordantPair \
-        --peOverlapNbasesMin 10 \
-        --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
-        --sjdbOverhang ${{readlength}}
-
-    mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
-    mv {params.prefix}.Log.final.out {workpath}/{log_dir}
-    """
+        mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
+        mv {params.prefix}.Log.final.out {workpath}/{log_dir}
+        """
 
 
 # Post Alignment Rules
