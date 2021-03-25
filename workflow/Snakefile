@@ -41,6 +41,9 @@ if paired_end:
             expand(join(workpath,"rawQC","{name}.validated.R1.fastq.log"), name=provided(samples, wf_api.use_singularity)),
             expand(join(workpath,"rawQC","{name}.validated.R2.fastq.log"), name=provided(samples, wf_api.use_singularity)),
 
+            # Flowcell Lane information
+            expand(join(workpath,"rawQC","{name}.fastq.info.txt"),name=samples),
+
             # FastQC (before and after trimming)
             expand(join(workpath,"rawQC","{name}.R1_fastqc.zip"), name=samples),
             expand(join(workpath,"rawQC","{name}.R2_fastqc.zip"), name=samples),
@@ -114,6 +117,9 @@ elif not paired_end:
         input:
             # FastQValidator
             expand(join(workpath,"rawQC","{name}.validated.R1.fastq.log"), name=provided(samples, wf_api.use_singularity)),
+
+            # Flowcell Lane information
+            expand(join(workpath,"rawQC","{name}.fastq.info.txt"),name=samples),
 
             # FastQC (before and after trimming)
             expand(join(workpath,"rawQC","{name}.R1_fastqc.zip"), name=samples),

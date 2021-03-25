@@ -7,6 +7,34 @@ container: "docker://continuumio/miniconda3"
 
 
 # Rules common to RNA-seq pipeline, irrespective if the data is single-end or paired-end
+rule fc_lane:
+    """
+    Quality-control step to get flowcell and lane information from FastQ file.
+    FastQ files generated with older versions of Casava or downloaded from
+    SRA have a different format than newer FastQ files generated with the
+    current version of Casava. It is worth noting that FastQ files downloaded from SRA
+    or FastQ files generated with Casava version < 1.8 do not have Flowcell
+    IDs in its sequence indentifer. If a FastQ file does not have Flowcell IDs,
+    the Machine or Instrument ID is grabbed instead.
+    @Input:
+        Raw FastQ R1 file (scatter)
+    @Output:
+        Text file containing information about the FastQ file
+    """
+    input:
+        R1=join(workpath,"{name}.R1.fastq.gz"),
+    output:
+        fqinfo=join(workpath,"rawQC","{name}.fastq.info.txt")
+    params:
+        rname='pl:fc_lane',
+        get_flowcell_lanes=join("workflow", "scripts", "get_flowcell_lanes.py"),
+    envmodules: config['bin'][pfamily]['tool_versions']['PYTHONVER']
+    container: "docker://nciccbr/ccbr_python:v0.0.1"
+    shell: """
+    python {params.get_flowcell_lanes} {input.R1} {wildcards.name} > {output.fqinfo}
+    """
+
+
 rule picard:
     """
     Data processing and quality-control step to add read groups and mark duplicate reads.
@@ -212,6 +240,7 @@ rule rnaseq_multiqc:
         expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
         expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
         expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
+        expand(join(workpath,"rawQC","{name}.fastq.info.txt"),name=samples),
         qcconfig=abstract_location(config['bin'][pfamily]['CONFMULTIQC']),
     output:
         join(workpath,"Reports","multiqc_report.html"),
