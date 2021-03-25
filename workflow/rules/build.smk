@@ -14,8 +14,8 @@ workdir:OUTDIR
 
 rule all:
 	input:
+		# expand("STAR/2.7.6a/genes-{readlength}/SA",readlength=READLENGTHS),
 		expand("{genome}_{gtfver}.json",genome=GENOME, gtfver=GTFVER),
-		expand("STAR/2.7.6a/genes-{readlength}/SA",readlength=READLENGTHS),
 		expand("{genome}.rRNA_interval_list",genome=GENOME),
 		expand("rsemref/{genome}.transcripts.ump",genome=GENOME),
 		"STAR/2.7.6a/genome/SA",
@@ -358,7 +358,6 @@ rule jsonmaker:
 		refdict["references"]["rnaseq"]["GENOME"] = input.fa
 		refdict["references"]["rnaseq"]["GTFFILE"] = input.gtf
 		refdict["references"]["rnaseq"]["GENOME_STARDIR"] = outdir+"STAR/2.7.6a/genome"
-		refdict["references"]["rnaseq"]["STARDIR"] = outdir+"STAR/2.7.6a/genes-"
 		refdict["references"]["rnaseq"]["ANNOTATE"] = outdir+"annotate.genes.txt"
 		refdict["references"]["rnaseq"]["ANNOTATEISOFORMS"] = outdir+"annotate.isoforms.txt"
 		refdict["references"]["rnaseq"]["REFFLAT"] = outdir+"refFlat.txt"
