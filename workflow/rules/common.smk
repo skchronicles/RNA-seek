@@ -92,6 +92,33 @@ rule preseq:
     """
 
 
+rule qualibam:
+    """
+    Quality-control step to assess various post-alignment metrics and a secondary
+    method to calculate insert size.
+    @Input:
+        Sorted, duplicate marked genomic BAM file (scatter)
+    @Output:
+        Report containing post-aligment QC metrics
+    """
+    input:
+        bamfile=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
+    output:
+        report=join(workpath,"QualiMap","{name}","qualimapReport.html"),
+    params:
+        rname='pl:qualibam',
+        outdir=join(workpath,"QualiMap","{name}"),
+        gtfFile=config['references'][pfamily]['GTFFILE'],
+    threads: 8
+    envmodules: config['bin'][pfamily]['tool_versions']['QUALIMAPVER']
+    container: "docker://nciccbr/ccbr_qualimap:v0.0.1"
+    shell: """
+    unset DISPLAY;
+    qualimap bamqc -bam {input.bamfile} --feature-file {params.gtfFile} \
+        -outdir {params.outdir} -nt {threads} --java-mem-size=11G
+    """
+
+
 rule stats:
     """
     Quality step to run Picard CollectRnaSeqMetrics. This step collects alignment
@@ -216,45 +243,4 @@ rule tin:
     # tin.py writes to current working directory
     cd {params.outdir}
     tin.py -i {input.bam} -r {params.bedref}
-    """
-
-
-rule rnaseq_multiqc:
-    """
-    Reporting step to aggregate sample statistics and quality-control information
-    across all samples. This is be the last step of the pipeline. The inputs listed
-    here are to ensure that this step runs last. During runtime, MultiQC will recurively
-    crawl through the working directory and parse files that it supports.
-    @Input:
-        List of files to ensure this step runs last (gather)
-    @Output:
-        Interactive MulitQC report and a QC metadata table
-    """
-    input:
-        expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
-        expand(join(workpath,"FQscreen","{name}.R1.trim_screen.png"),name=samples),
-        expand(join(workpath,log_dir,"{name}.flagstat.concord.txt"),name=samples),
-        expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
-        expand(join(workpath,log_dir,"{name}.star.duplic"),name=samples),
-        expand(join(workpath,preseq_dir,"{name}.ccurve"),name=samples),
-        expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
-        expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
-        expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
-        expand(join(workpath,"rawQC","{name}.fastq.info.txt"),name=samples),
-        qcconfig=abstract_location(config['bin'][pfamily]['CONFMULTIQC']),
-    output:
-        join(workpath,"Reports","multiqc_report.html"),
-        join(workpath,"Reports", "multiqc_matrix.tsv"),
-    params:
-        rname="pl:multiqc",
-        workdir=join(workpath),
-        outdir=join(workpath,"Reports"),
-        logfiles=join(workpath,"Reports","multiqc_data","*.txt"),
-        pyparser=join("workflow", "scripts", "pyparser.py"),
-    threads: 2
-    envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
-    container: "docker://nciccbr/ccbr_multiqc_1.9:v0.0.1"
-    shell: """
-    multiqc -f -c {input.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
-    python3 {params.pyparser} {params.logfiles} {params.outdir}
     """
