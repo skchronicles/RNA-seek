@@ -69,8 +69,8 @@ rule trim_pe:
         Trimmed FastQ file
     """
     input:
-        file1=join(workpath,"{name}.R1."+config['project']['filetype']),
-        file2=join(workpath,"{name}.R2."+config['project']['filetype']),
+        file1=join(workpath,"{name}.R1.fastq.gz"),
+        file2=join(workpath,"{name}.R2.fastq.gz"),
     output:
         #out1=temp(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz")),
         #out2=temp(join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"))

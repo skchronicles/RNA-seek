@@ -63,7 +63,7 @@ rule trim_se:
         Trimmed FastQ file
     """
     input:
-        infq=join(workpath,"{name}.R1."+config['project']['filetype']),
+        infq=join(workpath,"{name}.R1.fastq.gz"),
     output:
         outfq=temp(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"))
     params:
