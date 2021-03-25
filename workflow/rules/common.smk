@@ -244,3 +244,26 @@ rule tin:
     cd {params.outdir}
     tin.py -i {input.bam} -r {params.bedref}
     """
+
+
+rule tin_merge:
+    """
+    Data processing step to merge the TINs (transcript integrity numbers) for
+    each sample into a matrix.
+    @Input:
+        RSeQC transcript integrity numbers (gather)
+    @Output:
+        TIN value matrix
+    """
+    input:
+        tins=expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.tin.xls"), name=samples)
+    output:
+        matrix=join(workpath,degall_dir,"combined_TIN.tsv")
+    params:
+        rname="pl:tin_merge",
+        create_matrix=join("workflow", "scripts", "create_tin_matrix.py")
+    envmodules: config['bin'][pfamily]['tool_versions']['PYTHONVER'],
+    container: "docker://nciccbr/ccbr_python:v0.0.1"
+    shell: """
+    python {params.create_matrix} {input.tins} > {output.matrix}
+    """

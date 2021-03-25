@@ -94,6 +94,7 @@ if paired_end:
             expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
             expand(join(workpath,rseqc_dir,"{name}.inner_distance_freq.txt"),name=samples),
             expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
+            join(workpath,degall_dir,"combined_TIN.tsv"),
 
             # RSEM merge and counts
             expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
@@ -151,6 +152,7 @@ elif not paired_end:
 
             # RSeQC
             expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
+            join(workpath,degall_dir,"combined_TIN.tsv"),
 
             # RSEM
             expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
