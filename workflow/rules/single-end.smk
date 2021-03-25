@@ -547,3 +547,59 @@ rule bam2bw_rnaseq_se:
         mv {output.fbw}.tmp {output.rbw}
     fi
     """
+
+
+rule rnaseq_multiqc:
+    """
+    Reporting step to aggregate sample statistics and quality-control information
+    across all samples. This is be the last step of the pipeline. The inputs listed
+    here are to ensure that this step runs last. During runtime, MultiQC will recurively
+    crawl through the working directory and parse files that it supports.
+    @Input:
+        List of files to ensure this step runs last (gather)
+    @Output:
+        Interactive MulitQC report and a QC metadata table
+    """
+    input:
+        expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
+        expand(join(workpath,"FQscreen","{name}.R1.trim_screen.png"),name=samples),
+        expand(join(workpath,log_dir,"{name}.flagstat.concord.txt"),name=samples),
+        expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
+        expand(join(workpath,log_dir,"{name}.star.duplic"),name=samples),
+        expand(join(workpath,preseq_dir,"{name}.ccurve"),name=samples),
+        expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
+        expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
+        expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
+        expand(join(workpath,"rawQC","{name}.fastq.info.txt"),name=samples),
+        fqinfo=expand(join(workpath,"rawQC","{name}.fastq.info.txt"),name=samples),
+        qcconfig=abstract_location(config['bin'][pfamily]['CONFMULTIQC']),
+        tins=expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples)
+    output:
+        join(workpath,"Reports","multiqc_report.html"),
+        join(workpath,"Reports", "multiqc_matrix.tsv"),
+        medtins=join(workpath,"Reports","multiqc_data", "rseqc_median_tin.txt"),
+        fclanes=join(workpath,"Reports","multiqc_data", "fastq_flowcell_lanes.txt"),
+    params:
+        rname="pl:multiqc",
+        workdir=join(workpath),
+        outdir=join(workpath,"Reports"),
+        logfiles=join(workpath,"Reports","multiqc_data","*.txt"),
+        pyparser=join("workflow", "scripts", "pyparser.py"),
+    threads: 2
+    envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
+    container: "docker://nciccbr/ccbr_multiqc_1.9:v0.0.1"
+    shell: """
+    multiqc -f -c {input.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
+
+    # Parse RSeQC Median TINs
+    echo -e "Sample\\tmedian_tin" > {output.medtins}
+    cut -f1,3 {input.tins}  | \
+        grep -v '^Bam_file' | \
+        awk -F '\\t' '{{printf "%s\\t%.3f\\n", $1,$2}}' >> {output.medtins}
+
+    # Parse Flowcell and Lane information
+    echo -e "Sample\\tflowcell_lanes" > {output.fclanes}
+    awk -F '\\t' -v OFS='\\t' 'FNR==2 {{print $1,$5}}' {input.fqinfo} >> {output.fclanes}
+
+    python3 {params.pyparser} {params.logfiles} {params.outdir}
+    """
