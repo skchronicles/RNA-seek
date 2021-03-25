@@ -17,9 +17,8 @@ config = {
                 "mean_coverage", "avg_aligned_read_length", "pct_mrna_bases", "pct_coding_bases",
                 "pct_intronic_bases", "pct_utr_bases", "pct_intergenic_bases", "median_cv_coverage",
                 "median_5prime_to_3prime_bias", "median_5prime_bias", "median_3prime_bias",
-                "human_percent_aligned", "mouse_percent_aligned", "bacteria_percent_aligned",
-                "fungi_percent_aligned", "virus_percent_aligned", "rRNA_percent_aligned",
-                "uni_vec_percent_aligned", "percent_antisense_strand", "percent_sense_strand"
+                "rRNA_percent_aligned", "uni_vec_percent_aligned", "percent_antisense_strand",
+                "percent_sense_strand", "median_tin", "flowcell_lanes"
             ]
         }
     },
@@ -27,9 +26,10 @@ config = {
 	"multiqc_cutadapt.txt": {
         "delimeter": "\t",
 		"clean_sample_name": [".R1$", ".R2$"],
-		"parse_column": ["Sample", "pairs_processed"],
+		"parse_column": ["Sample", "pairs_processed", "r_processed"],
 		"rename_field": {
-			"pairs_processed": "total_read_pairs"
+			"pairs_processed": "total_read_pairs",
+            "r_processed": "total_read_pairs"
 		},
         "typecast": {
             "total_read_pairs": int
@@ -122,10 +122,12 @@ config = {
 	"multiqc_rseqc_infer_experiment.txt": {
         "delimeter": "\t",
 		"clean_sample_name": ["^RSeQC \\| ", ".strand.info$",".info.strand$", "^output.", ".p2$"],
-		"parse_column": ["Sample", "pe_sense", "pe_antisense"],
+		"parse_column": ["Sample", "pe_sense", "se_sense", "pe_antisense", "se_antisense"],
 		"rename_field": {
 			"pe_sense": "percent_sense_strand",
-			"pe_antisense": "percent_antisense_strand"
+            "se_sense": "percent_sense_strand",
+			"pe_antisense": "percent_antisense_strand",
+            "se_antisense": "percent_antisense_strand",
 		},
         "typecast": {
             "percent_sense_strand": float,
@@ -137,17 +139,38 @@ config = {
         },
 	},
 
-        "mqc_rseqc_inner_distance_plot_Percentages_parsed.txt": {
+    "rseqc_inner_distances.txt": {
         "delimeter": "\t",
-                "clean_sample_name": ["^RSeQC \\| ", ".strand.info$",".info.strand$", "^output.", ".p2$"],
-                "parse_column": ["Sample", "Inner_Dist_Maxima"],
-                "rename_field": {
-                        "Inner_Dist_Maxima": "inner_distance_maxima"
-                },
+        "clean_sample_name": [".inner_distance_freq.txt$"],
+        "parse_column": ["Sample", "Inner_Dist_Maxima"],
+        "rename_field": {
+            "Inner_Dist_Maxima": "inner_distance_maxima"
+        },
         "typecast": {
             "inner_distance_maxima": float
         },
-        },
+    },
+
+	"rseqc_median_tin.txt": {
+        "delimeter": "\t",
+		"clean_sample_name": [".star_rg_added.sorted.dmark.bam$"],
+		"parse_column": ["Sample", "median_tin"],
+        "typecast": {
+            "median_tin": float
+        }
+	},
+
+	"sample_group.txt": {
+        "delimeter": "\t",
+		"clean_sample_name": [],
+		"parse_column": ["Sample", "TissueType"],
+	},
+
+	"fastq_flowcell_lanes.txt": {
+        "delimeter": "\t",
+		"clean_sample_name": [],
+		"parse_column": ["Sample", "flowcell_lanes"],
+	},
 
 	"multiqc_star.txt": {
         "delimeter": "\t",
