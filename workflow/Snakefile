@@ -140,10 +140,10 @@ elif not paired_end:
             expand(join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),name=samples),
 
             # Picard
-            #expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
+            expand(join(workpath,log_dir,"{name}.RnaSeqMetrics.txt"),name=samples),
 
             # QualiMap
-            #expand(join(workpath,"QualiMap","{name}","qualimapReport.html"),name=samples),
+            expand(join(workpath,"QualiMap","{name}","qualimapReport.html"),name=samples),
 
             # Bam to stranded bigwigs
             expand(join(workpath,bams_dir,"{name}.fwd.bw"),name=samples),
