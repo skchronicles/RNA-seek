@@ -6,9 +6,14 @@ custom_logo: 'resources/nih-bnfo-logo.png'
 
 fastqscreen_simpleplot: true
 
+# Ignore these files / directories / paths when searching for logs
+fn_ignore_files:
+  - Log.final.out
+
 module_order:
 # Pre-alignment QC
     - 'fastq_screen'
+    - 'kraken'
     - 'fastqc':
         name: 'FastQC'
         info: 'This section of the report shows FastQC results before and after adapter trimming.'
