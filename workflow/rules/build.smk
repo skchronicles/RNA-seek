@@ -55,7 +55,7 @@ rule rsem:
 		rname='bl:rsem',
 		genome=GENOME,
 		prefix=join("rsemref", GENOME)
-	container: "docker://nciccbr/ccbr_rsem_1.3.1:v032219"
+	container: "docker://nciccbr/ccbr_rsem_1.3.3:v1.0"
 	shell: """
 	rsem-prepare-reference -p {threads} --gtf {input.gtf} {input.fa} {params.prefix}
 	rsem-generate-ngvector {params.prefix}.transcripts.fa {params.prefix}.transcripts

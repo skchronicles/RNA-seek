@@ -208,7 +208,7 @@ rule rseqc:
         bedref=config['references'][pfamily]['BEDREF'],
         rname="pl:rseqc",
     envmodules: config['bin'][pfamily]['tool_versions']['RSEQCVER'],
-    container: "docker://nciccbr/ccbr_rseqc_3.0.0:v032219"
+    container: "docker://nciccbr/ccbr_rseqc_4.0.0:v1.0"
     shell: """
     infer_experiment.py -r {params.bedref} -i {input.file1} -s 1000000 > {output.out1}
     read_distribution.py -i {input.file1} -r {params.bedref} > {output.out2}
@@ -238,7 +238,7 @@ rule tin:
         outdir=join(workpath,rseqc_dir),
         rname="pl:tin",
     envmodules: config['bin'][pfamily]['tool_versions']['RSEQCVER'],
-    container: "docker://nciccbr/ccbr_rseqc_3.0.0:v032219"
+    container: "docker://nciccbr/ccbr_rseqc_4.0.0:v1.0"
     shell: """
     # tin.py writes to current working directory
     cd {params.outdir}
@@ -248,12 +248,12 @@ rule tin:
 
 rule tin_merge:
     """
-    Data processing step to merge the TINs (transcript integrity numbers) for
+    Data processing step to merge the transcript integrity numbers (TINs) for
     each sample into a matrix.
     @Input:
         RSeQC transcript integrity numbers (gather)
     @Output:
-        TIN value matrix
+        TIN value matrix (combined_TIN.tsv)
     """
     input:
         tins=expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.tin.xls"), name=samples)

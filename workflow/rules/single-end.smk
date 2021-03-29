@@ -46,7 +46,7 @@ rule rawfastqc:
         outdir=join(workpath,"rawQC"),
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
-    container: "docker://nciccbr/fastqc:v0.0.1"
+    container: "docker://nciccbr/ccbr_fastqc_0.11.9:v1.1"
     shell: """
     fastqc {input} -t {threads} -o {params.outdir};
     """
@@ -106,7 +106,7 @@ rule fastqc:
         getrl=join("workflow", "scripts", "get_read_length.py"),
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
-    container: "docker://nciccbr/fastqc:v0.0.1"
+    container: "docker://nciccbr/ccbr_fastqc_0.11.9:v1.1"
     shell: """
     fastqc {input} -t {threads} -o {params.outdir};
     python3 {params.getrl} {params.outdir} > {params.outdir}/readlength.txt \
@@ -144,7 +144,7 @@ rule fastq_screen:
         config['bin'][pfamily]['tool_versions']['FASTQSCREENVER'],
         config['bin'][pfamily]['tool_versions']['PERLVER'],
         config['bin'][pfamily]['tool_versions']['BOWTIE2VER'],
-    container: "docker://nciccbr/ccbr_fastq_screen_0.13.0:v032219"
+    container: "docker://nciccbr/ccbr_fastq_screen_0.14.1:v1.0"
     shell: """
     fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} \
         --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
@@ -498,10 +498,10 @@ rule rsem:
     envmodules:
         config['bin'][pfamily]['tool_versions']['RSEMVER'],
         config['bin'][pfamily]['tool_versions']['PYTHONVER'],
-    container: "docker://nciccbr/ccbr_rsem_1.3.1:v032219"
+    container: "docker://nciccbr/ccbr_rsem_1.3.3:v1.0"
     shell: """
     # Get strandedness to calculate Forward Probability
-    fp=`tail -n1 {input.file2} | awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}'`
+    fp=$(tail -n1 {input.file2} | awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}')
 
     echo "Forward Probability Passed to RSEM: $fp"
     rsem-calculate-expression --no-bam-output --calc-ci --seed 12345 \
