@@ -687,7 +687,7 @@ def run(sub_args):
         # and other reference genome file paths
         fqscreen_cfg1=config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG']
         fqscreen_cfg2=config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG2']
-        fq_screen_paths = get_fastq_screen_paths([fqscreen_cfg1, fqscreen_cfg2])
+        fq_screen_paths = get_fastq_screen_paths([os.path.join(sub_args.output,fqscreen_cfg1), os.path.join(sub_args.output,fqscreen_cfg2)])
         kraken_db_path = [config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB']]
         genome_bind_paths = resolve_additional_bind_paths(list(config['references']['rnaseq'].values()) + fq_screen_paths + kraken_db_path)
         all_bind_paths = "{},{}".format(",".join(genome_bind_paths), rawdata_bind_paths)
