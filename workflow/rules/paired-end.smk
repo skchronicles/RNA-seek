@@ -190,7 +190,7 @@ rule fastq_screen:
         config['bin'][pfamily]['tool_versions']['FASTQSCREENVER'],
         config['bin'][pfamily]['tool_versions']['PERLVER'],
         config['bin'][pfamily]['tool_versions']['BOWTIE2VER'],
-    container: "docker://nciccbr/ccbr_fastq_screen_0.14.1:v1.0"
+    container: "docker://nciccbr/ccbr_fastq_screen_0.13.0:v2.0"
     shell: """
     fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} \
         --threads {threads} --subset 1000000 \
@@ -729,9 +729,9 @@ rule bam2bw_rnaseq_pe:
 rule rnaseq_multiqc:
     """
     Reporting step to aggregate sample statistics and quality-control information
-    across all samples. This is be the last step of the pipeline. The inputs listed
-    here are to ensure that this step runs last. During runtime, MultiQC will recurively
-    crawl through the working directory and parse files that it supports.
+    across all samples. This will be one of the last steps of the pipeline. The inputs
+    listed here are to ensure that this step runs last. During runtime, MultiQC will
+    recurively crawl through the working directory and parse files that it supports.
     @Input:
         List of files to ensure this step runs last (gather)
     @Output:
@@ -787,4 +787,45 @@ rule rnaseq_multiqc:
     awk -F '\\t' -v OFS='\\t' 'FNR==2 {{print $1,$5}}' {input.fqinfo} >> {output.fclanes}
 
     python3 {params.pyparser} {params.logfiles} {params.outdir}
+    """
+
+
+rule rna_report:
+    """
+    Reporting step to aggregate sample quality-control metrics across all samples in
+    an interactive report. report Not Applicable, as known as rNA, is an interactive
+    report to allow users to identify problematic samples prior to downstream analysis.
+    This rule uses a rmarkdown script that runs without group information. It is uses
+    flowcell and lane information from the FastQ file instead. This will be one of the
+    last steps of the pipeline.
+    @Input:
+        Raw counts matrix  (TSV)
+        TIN value matrix   (TSV)
+        QC metadata matrix (TSV)
+    @Output:
+        Interactive RNA Report (RNA_Report.html)
+    """
+    input:
+        counts=join(workpath,degall_dir,"RSEM_genes_expected_counts.tsv"),
+        tins=join(workpath,degall_dir,"combined_TIN.tsv"),
+        qc=join(workpath,"Reports", "multiqc_matrix.tsv")
+    output:
+        html=join(workpath,"Reports","RNA_Report.html")
+    params:
+        rname='pl:rna_report',
+        rwrapper=join("workflow", "scripts", "rNA.R"),
+        rmarkdown=join("workflow", "scripts", "rNA_flowcells.Rmd"),
+        odir=join(workpath,"Reports"),
+    envmodules:
+        config['bin'][pfamily]['tool_versions']['RVER']
+    container: "docker://nciccbr/ccbr_rna:v0.0.1"
+    shell: """
+    # Generate RNA QC Dashboard
+    {params.rwrapper} \
+        -m {params.rmarkdown} \
+        -r {input.counts} \
+        -t {input.tins} \
+        -q {input.qc} \
+        -o {params.odir} \
+        -f RNA_Report.html
     """

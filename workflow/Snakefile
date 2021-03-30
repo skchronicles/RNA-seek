@@ -110,6 +110,9 @@ if paired_end:
             # MultiQC
             join(workpath,"Reports","multiqc_report.html"),
 
+            # RNA QC Report
+            join(workpath,"Reports","RNA_Report.html"),
+
 
 elif not paired_end:
     # Single-end Target files

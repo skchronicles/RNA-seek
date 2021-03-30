@@ -144,7 +144,7 @@ rule fastq_screen:
         config['bin'][pfamily]['tool_versions']['FASTQSCREENVER'],
         config['bin'][pfamily]['tool_versions']['PERLVER'],
         config['bin'][pfamily]['tool_versions']['BOWTIE2VER'],
-    container: "docker://nciccbr/ccbr_fastq_screen_0.14.1:v1.0"
+    container: "docker://nciccbr/ccbr_fastq_screen_0.13.0:v2.0"
     shell: """
     fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} \
         --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
@@ -552,9 +552,9 @@ rule bam2bw_rnaseq_se:
 rule rnaseq_multiqc:
     """
     Reporting step to aggregate sample statistics and quality-control information
-    across all samples. This is be the last step of the pipeline. The inputs listed
-    here are to ensure that this step runs last. During runtime, MultiQC will recurively
-    crawl through the working directory and parse files that it supports.
+    across all samples. This will be one of the last steps of the pipeline. The inputs
+    listed here are to ensure that this step runs last. During runtime, MultiQC will
+    recurively crawl through the working directory and parse files that it supports.
     @Input:
         List of files to ensure this step runs last (gather)
     @Output:
