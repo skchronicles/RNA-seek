@@ -73,6 +73,7 @@ if paired_end:
 
             # Arriba
             expand(join(workpath,"fusions","{name}_fusions.tsv"),name=provided(samples, references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROTDOMAIN']))),
+            expand(join(workpath,"fusions","{name}_fusions.arriba.pdf"),name=provided(samples, references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROTDOMAIN']))),
 
             # Bam to stranded bigwigs
             expand(join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),name=samples),
