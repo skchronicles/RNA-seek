@@ -13,15 +13,21 @@ import sys, gzip
 
 # Input 1 (Normal FastQ from Casava > 1.8)
 # @J00170:88:ANYVJBBXX:8:1101:1600:1244 1:N:0:ACTTGA
-# GGGAAGTTGAAAGCTTCCAGTGCTCCCTGTCAATTCTAGTCCCTCCAGTCTCTTGACCAGAAGG
+# GGGAAGTTGAAAGCTTCCAGTGCTCCCTGTCAATTCTAGTCCCTCCAGTCT
 # +
-# AAAFFJJFJJJJJJFJJJJJJJJJJFJAJJJJJFJJJJJFFJJAJJJJ7JJJJJJJJJJFJFJJ
+# AAAFFJJFJJJJJJFJJJJJJJJJJFJAJJJJJFJJJJJFFJJAJJJJ7JJ
 
 # Input 2 (SRA doesn't store FC ID, use intrument name instead)
 # @SRR5351039.1 SN608:8:1101:31.20:96.50 length=51
 # NTTTANNNNNNGNGCNCTGNNNNNNNNGNNNNNAAGGGNTNNNNNNNNNNN
 # +SRR5351039.1 SN608:8:1101:31.20:96.50 length=51
 # !0;??!!!!!!3!22!2:=!!!!!!!!1!!!!!00<=?!-!!!!!!!!!!!
+
+# Input 3 (SRA download with no FC ID, instrument name, or lanes information)
+# @SRR6755966.1 1 length=101
+# GCCCACACGTTCCCCTTAAATAAGACATCACGATGGATCACAGGTCTATCA
+# +SRR6755966.1 1 length=101
+# CC@FFFFFHHHHHJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJHIJJJJI
 
 def usage(message = '', exitcode = 0):
     """Displays help and usage information. If provided invalid usage
@@ -62,8 +68,19 @@ def get_flowcell_lane(sequence_identifer):
         # Return next instrument id instead (next best thing)
         if sequence_identifer.startswith('@SRR'):
             # SRA format or downloaded SRA FastQ file
+            # SRA format 1: contains machine and lane information
             # @SRR001666.1 071112_SLXA-EAS1_s_7:5:1:817:345 length=36
-            return id_list[0].split()[1],id_list[1]
+            # SRA format 2: contains nothing, grab SRR ID
+            # @SRR6755966.1 1 length=101
+            try:
+                # SRA format 1
+                id1 = id_list[0].split()[1]
+                id2 = id_list[1]
+            except IndexError:
+                # SRA format 2
+                id1 = id_list[0].split()[0].split(".")[0]
+                id2 = id1.lstrip('@')
+            return id1,id2
         else:
             # Casava < 1.8 (fastq format)
             # @HWUSI-EAS100R:6:73:941:1973#0/1
