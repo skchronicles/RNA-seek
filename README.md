@@ -69,7 +69,7 @@ RNA-seek comes bundled with pre-built reference files for the following genomes:
 > **Warning:** This section contains FTP links for downloading each reference file.  Open the link in a new tab to start a download. 
 
 #### 2.3 Dependencies
-**Requires:** `singularity>=3.0`  `snakemake>=5.24` 
+**Requires:** `singularity>=3.5`  `snakemake>=5.24` 
 
 [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html) and [singularity](https://singularity.lbl.gov/all-releases) must be installed on the target system. Snakemake orchestrates the execution of each step in the pipeline. To guarantee reproducibility, each step relies on pre-built images from [DockerHub](https://hub.docker.com/orgs/nciccbr/repositories). Snakemake uses singaularity to pull these images onto the local filesystem prior to job execution, and as so, snakemake and singularity are the only two dependencies.
 
