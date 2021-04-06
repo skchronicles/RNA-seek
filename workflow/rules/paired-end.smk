@@ -301,7 +301,12 @@ if config['options']['star_2_pass_basic']:
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
-        readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+        readlength=$(
+            zcat {input.file1} | \
+            awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; \
+            END {{print maxlen-1}}'
+        )
+
         echo "sjdbOverhang for STAR: ${{readlength}}"
 
         STAR --genomeDir {params.stardir} \
@@ -328,12 +333,19 @@ if config['options']['star_2_pass_basic']:
             --sjdbGTFfile {params.gtffile} \
             --limitSjdbInsertNsj {params.nbjuncs} \
             --quantMode TranscriptomeSAM GeneCounts \
-            --outSAMtype BAM SortedByCoordinate \
+            --outSAMtype BAM Unsorted \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
             --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
+        # SAMtools sort (uses less memory than STAR SortedByCoordinate)
+        samtools sort -@ {threads} \
+            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
+            -O bam {params.prefix}.Aligned.out.bam \
+            > {output.out1}
+
+        rm {params.prefix}.Aligned.out.bam
         mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
         mv {params.prefix}.Log.final.out {workpath}/{log_dir}
         """
@@ -384,7 +396,12 @@ else:
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
-        readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+        readlength=$(
+            zcat {input.file1} | \
+            awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; \
+            END {{print maxlen-1}}'
+        )
+
         echo "sjdbOverhang for STAR: ${{readlength}}"
 
         STAR --genomeDir {params.stardir} \
@@ -408,7 +425,7 @@ else:
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
             --sjdbGTFfile {params.gtffile} \
-            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --outTmpDir=/lscratch/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
         """
 
@@ -493,7 +510,12 @@ else:
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
-        readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+        readlength=$(
+            zcat {input.file1} | \
+            awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; \
+            END {{print maxlen-1}}'
+        )
+
         echo "sjdbOverhang for STAR: ${{readlength}}"
 
         STAR --genomeDir {params.stardir} \
@@ -520,12 +542,19 @@ else:
             --sjdbGTFfile {params.gtffile} \
             --limitSjdbInsertNsj {params.nbjuncs} \
             --quantMode TranscriptomeSAM GeneCounts \
-            --outSAMtype BAM SortedByCoordinate \
+            --outSAMtype BAM Unsorted \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
-            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --outTmpDir=/lscratch/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
+        # SAMtools sort (uses less memory than STAR SortedByCoordinate)
+        samtools sort -@ {threads} \
+            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
+            -O bam {params.prefix}.Aligned.out.bam \
+            > {output.out1}
+
+        rm {params.prefix}.Aligned.out.bam
         mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
         mv {params.prefix}.Log.final.out {workpath}/{log_dir}
         """
@@ -556,12 +585,13 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
             fusions=join(workpath,"fusions","{name}_fusions.tsv"),
             discarded=join(workpath,"fusions","{name}_fusions.discarded.tsv"),
             figure=join(workpath,"fusions","{name}_fusions.arriba.pdf"),
+            bam=join(workpath,"fusions","{name}.p2.arriba.Aligned.sortedByCoord.out.bam"),
+            bai=join(workpath,"fusions","{name}.p2.arriba.Aligned.sortedByCoord.out.bam.bai"),
         params:
             rname='pl:arriba',
             prefix=join(workpath, "fusions", "{name}.p2"),
             # Exposed Parameters: modify config/genomes/{genome}.json to change default
             chimericbam="{name}.p2.arriba.Aligned.out.bam",
-            sortedbam="{name}.p2.arriba.Aligned.sortedByCoord.out.bam",
             stardir=config['references'][pfamily]['GENOME_STARDIR'],
             gtffile=config['references'][pfamily]['GTFFILE'],
             reffa=config['references'][pfamily]['GENOME']
@@ -570,8 +600,11 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
-        readlength=$(zcat {input.R1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
-        echo "sjdbOverhang for STAR: ${{readlength}}"
+        readlength=$(
+            zcat {input.R1} | \
+            awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; \
+            END {{print maxlen-1}}'
+        )
 
         STAR --runThreadN {threads} \
             --sjdbGTFfile {params.gtffile} \
@@ -583,7 +616,6 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
             --outStd BAM_Unsorted \
             --outSAMtype BAM Unsorted \
             --outSAMunmapped Within \
-            --outBAMcompression 0 \
             --outFilterMultimapNmax 50 \
             --peOverlapNbasesMin 10 \
             --alignSplicedMateMapLminOverLmate 0.5 \
@@ -597,7 +629,7 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
             --chimSegmentReadGapMax 3 \
             --chimMultimapNmax 50 \
             --twopassMode Basic \
-            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --outTmpDir=/lscratch/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
             --outFileNamePrefix {params.prefix}. \
         | tee /lscratch/$SLURM_JOB_ID/{params.chimericbam} | \
         arriba -x /dev/stdin \
@@ -609,17 +641,17 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
 
         # Sorting and Indexing BAM files is required for Arriba's Visualization
         samtools sort -@ {threads} \
-            -m 3G -T /lscratch/$SLURM_JOB_ID/samtools_tmp_{wildcards.name} \
+            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
             -O bam /lscratch/$SLURM_JOB_ID/{params.chimericbam} \
-            > /lscratch/$SLURM_JOB_ID/{params.sortedbam}
+            > {output.bam}
+
+        samtools index {output.bam} {output.bai}
         rm /lscratch/$SLURM_JOB_ID/{params.chimericbam}
-        samtools index /lscratch/$SLURM_JOB_ID/{params.sortedbam} \
-            /lscratch/$SLURM_JOB_ID/{params.sortedbam}.bai
 
         # Generate Gene Fusions Visualization
         draw_fusions.R \
             --fusions={output.fusions} \
-            --alignments=/lscratch/$SLURM_JOB_ID/{params.sortedbam} \
+            --alignments={output.bam} \
             --output={output.figure} \
             --annotation={params.gtffile} \
             --cytobands={input.cytoband} \
