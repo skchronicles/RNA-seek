@@ -105,6 +105,7 @@ rule qualibam:
         bamfile=join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),
     output:
         report=join(workpath,"QualiMap","{name}","qualimapReport.html"),
+        results=join(workpath,"QualiMap","{name}","genome_results.txt"),
     params:
         rname='pl:qualibam',
         outdir=join(workpath,"QualiMap","{name}"),

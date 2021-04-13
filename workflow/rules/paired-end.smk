@@ -770,6 +770,7 @@ rule rnaseq_multiqc:
         Interactive MulitQC report and a QC metadata table
     """
     input:
+        expand(join(workpath,"QualiMap","{name}","genome_results.txt"),name=samples),
         expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
         expand(join(workpath,"FQscreen","{name}.R1.trim_screen.png"),name=samples),
         expand(join(workpath,log_dir,"{name}.flagstat.concord.txt"),name=samples),
