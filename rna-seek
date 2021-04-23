@@ -519,7 +519,7 @@ def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Sna
         #  Occurs when command returns a non-zero exit-code
         if e.errno == 2 and not exe_in_path('snakemake'):
             # Failure caused because snakemake is NOT in $PATH
-            print('Is snakemake in your PATH? Please check before proceeding again!')
+            print('\x1b[6;37;41m\nError: Are snakemake AND singularity in your $PATH?\nPlease check before proceeding again!\x1b[0m', file=sys.stderr)
             sys.exit("{}\n{}".format(e, e.output))
         else:
             # Failure caused by unknown cause, raise error
