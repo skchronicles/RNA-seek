@@ -14,7 +14,7 @@ from __future__ import print_function
 import sys, os, json
 
 __author__ = 'Skyler Kuhn'
-__version__ = 'v1.0.2'
+__version__ = 'v1.1.0'
 __email__ = 'kuhnsa@nih.gov'
 
 
@@ -73,6 +73,41 @@ def permissions(parser, filename, *args, **kwargs):
         parser.error("File '{}' exists, but cannot read file due to permissions!".format(filename))
 
     return filename
+
+
+def check_cache(parser, cache, *args, **kwargs):
+    """Check if provided SINGULARITY_CACHE is valid. Singularity caches cannot be
+    shared across users (and must be owned by the user). Singularity strictly enforces
+    0700 user permission on on the cache directory and will return a non-zero exitcode.
+    @param parser <argparse.ArgumentParser() object>:
+        Argparse parser object
+    @param cache <str>:
+        Singularity cache directory
+    @return cache <str>:
+        If singularity cache dir is valid
+    """
+    if not exists(cache):
+        # Cache directory does not exist on filesystem
+        os.makedirs(cache)
+    elif os.path.isfile(cache):
+        # Cache directory exists as file, raise error
+        parser.error("""\n\t\x1b[6;37;41mFatal: Failed to provided a valid singularity cache!\x1b[0m
+        The provided --singularity-cache already exists on the filesystem as a file.
+        Please run {} again with a different --singularity-cache location.
+        """.format(sys.argv[0]))
+    elif os.path.isdir(cache):
+        # Provide cache exists as directory
+        # Check that the user owns the child cache directory
+        # May revert to os.getuid() if user id is not sufficent
+        if exists(os.path.join(cache, 'cache')) and os.stat(os.path.join(cache, 'cache')).st_uid != os.getuid():
+                # User does NOT own the cache directory, raise error
+                parser.error("""\n\t\x1b[6;37;41mFatal: Failed to provided a valid singularity cache!\x1b[0m
+                The provided --singularity-cache already exists on the filesystem with a different owner.
+                Singularity strictly enforces that the cache directory is not shared across users.
+                Please run {} again with a different --singularity-cache location.
+                """.format(sys.argv[0]))
+
+    return cache
 
 
 def _cp_r_safe_(source, target, resources = []):
@@ -202,13 +237,13 @@ def initialize(sub_args, repo_path, output_path):
         List of pipeline's input FastQ files
     """
     if not exists(output_path):
-        # Pipleine output directory does not exist on filesystem
+        # Pipeline output directory does not exist on filesystem
         os.makedirs(output_path)
 
     elif exists(output_path) and os.path.isfile(output_path):
-        # Provided Path for pipleine output directory exists as file
+        # Provided Path for pipeline output directory exists as file
         raise OSError("""\n\tFatal: Failed to create provided pipeline output directory!
-        User provided --ouput PATH already exists on the filesystem as a file.
+        User provided --output PATH already exists on the filesystem as a file.
         Please run {} again with a different --output PATH.
         """.format(sys.argv[0])
         )
@@ -480,7 +515,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
     git_hash = get_repo_git_commit_hash(repo_path)
     config['project']['git_commit_hash'] = git_hash
 
-    # Save config to ouput directory
+    # Save config to output directory
     print("\nGenerating config file in '{}'... ".format(os.path.join(output_path, 'config.json')), end = "")
     # print(json.dumps(config, indent = 4, sort_keys=True))
     with open(os.path.join(output_path, 'config.json'), 'w') as fh:
@@ -528,7 +563,7 @@ def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Sna
     return dryrun_output
 
 
-def orchestrate(mode, outdir, additional_bind_paths, threads=2, submission_script='submit', masterjob='pl:rna-seek'):
+def orchestrate(mode, outdir, additional_bind_paths, cache, threads=2, submission_script='submit', masterjob='pl:rna-seek'):
     """Runs RNA-seek pipeline via selected executor: local or slurm.
     If 'local' is selected, the pipeline is executed locally on a compute node/instance.
     If 'slurm' is selected, jobs will be submited to the cluster using SLURM job scheduler.
@@ -541,6 +576,8 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2, submission_scrip
             slurm will submit jobs to the cluster using the SLURM job scheduler.
     @param additional_bind_paths <str>:
         Additional paths to bind to container filesystem (i.e. input file paths)
+    @param cache <str>:
+        Alternative singularity cache location
     @param threads <str>:
         Number of threads to use for local execution method
     @param submission_script <str>:
@@ -562,6 +599,10 @@ def orchestrate(mode, outdir, additional_bind_paths, threads=2, submission_scrip
     # Set ENV variable 'SINGULARITY_CACHEDIR' to output directory
     my_env = {}; my_env.update(os.environ)
     my_env['SINGULARITY_CACHEDIR'] = os.path.join(outdir, ".singularity")
+
+    if cache:
+        # Override the pipeline's default cache location
+        my_env['SINGULARITY_CACHEDIR'] = cache
 
     if additional_bind_paths:
         # Add Bind PATHs for rawdata directories
@@ -692,7 +733,7 @@ def run(sub_args):
         genome_bind_paths = resolve_additional_bind_paths(list(config['references']['rnaseq'].values()) + fq_screen_paths + kraken_db_path)
         all_bind_paths = "{},{}".format(",".join(genome_bind_paths), rawdata_bind_paths)
 
-        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = all_bind_paths, threads = sub_args.threads)
+        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = all_bind_paths, cache = sub_args.singularity_cache,  threads = sub_args.threads)
 
         print("\nRunning RNA-seek pipeline in '{}' mode...".format(sub_args.mode))
         masterjob.wait()
@@ -773,11 +814,11 @@ def _configure(sub_args, filename, git_repo):
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for unlock sub-command
     @params filename <str>:
-        Ouput filename of build config YAML file
+        Output filename of build config YAML file
     @param git_repo <str>:
         Path to rna-seek github repository installation
     """
-    # Save config to ouput directory
+    # Save config to output directory
     print("\nGenerating config file in '{}'... ".format(filename), end = "")
     # Creates config file /path/to/output/config/build.yml
     with open(filename, 'w') as fh:
@@ -808,13 +849,13 @@ def configure_build(sub_args, git_repo, output_path):
     """
 
     if not exists(output_path):
-        # Pipleine output directory does not exist on filesystem
+        # Pipeline output directory does not exist on filesystem
         os.makedirs(output_path)
 
     elif exists(output_path) and os.path.isfile(output_path):
-        # Provided Path for pipleine output directory exists as file
+        # Provided Path for pipeline output directory exists as file
         raise OSError("""\n\tFatal: Failed to create provided pipeline output directory!
-        User provided --ouput PATH already exists on the filesystem as a file.
+        User provided --output PATH already exists on the filesystem as a file.
         Please run {} again with a different --output PATH.
         """.format(sys.argv[0])
         )
@@ -853,7 +894,7 @@ def build(sub_args):
 
     # Run RNA-seek reference building pipeline
     if not sub_args.dry_run:
-        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = [], submission_script = 'builder', masterjob = 'pl:build')
+        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = [], cache = sub_args.singularity_cache, submission_script = 'builder', masterjob = 'pl:build')
         masterjob.wait()
         print('RNA-seek reference building pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
 
@@ -930,6 +971,7 @@ def parsed_arguments():
                                  [--dry-run]
                                  [--star-2-pass-basic]
                                  [--threads THREADS]
+                                 [--singularity-cache SINGULARITY_CACHE]
 
         This section explains concepts and options for running the RNA-seek pipeline.
         Please visit "https://github.com/skchronicles/RNA-seek" for more details.
@@ -1046,7 +1088,6 @@ def parsed_arguments():
                                 help = 'Do not execute anything, \
                                 and only display what steps in the pipeline remain or will \
                                 be run.')
-
     # Run STAR 2-pass-basic
     subparser_run.add_argument('--star-2-pass-basic',
                                 action = 'store_true',
@@ -1059,7 +1100,6 @@ def parsed_arguments():
                                 approach where the set of splice junctions detected across all samples are provided to \
                                 the second pass of STAR. This option overrides the default behavior so each sample will \
                                 be processed in a per sample two-pass basic mode.')
-
     # Number of threads for the RNA-seek pipeline's main proceess
     subparser_run.add_argument('--threads',
                                 type = int,
@@ -1068,7 +1108,14 @@ def parsed_arguments():
                                 help = 'Max number of threads for each process. \
                                 It is recommended setting this vaule to the maximum number of CPUs \
                                 available on the host machine [Default: 2].')
-
+    # Singularity cache directory (default uses output directory)
+    subparser_run.add_argument('--singularity-cache',
+                                type = lambda option: check_cache(parser, os.path.abspath(os.path.expanduser(option))),
+                                required = False,
+                                help = 'Overrides the $SINGULARITY_CACHEDIR environment variable. \
+                                Singularity will cache SIF container images generated from remote sources. \
+                                By default, the cache is set to \'/path/to/output/directory/.singularity/\'. \
+                                Please note that a singularity cache cannot be shared across users.')
 
     # Options for the "build" sub-command
     # Grouped sub-parser arguments are currently not supported.
@@ -1083,6 +1130,7 @@ def parsed_arguments():
                                    --gtf-ver GTF_VER
                                    --output OUTPUT
                                    [--dry-run]
+                                   [--singularity-cache SINGULARITY_CACHE]
 
         Builds the reference files for the RNA-seek pipeline from a genomic
         FASTA file and a GTF file. Disclaimer: If you have two GTF files,
@@ -1171,6 +1219,14 @@ def parsed_arguments():
                                 help = 'Do not execute anything, \
                                 and only display what steps in the pipeline remain or will \
                                 be run.')
+    # Singularity cache directory (default uses output directory)
+    subparser_build.add_argument('--singularity-cache',
+                                type = lambda option: check_cache(parser, os.path.abspath(os.path.expanduser(option))),
+                                required = False,
+                                help = 'Overrides the $SINGULARITY_CACHEDIR environment variable. \
+                                Singularity will cache SIF container images generated from remote sources. \
+                                By default, the cache is set to \'/path/to/output/directory/.singularity/\'. \
+                                Please note that a singularity cache cannot be shared across users.')
 
 
     # Options for the "unlock" sub-command
