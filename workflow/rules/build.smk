@@ -129,7 +129,7 @@ rule star_rl:
 	# Create Index for read length
 	rl=$(({wildcards.readlength}-1))
 
-	# Cleaned up tmp directory
+	# Clean up tmp directory
 	trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
 
 	# Create parent directory for tmp files
@@ -174,7 +174,7 @@ rule star_genome:
 		rname='bl:star_genome',
 	container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
 	shell: """
-	# Cleaned up tmp directory
+	# Clean up tmp directory
 	trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
 
 	# Create parent directory for tmp files

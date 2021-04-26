@@ -230,10 +230,16 @@ rule kraken_pe:
         config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
     container: "docker://nciccbr/ccbr_kraken_v2.1.1:v0.0.1"
     shell: """
-    # Copy kraken2 db to /lscratch or /dev/shm (RAM-disk) to reduce filesystem strain
-    cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
+    # Clean up tmp directory
+    trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+    # Create parent directory for tmp files
+    mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
+    # Copy kraken2 db to /scratch/local or /dev/shm (RAM-disk) to reduce filesystem strain
+    cp -rv {params.bacdb} /scratch/local/$SLURM_JOBID/;
     kdb_base=$(basename {params.bacdb})
-    kraken2 --db /lscratch/$SLURM_JOBID/${{kdb_base}} \
+    kraken2 --db /scratch/local/$SLURM_JOBID/${{kdb_base}} \
         --threads {threads} --report {output.krakentaxa} \
         --output {output.krakenout} \
         --gzip-compressed \
@@ -300,6 +306,12 @@ if config['options']['star_2_pass_basic']:
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
+        # Clean up tmp directory
+        trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+        # Create parent directory for tmp files
+        mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
             zcat {input.file1} | \
@@ -336,12 +348,12 @@ if config['options']['star_2_pass_basic']:
             --outSAMtype BAM Unsorted \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
-            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --outTmpDir=/scratch/local/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
         # SAMtools sort (uses less memory than STAR SortedByCoordinate)
         samtools sort -@ {threads} \
-            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
+            -m 2G -T /scratch/local/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
             -O bam {params.prefix}.Aligned.out.bam \
             > {output.out1}
 
@@ -395,6 +407,12 @@ else:
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
+        # Clean up tmp directory
+        trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+        # Create parent directory for tmp files
+        mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
             zcat {input.file1} | \
@@ -425,7 +443,7 @@ else:
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
             --sjdbGTFfile {params.gtffile} \
-            --outTmpDir=/lscratch/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
+            --outTmpDir=/scratch/local/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
         """
 
@@ -509,6 +527,12 @@ else:
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
+        # Clean up tmp directory
+        trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+        # Create parent directory for tmp files
+        mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
             zcat {input.file1} | \
@@ -545,12 +569,12 @@ else:
             --outSAMtype BAM Unsorted \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
-            --outTmpDir=/lscratch/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
+            --outTmpDir=/scratch/local/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
         # SAMtools sort (uses less memory than STAR SortedByCoordinate)
         samtools sort -@ {threads} \
-            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
+            -m 2G -T /scratch/local/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
             -O bam {params.prefix}.Aligned.out.bam \
             > {output.out1}
 
@@ -599,6 +623,12 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
         envmodules: config['bin'][pfamily]['tool_versions']['ARRIBAVER']
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
+        # Clean up tmp directory
+        trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+        # Create parent directory for tmp files
+        mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
             zcat {input.R1} | \
@@ -629,9 +659,9 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
             --chimSegmentReadGapMax 3 \
             --chimMultimapNmax 50 \
             --twopassMode Basic \
-            --outTmpDir=/lscratch/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
+            --outTmpDir=/scratch/local/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
             --outFileNamePrefix {params.prefix}. \
-        | tee /lscratch/$SLURM_JOB_ID/{params.chimericbam} | \
+        | tee /scratch/local/$SLURM_JOB_ID/{params.chimericbam} | \
         arriba -x /dev/stdin \
             -o {output.fusions} \
             -O {output.discarded} \
@@ -641,12 +671,12 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
 
         # Sorting and Indexing BAM files is required for Arriba's Visualization
         samtools sort -@ {threads} \
-            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
-            -O bam /lscratch/$SLURM_JOB_ID/{params.chimericbam} \
+            -m 2G -T /scratch/local/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
+            -O bam /scratch/local/$SLURM_JOB_ID/{params.chimericbam} \
             > {output.bam}
 
         samtools index {output.bam} {output.bai}
-        rm /lscratch/$SLURM_JOB_ID/{params.chimericbam}
+        rm /scratch/local/$SLURM_JOB_ID/{params.chimericbam}
 
         # Generate Gene Fusions Visualization
         draw_fusions.R \
@@ -685,13 +715,19 @@ rule rsem:
     container: "docker://nciccbr/ccbr_rsem_1.3.3:v1.0"
     threads: 16
     shell: """
+    # Clean up tmp directory
+    trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+    # Create parent directory for tmp files
+    mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
     # Get strandedness to calculate Forward Probability
     fp=$(tail -n1 {input.file2} | awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}')
 
     echo "Forward Probability Passed to RSEM: $fp"
     rsem-calculate-expression --no-bam-output --calc-ci --seed 12345  \
         --bam --paired-end -p {threads}  {input.file1} {params.rsemref} {params.prefix} --time \
-        --temporary-folder /lscratch/$SLURM_JOBID --keep-intermediate-files --forward-prob=${{fp}} --estimate-rspd
+        --temporary-folder /scratch/local/$SLURM_JOBID --keep-intermediate-files --forward-prob=${{fp}} --estimate-rspd
     """
 
 

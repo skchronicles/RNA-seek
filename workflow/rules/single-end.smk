@@ -181,10 +181,16 @@ rule kraken_se:
         config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
     container: "docker://nciccbr/ccbr_kraken_v2.1.1:v0.0.1"
     shell: """
-    # Copy kraken2 db to /lscratch or /dev/shm (RAM-disk) to reduce filesytem strain
-    cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
+    # Clean up tmp directory
+    trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+    # Create parent directory for tmp files
+    mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
+    # Copy kraken2 db to /scratch/local or /dev/shm (RAM-disk) to reduce filesytem strain
+    cp -rv {params.bacdb} /scratch/local/$SLURM_JOBID/;
     kdb_base=$(basename {params.bacdb})
-    kraken2 --db /lscratch/$SLURM_JOBID/${{kdb_base}} \
+    kraken2 --db /scratch/local/$SLURM_JOBID/${{kdb_base}} \
         --threads {threads} --report {output.krakentaxa} \
         --output {output.krakenout} \
         --gzip-compressed \
@@ -249,6 +255,12 @@ if config['options']['star_2_pass_basic']:
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
+        # Clean up tmp directory
+        trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+        # Create parent directory for tmp files
+        mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
         echo "sjdbOverhang for STAR: ${{readlength}}"
@@ -279,7 +291,7 @@ if config['options']['star_2_pass_basic']:
             --outSAMtype BAM SortedByCoordinate \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
-            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --outTmpDir=/scratch/local/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
         mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
@@ -330,6 +342,12 @@ else:
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
+        # Clean up tmp directory
+        trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+        # Create parent directory for tmp files
+        mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
         echo "sjdbOverhang for STAR: ${{readlength}}"
@@ -354,7 +372,7 @@ else:
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
             --sjdbGTFfile {params.gtffile} \
-            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --outTmpDir=/scratch/local/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
         """
 
@@ -436,6 +454,12 @@ else:
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
         shell: """
+        # Clean up tmp directory
+        trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+        # Create parent directory for tmp files
+        mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
         echo "sjdbOverhang for STAR: ${{readlength}}"
@@ -466,7 +490,7 @@ else:
             --outSAMtype BAM SortedByCoordinate \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
-            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --outTmpDir=/scratch/local/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
         mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
@@ -500,13 +524,19 @@ rule rsem:
         config['bin'][pfamily]['tool_versions']['PYTHONVER'],
     container: "docker://nciccbr/ccbr_rsem_1.3.3:v1.0"
     shell: """
+    # Clean up tmp directory
+    trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+    # Create parent directory for tmp files
+    mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
     # Get strandedness to calculate Forward Probability
     fp=$(tail -n1 {input.file2} | awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}')
 
     echo "Forward Probability Passed to RSEM: $fp"
     rsem-calculate-expression --no-bam-output --calc-ci --seed 12345 \
         --bam -p {threads}  {input.file1} {params.rsemref} {params.prefix} --time \
-        --temporary-folder /lscratch/$SLURM_JOBID --keep-intermediate-files --forward-prob=${{fp}} --estimate-rspd
+        --temporary-folder /scratch/local/$SLURM_JOBID --keep-intermediate-files --forward-prob=${{fp}} --estimate-rspd
     """
 
 

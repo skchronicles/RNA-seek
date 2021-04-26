@@ -1,6 +1,5 @@
 {
 	"__default__": {
-		"gres": "lscratch:256",
 		"mem": "48g",
 		"partition": "norm",
 		"threads": "4",
@@ -30,12 +29,10 @@
 	},
 	"kraken_pe": {
 		"cpus-per-task": "24",
-		"gres": "lscratch:256",
 		"mem": "110g"
 	},
 	"kraken_se": {
 		"cpus-per-task": "24",
-		"gres": "lscratch:256",
 		"mem": "110g"
 	},
 	"pca": {
@@ -43,7 +40,6 @@
 		"threads": "2"
 	},
 	"picard": {
-		"gres": "lscratch:256",
 		"mem": "110g",
 		"threads": "6"
 	},
@@ -59,7 +55,6 @@
 		"threads": "8"
 	},
 	"rsem": {
-		"gres": "lscratch:500",
 		"threads": "16",
 		"time": "4-00:00:00"
 	},
@@ -79,23 +74,19 @@
 		"time": "4-00:00:00"
 	},
 	"arriba": {
-		"gres": "lscratch:256",
 		"mem": "110g",
 		"threads": "32",
 		"time": "4-00:00:00"
 	},
 	"stats": {
-		"gres": "lscratch:256",
 		"mem": "110g",
 		"threads": "4"
 	},
 	"subread": {
-		"gres": "lscratch:500",
 		"threads": "16",
 		"time": "1-00:00:00"
 	},
 	"subreadoverlap": {
-		"gres": "lscratch:500",
 		"threads": "16",
 		"time": "1-00:00:00"
 	},
