@@ -14,7 +14,7 @@ from __future__ import print_function
 import sys, os, json
 
 __author__ = 'Skyler Kuhn'
-__version__ = 'v1.1.0'
+__version__ = 'v1.1.1'
 __email__ = 'kuhnsa@nih.gov'
 
 
@@ -563,7 +563,7 @@ def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Sna
     return dryrun_output
 
 
-def orchestrate(mode, outdir, additional_bind_paths, cache, threads=2, submission_script='submit', masterjob='pl:rna-seek'):
+def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submission_script='runner', masterjob='pl:rna-seek'):
     """Runs RNA-seek pipeline via selected executor: local or slurm.
     If 'local' is selected, the pipeline is executed locally on a compute node/instance.
     If 'slurm' is selected, jobs will be submited to the cluster using SLURM job scheduler.
@@ -572,17 +572,17 @@ def orchestrate(mode, outdir, additional_bind_paths, cache, threads=2, submissio
         Pipeline output PATH
     @param mode <str>:
         Execution method or mode:
-            local runs serially a compute instance without sumbitting to the cluster.
+            local runs serially a compute instance without submitting to the cluster.
             slurm will submit jobs to the cluster using the SLURM job scheduler.
     @param additional_bind_paths <str>:
         Additional paths to bind to container filesystem (i.e. input file paths)
-    @param cache <str>:
+    @param alt_cache <str>:
         Alternative singularity cache location
     @param threads <str>:
         Number of threads to use for local execution method
     @param submission_script <str>:
         Path to master jobs submission script:
-            rna-seek run =   /path/to/output/resources/submit
+            rna-seek run =   /path/to/output/resources/runner
             rna-seek build = /path/to/output/resources/builder
     @param masterjob <str>:
         Name of the master job
@@ -598,11 +598,13 @@ def orchestrate(mode, outdir, additional_bind_paths, cache, threads=2, submissio
 
     # Set ENV variable 'SINGULARITY_CACHEDIR' to output directory
     my_env = {}; my_env.update(os.environ)
-    my_env['SINGULARITY_CACHEDIR'] = os.path.join(outdir, ".singularity")
+    cache = os.path.join(outdir, ".singularity")
+    my_env['SINGULARITY_CACHEDIR'] = cache
 
-    if cache:
+    if alt_cache:
         # Override the pipeline's default cache location
-        my_env['SINGULARITY_CACHEDIR'] = cache
+        my_env['SINGULARITY_CACHEDIR'] = alt_cache
+        cache = alt_cache
 
     if additional_bind_paths:
         # Add Bind PATHs for rawdata directories
@@ -640,12 +642,12 @@ def orchestrate(mode, outdir, additional_bind_paths, cache, threads=2, submissio
 
         # Create log file for master job information
         logfh = open(os.path.join(outdir, 'logfiles', 'master.log'), 'w')
-        # submission_script for rna-seek run is /path/to/output/resources/submit
+        # submission_script for rna-seek run is /path/to/output/resources/runner
         # submission_script for rna-seek build is /path/to/output/resources/builder
         masterjob = subprocess.Popen([
                 str(os.path.join(outdir, 'resources', str(submission_script))), mode,
                 '-j', str(masterjob), '-b', str(bindpaths),
-                '-o', str(outdir)
+                '-o', str(outdir), '-c', str(cache),
             ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
 
     return masterjob
@@ -733,7 +735,7 @@ def run(sub_args):
         genome_bind_paths = resolve_additional_bind_paths(list(config['references']['rnaseq'].values()) + fq_screen_paths + kraken_db_path)
         all_bind_paths = "{},{}".format(",".join(genome_bind_paths), rawdata_bind_paths)
 
-        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = all_bind_paths, cache = sub_args.singularity_cache,  threads = sub_args.threads)
+        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = all_bind_paths, alt_cache = sub_args.singularity_cache,  threads = sub_args.threads)
 
         print("\nRunning RNA-seek pipeline in '{}' mode...".format(sub_args.mode))
         masterjob.wait()
@@ -894,7 +896,7 @@ def build(sub_args):
 
     # Run RNA-seek reference building pipeline
     if not sub_args.dry_run:
-        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = [], cache = sub_args.singularity_cache, submission_script = 'builder', masterjob = 'pl:build')
+        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = [], alt_cache = sub_args.singularity_cache, submission_script = 'builder', masterjob = 'pl:build')
         masterjob.wait()
         print('RNA-seek reference building pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
 
