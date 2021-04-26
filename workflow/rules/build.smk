@@ -129,6 +129,12 @@ rule star_rl:
 	# Create Index for read length
 	rl=$(({wildcards.readlength}-1))
 
+	# Cleaned up tmp directory
+	trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+	# Create parent directory for tmp files
+	mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
 	STAR \
 		--runThreadN {threads} \
 		--runMode genomeGenerate \
@@ -137,7 +143,7 @@ rule star_rl:
 		--sjdbGTFfile {input.gtf} \
 		--sjdbOverhang $rl \
 		--outFileNamePrefix STAR/2.7.6a/build_{wildcards.readlength}_ \
-		--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_{wildcards.readlength}
+		--outTmpDir /scratch/local/${{SLURM_JOB_ID}}/tmp_{wildcards.readlength}
 	"""
 
 
@@ -168,13 +174,19 @@ rule star_genome:
 		rname='bl:star_genome',
 	container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
 	shell: """
+	# Cleaned up tmp directory
+	trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
+
+	# Create parent directory for tmp files
+	mkdir -p "/scratch/local/${{SLURM_JOB_ID}}"
+
 	STAR \
 		--runThreadN {threads} \
 		--runMode genomeGenerate \
 		--genomeDir STAR/2.7.6a/genome \
 		--genomeFastaFiles {input.fa} \
 		--outFileNamePrefix STAR/2.7.6a/build_genome_ \
-		--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_genome
+		--outTmpDir /scratch/local/${{SLURM_JOB_ID}}/tmp_genome
 	"""
 
 

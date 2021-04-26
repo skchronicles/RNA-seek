@@ -123,7 +123,7 @@ function submit(){
 
   # Check if singularity in $PATH
   # If not, try to module load singularity as a last resort
-  command -V singularity &> /dev/null || module load singularity || \
+  command -V singularity &> /dev/null || module load singularity/3.7.2 || \
     fatal "Fail to find or load 'singularity', not installed on target system."
 
   # Check if snakemake in $PATH

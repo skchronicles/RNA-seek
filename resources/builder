@@ -123,7 +123,7 @@ function submit(){
 
   # Check if singularity in $PATH
   # If not, try to module load singularity as a last resort
-  command -V singularity &> /dev/null || module load singularity || \
+  command -V singularity &> /dev/null || module load singularity/3.7.2 || \
     fatal "Fail to find or load 'singularity', not installed on target system."
 
   # Check if snakemake in $PATH
@@ -148,14 +148,15 @@ function submit(){
           # Create directory for logfiles
           mkdir -p "$3"/logfiles/slurmfiles/
           # Submit the master job to the cluster
-          job_id=$(sbatch -J "$2" --gres=lscratch:100 --time=4-00:00:00 --mail-type=BEGIN,END,FAIL \
+          job_id=$(sbatch -J "$2" --time=4-00:00:00 --mail-type=BEGIN,END,FAIL \
           --output "$3"/logfiles/snakemake.log --error "$3"/logfiles/snakemake.log \
           snakemake --latency-wait 120 -s "$3"/workflow/rules/build.smk -d "$3" \
             --use-singularity --singularity-args "'-B $4'" --configfile="$3"/config/build.yml \
             --printshellcmds --cluster-config "$3"/resources/build_cluster.json \
-            --cluster "sbatch --gres {cluster.gres} --cpus-per-task {cluster.threads} -p {cluster.partition} -t {cluster.time} --mem {cluster.mem} --job-name={params.rname}" \
+            --cluster "sbatch --cpus-per-task {cluster.threads} -p {cluster.partition} -t {cluster.time} --mem {cluster.mem} --job-name={params.rname}" \
             --keep-going --restart-times 3 -j 500 --rerun-incomplete --stats "$3"/logfiles/runtime_statistics.json \
             --keep-remote 2>&1 | tee -a "$3"/logfiles/master.log)
+          sleep 3
           # Clean-up working directory after completion
           cleanup_id=$(sbatch -J "pl:clean" --dependency=afterany:${job_id} "$3"/resources/cleanup "$3" "$job_id")
         ;;
