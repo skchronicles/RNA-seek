@@ -43,12 +43,15 @@ OPTIONS:
   -o,  --outdir  [Type: Path]  Path to output directory. If not provided, the Path
                                 will default to the current working directory of
                                 this script [Default: $(dirname  "$0")]
+-c,  --cache  [Type: Path]     Path to singularity cache. If not provided, the Path
+                                will default to the current working directory of
+                                this script [Default: $(dirname  "$0")/.singularity/]
   -h, --help     [Type: Bool]  Displays usage and help information.
 Example:
   $ builder slurm -h
   $ builder slurm -j RNA-seek_hg38 -b "/scratch/$USER/rawdata,/scratch/$USER/RNA_hg38,/data/CCBR_Pipeliner/db/PipeDB/,/lscratch,/fdb"
 Version:
-  0.0.1
+  0.1.0
 EOF
 }
 
@@ -71,6 +74,7 @@ function parser() {
       -j  | --job-name)   provided "$key" "${2:-}"; Arguments["j"]="$2"; shift; shift;;
       -b  | --bind-paths) provided "$key" "${2:-}"; Arguments["b"]="$2"; shift; shift;;
       -o  | --outdir)  provided "$key" "${2:-}"; Arguments["o"]="$2"; shift; shift;;
+      -c  | --cache)  provided "$key" "${2:-}"; Arguments["c"]="$2"; shift; shift;;
       -*  | --*) err "Error: Failed to parse unsupported argument: '${key}'."; usage && exit 1;;
       *) err "Error: Failed to parse unrecognized argument: '${key}'. Do any of your inputs have spaces?"; usage && exit 1;;
     esac
@@ -116,6 +120,7 @@ function submit(){
   # INPUT $2 = Name of master/main job or process (pipeline controller)
   # INPUT $3 = Pipeline output directory
   # INPUT $4 = Singularity Bind paths
+  # INPUT $5 = Singularity cache directory
 
   # SLURM inherits the environment from which the job was launched
   # Try to purge modules all modules from environment
@@ -137,7 +142,7 @@ function submit(){
   # Goto Pipeline Ouput directory
   # Create a local singularity cache in output directory
   # cache can be re-used instead of re-pulling from DockerHub everytime
-  cd "$3" && export SINGULARITY_CACHEDIR="${3}/.singularity"
+  cd "$3" && export SINGULARITY_CACHEDIR="${5}"
 
   # unsetting XDG_RUNTIME_DIR to avoid some unsighly but harmless warnings
   unset XDG_RUNTIME_DIR
@@ -197,13 +202,18 @@ function main(){
   Arguments[o]="${Arguments[o]:-$outdir}"
   Arguments[o]="${Arguments[o]%/}" # clean outdir path (remove trailing '/')
 
+  # If singularity cache not provided, default to ${outdir}/.singularity
+  cache="${Arguments[o]}/.singularity"
+  Arguments[c]="${Arguments[c]:-$cache}"
+  Arguments[c]="${Arguments[c]%/}" # clean outdir path (remove trailing '/')
+
   # Print pipeline metadata prior to running
   echo -e "\nRNA-seek Builder\t$(date)"
   echo -e "Running pipeline with the following parameters:"
   for key in "${!Arguments[@]}"; do echo -e "\t${key}\t${Arguments["$key"]}"; done
 
   # Step 1. Run builder pipeline and submit jobs to cluster using the defined executor
-  job_id=$(submit "${Arguments[e]}" "${Arguments[j]}" "${Arguments[o]}" "${Arguments[b]}")
+  job_id=$(submit "${Arguments[e]}" "${Arguments[j]}" "${Arguments[o]}" "${Arguments[b]}" "${Arguments[c]}")
   echo -e "RNA-seek build reference pipeline submitted to cluster.\nMaster Job ID: $job_id"
 
   # Step 2. Clean-up steps after completes (To be implemented)
