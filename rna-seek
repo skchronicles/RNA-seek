@@ -14,7 +14,7 @@ from __future__ import print_function
 import sys, os, json
 
 __author__ = 'Skyler Kuhn'
-__version__ = 'v1.1.1'
+__version__ = 'v1.1.2'
 __email__ = 'kuhnsa@nih.gov'
 
 
@@ -1016,7 +1016,7 @@ def parsed_arguments():
           # Step 1.) Grab an interactive node (do not run on head node)
           sinteractive --mem=8g --cpus-per-task=4
           module purge
-          module load singularity snakemake/5.24.1
+          module load singularity snakemake
 
           # Step 2A.) Dry run pipeline with provided test data
           ./rna-seek run --input .tests/*.R?.fastq.gz \\
@@ -1168,7 +1168,12 @@ def parsed_arguments():
     # Display example usage in epilog
     build_epilog = textwrap.dedent("""\
         example:
-          # Build RNA-seek reference files
+          # Step 1.) Grab an interactive node (do not run on head node)
+          sinteractive --mem=8g --cpus-per-task=4
+          module purge
+          module load singularity snakemake
+
+          # Step 2.) Build RNA-seek reference files
           rna-seek build --ref-fa GRCm39.primary_assembly.genome.fa \\
                          --ref-name mm39 \\
                          --ref-gtf gencode.vM26.annotation.gtf \\
