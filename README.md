@@ -69,7 +69,7 @@ RNA-seek comes bundled with pre-built reference files for the following genomes:
 > **Warning:** This section contains FTP links for downloading each reference file.  Open the link in a new tab to start a download. 
 
 #### 2.3 Dependencies
-**Requires:** `singularity>=3.5`  `snakemake>=5.24` 
+**Requires:** `singularity>=3.5`  `snakemake>=6.0` 
 
 [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html) and [singularity](https://singularity.lbl.gov/all-releases) must be installed on the target system. Snakemake orchestrates the execution of each step in the pipeline. To guarantee reproducibility, each step relies on pre-built images from [DockerHub](https://hub.docker.com/orgs/nciccbr/repositories). Snakemake uses singaularity to pull these images onto the local filesystem prior to job execution, and as so, snakemake and singularity are the only two dependencies.
 
@@ -111,14 +111,14 @@ cd RNA-seek/
 # Grab an interactive node
 sinteractive --mem=110g --cpus-per-task=12 --gres=lscratch:200
 module purge
-module load singularity snakemake/5.24.1
+module load singularity snakemake
 ./rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/LOCAL_RNA --genome hg38_30 --mode local
 
 # @slurm: uses slurm and singularity execution method
 # The slurm MODE will submit jobs to the cluster.
 # It is recommended running rna-seek in this mode.
 module purge
-module load singularity snakemake/5.24.1
+module load singularity snakemake
 ./rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/LOCAL_RNA --genome hg38_30 --mode slurm
 ```
 

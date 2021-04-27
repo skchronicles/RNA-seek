@@ -153,7 +153,7 @@ function submit(){
           # Create directory for logfiles
           mkdir -p "$3"/logfiles/slurmfiles/
           # Submit the master job to the cluster
-          job_id=$(sbatch -J "$2" --gres=lscratch:100 --time=4-00:00:00 --mail-type=BEGIN,END,FAIL \
+          job_id=$(sbatch --parsable -J "$2" --gres=lscratch:100 --time=4-00:00:00 --mail-type=BEGIN,END,FAIL \
           --output "$3"/logfiles/snakemake.log --error "$3"/logfiles/snakemake.log \
           snakemake --latency-wait 120 -s "$3"/workflow/Snakefile -d "$3" \
             --use-singularity --singularity-args "'-B $4'" --configfile="$3"/config.json \
