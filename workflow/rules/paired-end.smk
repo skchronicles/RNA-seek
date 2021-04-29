@@ -835,7 +835,7 @@ rule rnaseq_multiqc:
     envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
     container: "docker://nciccbr/ccbr_multiqc_1.9:v0.0.1"
     shell: """
-    multiqc -f -c {input.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
+    multiqc --ignore '*/.singularity/*' -f -c {input.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
 
     # Parse RSeQC Inner Distance Maximas
     echo -e "Sample\\tInner_Dist_Maxima" > {output.maximas}
