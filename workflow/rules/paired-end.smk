@@ -145,11 +145,16 @@ rule bbmerge:
     priority: 2
     params:
         rname='pl:bbmerge',
+        encoding=join("workflow", "scripts", "phred_encoding.py"),
     threads: 4
     envmodules: config['bin'][pfamily]['tool_versions']['BBTOOLSVER']
     container: "docker://nciccbr/ccbr_bbtools_38.87:v0.0.1"
     shell: """
-    bbtools bbmerge-auto in1={input.R1} in2={input.R2} \
+    # Get encoding of Phred Quality Scores
+    encoding=$(python {params.encoding} {input.R1})
+    echo "Detected Phred+${{encoding}} ASCII encoding"
+
+    bbtools bbmerge-auto in1={input.R1} in2={input.R2} qin=${{encoding}} \
         ihist={output} k=62 extend2=200 rem ecct -Xmx32G
     """
 
