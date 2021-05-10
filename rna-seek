@@ -450,6 +450,38 @@ def add_rawdata_information(sub_args, config, ifiles):
     return config
 
 
+def image_cache(sub_args, config):
+    """Adds Docker Image URIs, or SIF paths to config if singularity cache option is provided.
+    If singularity cache option is provided and a local SIF does not exist, a warning is
+    displayed and the image will be pulled from URI in 'config/containers/images.json'.
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for run sub-command
+    @params config <file>:
+        Docker Image config file
+    @return config <dict>:
+         Updated config dictionary containing user information (username and home directory)
+    """
+    images = os.path.join('config','containers', 'images.json')
+    print(sub_args)
+    if sub_args.singularity_cache:
+        with open(images, 'r') as fh:
+            data = json.load(fh)
+        # Check in local sif exists 
+        for image, uri in data['images'].items():
+            sif = os.path.join(sub_args.singularity_cache, '{}.sif'.format(os.path.basename(uri).replace(':', '_')))
+            if not exists(sif):
+                # If local sif does not exist on in cache, print warning 
+                # and default to pulling from URI in config/containers/images.json
+                print('Warning: Local image "{}" does not exist in singularity cache'.format(sif), file=sys.stderr)
+            else:
+                # Change pointer to image from Registry URI to local SIF
+                data['images'][image] = sif
+
+        config.update(data)
+
+    return config
+
+
 def get_repo_git_commit_hash(repo_path):
     """Gets the git commit hash of the RNA-seek repo.
     @param repo_path <str>:
@@ -501,6 +533,10 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config = join_jsons(required.values()) # uses templates in the rna-seek repo
     config = add_user_information(config)
     config = add_rawdata_information(sub_args, config, ifiles)
+
+    # Resolves if an image needs to be pulled from an OCI registry or
+    # a local SIF generated from the rna-seek cache subcommand exists
+    config = image_cache(sub_args, config)
 
     # Add other cli collected info
     config['project']['annotation'] = sub_args.genome
