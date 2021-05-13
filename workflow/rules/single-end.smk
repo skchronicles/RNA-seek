@@ -593,13 +593,14 @@ rule rnaseq_multiqc:
 
     # Parse RSeQC Median TINs
     echo -e "Sample\\tmedian_tin" > {output.medtins}
-    cut -f1,3 {input.tins}  | \
+    find {params.workdir} -name '*.star_rg_added.sorted.dmark.summary.txt' -exec cut -f1,3 {{}} \\; | \
         grep -v '^Bam_file' | \
         awk -F '\\t' '{{printf "%s\\t%.3f\\n", $1,$2}}' >> {output.medtins}
 
     # Parse Flowcell and Lane information
     echo -e "Sample\\tflowcell_lanes" > {output.fclanes}
-    awk -F '\\t' -v OFS='\\t' 'FNR==2 {{print $1,$5}}' {input.fqinfo} >> {output.fclanes}
+    find {params.workdir} -name '*.fastq.info.txt' -exec awk -F '\\t' -v OFS='\\t' 'NR==2 {{print $1,$5}}' {{}} \\; \
+        >> {output.fclanes}
 
     python3 {params.pyparser} {params.logfiles} {params.outdir}
     """

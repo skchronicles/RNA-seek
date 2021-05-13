@@ -808,7 +808,7 @@ rule rnaseq_multiqc:
 
     # Parse RSeQC Inner Distance Maximas
     echo -e "Sample\\tInner_Dist_Maxima" > {output.maximas}
-    for f in {input.innerdists}; do
+    for f in $(find {params.workdir} -iname '*.inner_distance_freq.txt'); do
         sample=$(basename "${{f}}");
         inner_dist_maxima=$(sort -k3,3nr "${{f}}" | awk -F '\\t' 'NR==1{{print $1}}');
         echo -e "${{sample}}\\t${{inner_dist_maxima}}";
@@ -816,13 +816,14 @@ rule rnaseq_multiqc:
 
     # Parse RSeQC Median TINs
     echo -e "Sample\\tmedian_tin" > {output.medtins}
-    cut -f1,3 {input.tins}  | \
+    find {params.workdir} -name '*.star_rg_added.sorted.dmark.summary.txt' -exec cut -f1,3 {{}} \\; | \
         grep -v '^Bam_file' | \
         awk -F '\\t' '{{printf "%s\\t%.3f\\n", $1,$2}}' >> {output.medtins}
 
     # Parse Flowcell and Lane information
     echo -e "Sample\\tflowcell_lanes" > {output.fclanes}
-    awk -F '\\t' -v OFS='\\t' 'FNR==2 {{print $1,$5}}' {input.fqinfo} >> {output.fclanes}
+    find {params.workdir} -name '*.fastq.info.txt' -exec awk -F '\\t' -v OFS='\\t' 'NR==2 {{print $1,$5}}' {{}} \\; \
+        >> {output.fclanes}
 
     python3 {params.pyparser} {params.logfiles} {params.outdir}
     """
