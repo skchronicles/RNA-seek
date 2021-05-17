@@ -198,9 +198,10 @@ function main(){
 
   # Setting defaults for non-required arguments
   tmp="${Arguments[t]:-/tmp/$USER/cacher/.singularity/}"
+  # Sanitize single quoted input
+  tmp=$(echo "$tmp" | sed "s/\${SLURM_JOB_ID}/${SLURM_JOB_ID}/g" | sed "s/\$SLURM_JOB_ID/${SLURM_JOB_ID}/g")
   mkdir -p "$tmp"
   tmp=$(abspath "${tmp}")
-
 
   # Print cli options prior to running
   echo -e "RNA-seek cache \t$(date)"
