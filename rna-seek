@@ -993,7 +993,7 @@ def cache(sub_args):
                 str(os.path.join(repo_path, 'resources', 'cacher')) + ' slurm ' +
                 " -s '{}' ".format(sif_cache) +
                 " -i '{}' ".format(','.join(pull)) + 
-                " -t '"/lscratch/${SLURM_JOB_ID}/.singularity/' ", 
+                " -t '/lscratch/${SLURM_JOB_ID}/.singularity/' ", 
                 cwd = sif_cache, shell=True, stderr = subprocess.STDOUT, stdout = subprocess.PIPE)
 
             masterjob.communicate()
