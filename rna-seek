@@ -947,6 +947,7 @@ def cache(sub_args):
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for unlock sub-command
     """
+    import subprocess
 
     sif_cache = sub_args.sif_cache
     # Get absolute PATH to templates in rna-seek git repo
@@ -980,11 +981,23 @@ def cache(sub_args):
             pull.append(uri)
 
     if not pull:
+        # Nothing to do!
         print('Singularity image cache is already up to update!')
+    else:
+        # There are image(s) that need to be pulled 
+        if not sub_args.dry_run:
+            # submission_script for rna-seek cache is /path/to/output/resources/cacher
+            # Quote user provided values to avoid shell injections
+            masterjob = subprocess.Popen(
+                'sbatch --parsable -J pl:cache --gres=lscratch:200  --time=10:00:00 --mail-type=BEGIN,END,FAIL ' +
+                str(os.path.join(repo_path, 'resources', 'cacher')) + ' slurm ' +
+                " -s '{}' ".format(sif_cache) +
+                " -i '{}' ".format(','.join(pull)) + 
+                " -t '"/lscratch/${SLURM_JOB_ID}/.singularity/' ", 
+                cwd = sif_cache, shell=True, stderr = subprocess.STDOUT, stdout = subprocess.PIPE)
 
-    if not dryrun:
-        # TODO: Add bash script to images in pull list from Dockerhub
-        pass
+            masterjob.communicate()
+            print('RNA-seek reference cacher submitted master job with exit-code: {}'.format(masterjob.returncode))
 
 
 def genome_options(parser, user_option, prebuilt):
