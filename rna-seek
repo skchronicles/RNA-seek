@@ -465,11 +465,12 @@ def image_cache(sub_args, config):
     repo_path = os.path.dirname(os.path.abspath(__file__))
     images = os.path.join(repo_path, 'config','containers', 'images.json')
 
-    if sub_args.singularity_cache:
-        with open(images, 'r') as fh:
-            data = json.load(fh)
-        # Check in local sif exists 
-        for image, uri in data['images'].items():
+    # Read in config for docker image uris 
+    with open(images, 'r') as fh:
+        data = json.load(fh)
+    # Check if local sif exists 
+    for image, uri in data['images'].items():
+        if sub_args.singularity_cache:
             sif = os.path.join(sub_args.singularity_cache, '{}.sif'.format(os.path.basename(uri).replace(':', '_')))
             if not exists(sif):
                 # If local sif does not exist on in cache, print warning 
@@ -479,7 +480,7 @@ def image_cache(sub_args, config):
                 # Change pointer to image from Registry URI to local SIF
                 data['images'][image] = sif
 
-        config.update(data)
+    config.update(data)
 
     return config
 
