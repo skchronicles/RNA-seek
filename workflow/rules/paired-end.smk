@@ -22,7 +22,7 @@ rule validator:
     params:
         rname='pl:validator',
         outdir=join(workpath,"rawQC"),
-    container: "docker://nciccbr/ccbr_fastqvalidator:v0.1.0"
+    container: config['images']['fastqvalidator']
     shell: """
     mkdir -p {params.outdir}
     fastQValidator --noeof --file {input.R1} > {output.out1}
@@ -52,7 +52,7 @@ rule rawfastqc:
         outdir=join(workpath,"rawQC"),
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
-    container: "docker://nciccbr/ccbr_fastqc_0.11.9:v1.1"
+    container: config['images']['fastqc']
     shell: """
     fastqc {input} -t {threads} -o {params.outdir};
     """
@@ -85,7 +85,7 @@ rule trim_pe:
         minlen=config['bin'][pfamily]['tool_parameters']['MINLEN'],
     threads:32
     envmodules: config['bin'][pfamily]['tool_versions']['CUTADAPTVER']
-    container: "docker://nciccbr/ccbr_cutadapt_1.18:v032219"
+    container: config['images']['cutadapt']
     shell: """
     cutadapt --pair-filter=any --nextseq-trim=2 --trim-n \
         -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
@@ -119,7 +119,7 @@ rule fastqc:
         getrl=join("workflow", "scripts", "get_read_length.py"),
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
-    container: "docker://nciccbr/ccbr_fastqc_0.11.9:v1.1"
+    container: config['images']['fastqc']
     shell: """
     fastqc {input} -t {threads} -o {params.outdir};
     python3 {params.getrl} {params.outdir} > {params.outdir}/readlength.txt \
@@ -148,7 +148,7 @@ rule bbmerge:
         encoding=join("workflow", "scripts", "phred_encoding.py"),
     threads: 4
     envmodules: config['bin'][pfamily]['tool_versions']['BBTOOLSVER']
-    container: "docker://nciccbr/ccbr_bbtools_38.87:v0.0.1"
+    container: config['images']['bbtools']
     shell: """
     # Get encoding of Phred Quality Scores
     encoding=$(python {params.encoding} {input.R1})
@@ -195,7 +195,7 @@ rule fastq_screen:
         config['bin'][pfamily]['tool_versions']['FASTQSCREENVER'],
         config['bin'][pfamily]['tool_versions']['PERLVER'],
         config['bin'][pfamily]['tool_versions']['BOWTIE2VER'],
-    container: "docker://nciccbr/ccbr_fastq_screen_0.13.0:v2.0"
+    container: config['images']['fastq_screen']
     shell: """
     fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} \
         --threads {threads} --subset 1000000 \
@@ -233,7 +233,7 @@ rule kraken_pe:
     envmodules:
         config['bin'][pfamily]['tool_versions']['KRAKENVER'],
         config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
-    container: "docker://nciccbr/ccbr_kraken_v2.1.1:v0.0.1"
+    container: config['images']['kraken']
     shell: """
     # Copy kraken2 db to /lscratch or /dev/shm (RAM-disk) to reduce filesystem strain
     cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
@@ -303,7 +303,7 @@ if config['options']['star_2_pass_basic']:
             nbjuncs=config['bin'][pfamily]['NBJUNCS'],
         threads: 32
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        container: config['images']['arriba']
         shell: """
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
@@ -398,7 +398,7 @@ else:
             adapter2=config['bin'][pfamily]['ADAPTER2'],
         threads: 32
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        container: config['images']['arriba']
         shell: """
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
@@ -512,7 +512,7 @@ else:
             nbjuncs=config['bin'][pfamily]['NBJUNCS'],
         threads: 32
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        container: config['images']['arriba']
         shell: """
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
@@ -602,7 +602,7 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
             reffa=config['references'][pfamily]['GENOME']
         threads: 32
         envmodules: config['bin'][pfamily]['tool_versions']['ARRIBAVER']
-        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        container: config['images']['arriba']
         shell: """
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
@@ -687,7 +687,7 @@ rule rsem:
     envmodules:
         config['bin'][pfamily]['tool_versions']['RSEMVER'],
         config['bin'][pfamily]['tool_versions']['PYTHONVER'],
-    container: "docker://nciccbr/ccbr_rsem_1.3.3:v1.0"
+    container: config['images']['rsem']
     threads: 16
     shell: """
     # Get strandedness to calculate Forward Probability
@@ -717,7 +717,7 @@ rule inner_distance:
         genemodel=config['references'][pfamily]['BEDREF'],
         rname="pl:inner_distance",
     envmodules: config['bin'][pfamily]['tool_versions']['RSEQCVER'],
-    container: "docker://nciccbr/ccbr_rseqc_4.0.0:v1.0"
+    container: config['images']['rseqc']
     shell: """
     inner_distance.py -i {input.bam} -r {params.genemodel} \
         -k 10000000 -o {params.prefix}
@@ -749,7 +749,7 @@ rule bam2bw_rnaseq_pe:
         config['bin'][pfamily]['tool_versions']['BEDTOOLSVER'],
         config['bin'][pfamily]['tool_versions']['UCSCVER'],
         config['bin'][pfamily]['tool_versions']['PARALLELVER'],
-    container: "docker://nciccbr/ccbr_bam2strandedbw:v0.0.1"
+    container: config['images']['bam2strandedbw']
     shell: """
     bash {params.bashscript} {input.bam} {params.outprefix}
 
@@ -802,7 +802,7 @@ rule rnaseq_multiqc:
         pyparser=join("workflow", "scripts", "pyparser.py"),
     threads: 2
     envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
-    container: "docker://nciccbr/ccbr_multiqc_1.9:v0.0.1"
+    container: config['images']['multiqc']
     shell: """
     multiqc --ignore '*/.singularity/*' -f -c {input.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
 
@@ -857,7 +857,7 @@ rule rna_report:
         odir=join(workpath,"Reports"),
     envmodules:
         config['bin'][pfamily]['tool_versions']['RVER']
-    container: "docker://nciccbr/ccbr_rna:v0.0.1"
+    container: config['images']['rna']
     shell: """
     # Generate RNA QC Dashboard
     {params.rwrapper} \

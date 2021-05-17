@@ -3,7 +3,7 @@ from scripts.common import abstract_location
 
 # This container defines the underlying OS for each job when using the workflow
 # with --use-conda --use-singularity
-container: "docker://continuumio/miniconda3"
+container: config['images']['miniconda']
 
 
 # Rules common to RNA-seq pipeline, irrespective if the data is single-end or paired-end
@@ -29,7 +29,7 @@ rule fc_lane:
         rname='pl:fc_lane',
         get_flowcell_lanes=join("workflow", "scripts", "get_flowcell_lanes.py"),
     envmodules: config['bin'][pfamily]['tool_versions']['PYTHONVER']
-    container: "docker://nciccbr/ccbr_python:v0.0.1"
+    container: config['images']['python']
     shell: """
     python {params.get_flowcell_lanes} {input.R1} {wildcards.name} > {output.fqinfo}
     """
@@ -54,7 +54,7 @@ rule picard:
         sampleName="{name}",
     threads: 6
     envmodules: config['bin'][pfamily]['tool_versions']['PICARDVER'],
-    container: "docker://nciccbr/ccbr_picard:v0.0.1"
+    container: config['images']['picard']
     shell: """
     java -Xmx110g  -XX:ParallelGCThreads=5 -jar ${{PICARDJARPATH}}/picard.jar AddOrReplaceReadGroups \
         I={input.file1} O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
@@ -86,7 +86,7 @@ rule preseq:
     params:
         rname = "pl:preseq",
     envmodules: config['bin'][pfamily]['tool_versions']['PRESEQVER'],
-    container: "docker://nciccbr/ccbr_preseq:v0.0.1"
+    container: config['images']['preseq']
     shell:"""
     preseq c_curve -B -o {output.ccurve} {input.bam}
     """
@@ -112,7 +112,7 @@ rule qualibam:
         gtfFile=config['references'][pfamily]['GTFFILE'],
     threads: 8
     envmodules: config['bin'][pfamily]['tool_versions']['QUALIMAPVER']
-    container: "docker://nciccbr/ccbr_qualimap:v0.0.1"
+    container: config['images']['qualimap']
     shell: """
     unset DISPLAY;
     qualimap bamqc -bam {input.bamfile} --feature-file {params.gtfFile} \
@@ -148,7 +148,7 @@ rule stats:
         config['bin'][pfamily]['tool_versions']['PICARDVER'],
         config['bin'][pfamily]['tool_versions']['SAMTOOLSVER'],
         config['bin'][pfamily]['tool_versions']['PYTHONVER']
-    container: "docker://nciccbr/ccbr_rstat:v0.0.1"
+    container: config['images']['rstat']
     shell: """
     java -Xmx110g -jar ${{PICARDJARPATH}}/picard.jar CollectRnaSeqMetrics \
         REF_FLAT={params.refflat} I={input.file1} O={output.outstar1} \
@@ -183,7 +183,7 @@ rule rsem_merge:
         pythonscript=join("workflow", "scripts", "merge_rsem_results.py"),
         inputdir=join(workpath, degall_dir)
     envmodules: config['bin'][pfamily]['tool_versions']['PYTHONVER'],
-    container: "docker://nciccbr/ccbr_python:v0.0.1"
+    container: config['images']['python']
     shell: """
     python {params.pythonscript} {params.annotate} {params.inputdir} {params.inputdir}
     sed 's/\\t/|/1' {output.gene_counts_matrix} | \
@@ -209,7 +209,7 @@ rule rseqc:
         bedref=config['references'][pfamily]['BEDREF'],
         rname="pl:rseqc",
     envmodules: config['bin'][pfamily]['tool_versions']['RSEQCVER'],
-    container: "docker://nciccbr/ccbr_rseqc_4.0.0:v1.0"
+    container: config['images']['rseqc']
     shell: """
     infer_experiment.py -r {params.bedref} -i {input.file1} -s 1000000 > {output.out1}
     read_distribution.py -i {input.file1} -r {params.bedref} > {output.out2}
@@ -239,7 +239,7 @@ rule tin:
         outdir=join(workpath,rseqc_dir),
         rname="pl:tin",
     envmodules: config['bin'][pfamily]['tool_versions']['RSEQCVER'],
-    container: "docker://nciccbr/ccbr_rseqc_4.0.0:v1.0"
+    container: config['images']['rseqc']
     shell: """
     # tin.py writes to current working directory
     cd {params.outdir}
@@ -264,7 +264,7 @@ rule tin_merge:
         rname="pl:tin_merge",
         create_matrix=join("workflow", "scripts", "create_tin_matrix.py")
     envmodules: config['bin'][pfamily]['tool_versions']['PYTHONVER'],
-    container: "docker://nciccbr/ccbr_python:v0.0.1"
+    container: config['images']['python']
     shell: """
     python {params.create_matrix} {input.tins} > {output.matrix}
     """
