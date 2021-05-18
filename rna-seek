@@ -5,7 +5,7 @@
 About:
     This is the main entry for the RNA-seek pipeline.
 USAGE:
-	$ rna-seek <run|unlock> [OPTIONS]
+	$ rna-seek <run|build|unlock|cache> [OPTIONS]
 Example:
     $ rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/RNA_hg38 --genome hg38_30 --mode local
 """
@@ -14,7 +14,7 @@ from __future__ import print_function
 import sys, os, json
 
 __author__ = 'Skyler Kuhn'
-__version__ = 'v1.1.4'
+__version__ = 'v1.2.0'
 __email__ = 'kuhnsa@nih.gov'
 
 
@@ -470,8 +470,8 @@ def image_cache(sub_args, config):
         data = json.load(fh)
     # Check if local sif exists 
     for image, uri in data['images'].items():
-        if sub_args.singularity_cache:
-            sif = os.path.join(sub_args.singularity_cache, '{}.sif'.format(os.path.basename(uri).replace(':', '_')))
+        if sub_args.sif_cache:
+            sif = os.path.join(sub_args.sif_cache, '{}.sif'.format(os.path.basename(uri).replace(':', '_')))
             if not exists(sif):
                 # If local sif does not exist on in cache, print warning 
                 # and default to pulling from URI in config/containers/images.json
@@ -1073,6 +1073,7 @@ def parsed_arguments():
                                  [--star-2-pass-basic]
                                  [--threads THREADS]
                                  [--singularity-cache SINGULARITY_CACHE]
+                                 [--sif-cache SIF_CACHE]
 
         This section explains concepts and options for running the RNA-seek pipeline.
         Please visit "https://github.com/skchronicles/RNA-seek" for more details.
@@ -1214,9 +1215,19 @@ def parsed_arguments():
                                 type = lambda option: check_cache(parser, os.path.abspath(os.path.expanduser(option))),
                                 required = False,
                                 help = 'Overrides the $SINGULARITY_CACHEDIR environment variable. \
-                                Singularity will cache SIF container images generated from remote sources. \
+                                Singularity will cache image layers pulled from remote registries. \
                                 By default, the cache is set to \'/path/to/output/directory/.singularity/\'. \
-                                Please note that a singularity cache cannot be shared across users.')
+                                Please note that this cache cannot be shared across users.')
+    # Local SIF cache directory (default pull from Dockerhub) 
+    subparser_run.add_argument('--sif-cache',
+                                type = lambda option: os.path.abspath(os.path.expanduser(option)),
+                                required = False,
+                                help = 'Path where a local cache of SIFs are stored. \
+                                This cache can be shared across users if permissions are \
+                                set correctly. If a SIF does not exist in the SIF cache, \
+                                the image will be pulled from Dockerhub. The rna-seek cache \
+                                subcommand can be used to create a local SIF cache. Please see \
+                                rna-seek cache for more information.')
 
     # Options for the "build" sub-command
     # Grouped sub-parser arguments are currently not supported.
@@ -1232,6 +1243,7 @@ def parsed_arguments():
                                    --output OUTPUT
                                    [--dry-run]
                                    [--singularity-cache SINGULARITY_CACHE]
+                                   [--sif-cache SIF_CACHE]
 
         Builds the reference files for the RNA-seek pipeline from a genomic
         FASTA file and a GTF file. Disclaimer: If you have two GTF files,
@@ -1241,27 +1253,30 @@ def parsed_arguments():
 
         required arguments:
           --ref-fa REF_FA
-                      Genomic FASTA file of the reference genome. If you are
-                      downloading this from GENCODE, you should select the 'PRI'
-                      genomic FASTA file. This file will contain the primary
-                      genomic assembly (contains chromosomes and scaffolds).
+                                Genomic FASTA file of the reference genome. If you are
+                                downloading this from GENCODE, you should select the 'PRI'
+                                genomic FASTA file. This file will contain the primary
+                                genomic assembly (contains chromosomes and scaffolds).
           --ref-name REF_NAME
-                      Name of the input reference genome. This is the
-                      common name of the reference genome. Here is a list
-                      of common examples for different model organisms:
-                      mm10, hg38, rn6, danRer11, dm6, canFam3, sacCer3, ce11.
+                                Name of the input reference genome. This is the
+                                common name of the reference genome. Here is a list
+                                of common examples for different model organisms:
+                                mm10, hg38, rn6, danRer11, dm6, canFam3, sacCer3, ce11.
           --ref-gtf REF_GTF
-                      Annotation file or GTF file for the reference genome.
+                                Annotation file or GTF file for the reference genome.
+                                If you are downloading this from GENCODE, you should select
+                                the 'PRI' GTF file. This file contains gene annotations for 
+                                the primary assembly (contains chromosomes and scaffolds).
           --gtf-ver GTF_VER
-                      Version of the annotation file or GTF file provided.
-                      If you are using a GTF file from GENCODE, use the release
-                      number or version (i.e. 'M25' for mouse or '37' for human).
-                      Visit gencodegenes.org for more details.
+                                Version of the annotation file or GTF file provided.
+                                If you are using a GTF file from GENCODE, use the release
+                                number or version (i.e. 'M25' for mouse or '37' for human).
+                                Visit gencodegenes.org for more details.
           --output OUTPUT
-                      Path to an output directory. This location
-                      is where the pipeline will create all of its output
-                      files. If the user-provided working directory has not
-                      been initialized, it will automatically be created.
+                                Path to an output directory. This location
+                                is where the pipeline will create all of its output
+                                files. If the user-provided working directory has not
+                                been initialized, it will automatically be created.
         """)
 
     # Display example usage in epilog
@@ -1330,9 +1345,19 @@ def parsed_arguments():
                                 type = lambda option: check_cache(parser, os.path.abspath(os.path.expanduser(option))),
                                 required = False,
                                 help = 'Overrides the $SINGULARITY_CACHEDIR environment variable. \
-                                Singularity will cache SIF container images generated from remote sources. \
+                                Singularity will cache image layers pulled from remote registries. \
                                 By default, the cache is set to \'/path/to/output/directory/.singularity/\'. \
-                                Please note that a singularity cache cannot be shared across users.')
+                                Please note that this cache cannot be shared across users.')
+    # Local SIF cache directory (default pull from Dockerhub) 
+    subparser_build.add_argument('--sif-cache',
+                                type = lambda option: os.path.abspath(os.path.expanduser(option)),
+                                required = False,
+                                help = 'Path where a local cache of SIFs are stored. \
+                                This cache can be shared across users if permissions are \
+                                set correctly. If a SIF does not exist in the SIF cache, \
+                                the image will be pulled from Dockerhub. The rna-seek cache \
+                                subcommand can be used to create a local SIF cache. Please see \
+                                rna-seek cache for more information.')
 
 
     # Options for the "unlock" sub-command
@@ -1352,11 +1377,11 @@ def parsed_arguments():
 
         required arguments:
           --output OUTPUT
-                      Path to a previous run's output directory to
-                      unlock. This will remove a lock on the working directory.
-                      Please verify that the pipeline is not running before
-                      running this command.
-                      Example: --output /scratch/$USER/RNA_hg38
+                                Path to a previous run's output directory to
+                                unlock. This will remove a lock on the working 
+                                directory. Please verify that the pipeline is 
+                                not running before running this command.
+                                Example: --output /scratch/$USER/RNA_hg38
 
         """)
 
@@ -1408,7 +1433,7 @@ def parsed_arguments():
                       Images defined in config/containers/images.json
                       will be pulled into the local filesystem. The
                       path provided to this option can be passed to
-                      the --singularity-cache option of the build and
+                      the --sif-cache option of the build and
                       run subcomand. Please see rna-seek build and run
                       for more information.
 
