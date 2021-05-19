@@ -155,7 +155,7 @@ rule bbmerge:
     echo "Detected Phred+${{encoding}} ASCII encoding"
 
     bbtools bbmerge-auto in1={input.R1} in2={input.R2} qin=${{encoding}} \
-        ihist={output} k=62 extend2=200 rem ecct -Xmx32G
+        ihist={output} k=62 extend2=200 rem ecct -Xmx64G
     """
 
 
