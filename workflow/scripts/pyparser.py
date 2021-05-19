@@ -25,7 +25,7 @@ config = {
 
 	"multiqc_cutadapt.txt": {
         "delimeter": "\t",
-		"clean_sample_name": [".R1$", ".R2$"],
+		"clean_sample_name": ["\.R1$", "\.R2$"],
 		"parse_column": ["Sample", "pairs_processed", "r_processed"],
 		"rename_field": {
 			"pairs_processed": "total_read_pairs",
@@ -38,7 +38,7 @@ config = {
 
 	"multiqc_fastqc.txt": {
         "delimeter": "\t",
-		"clean_sample_name": ["^QC \\| ", "^rawQC \\| ", ".trim$", ".R1$", ".R2$"],
+		"clean_sample_name": ["^QC \\| ", "^rawQC \\| ", "\.trim$", "\.R1$", "\.R2$"],
         "collapse": True,
 		"parse_column": ["Sample", "Encoding", "Total Sequences", "Sequence length", "%GC", "avg_sequence_length"],
 		"rename_field": {
@@ -54,7 +54,7 @@ config = {
 
 	"multiqc_fastq_screen.txt": {
         "delimeter": "\t",
-		"clean_sample_name": ["^FQscreen \\| ", "^FQscreen2 \\| ", "_screen$", ".trim$", ".R1$", ".R2$"],
+		"clean_sample_name": ["^FQscreen \\| ", "^FQscreen2 \\| ", "_screen$", "\.trim$", "\.R1$", "\.R2$"],
 		"parse_column": ["Sample", "Uni_Vec percentage", "rRNA percentage", "Human percentage", "Mouse percentage", "Bacteria percentage", "Fungi percentage", "Virus percentage"],
 		"rename_field": {
 			"Uni_Vec percentage": "uni_vec_percent_aligned",
@@ -78,7 +78,7 @@ config = {
 
 	"multiqc_picard_dups.txt": {
         "delimeter": "\t",
-		"clean_sample_name": [".p2$"],
+		"clean_sample_name": ["\.p2$"],
 		"parse_column": ["Sample", "PERCENT_DUPLICATION"],
 		"rename_field": {
 			"PERCENT_DUPLICATION": "percent_duplication"
@@ -93,7 +93,7 @@ config = {
 
 	"multiqc_picard_RnaSeqMetrics.txt": {
         "delimeter": "\t",
-		"clean_sample_name": [".p2$"],
+		"clean_sample_name": ["\.p2$"],
 		"parse_column": ["Sample", "PCT_CODING_BASES", "PCT_MRNA_BASES", "MEDIAN_CV_COVERAGE", "PCT_INTRONIC_BASES", "MEDIAN_3PRIME_BIAS", "MEDIAN_5PRIME_BIAS", "MEDIAN_5PRIME_TO_3PRIME_BIAS", "PCT_INTERGENIC_BASES", "PCT_UTR_BASES"],
 		"rename_field": {
 			"PCT_CODING_BASES": "pct_coding_bases",
@@ -121,7 +121,7 @@ config = {
 
 	"multiqc_rseqc_infer_experiment.txt": {
         "delimeter": "\t",
-		"clean_sample_name": ["^RSeQC \\| ", ".strand.info$",".info.strand$", "^output.", ".p2$"],
+		"clean_sample_name": ["^RSeQC \\| ", "\.strand\.info$","\.info\.strand$", "^output\.", "\.p2$"],
 		"parse_column": ["Sample", "pe_sense", "se_sense", "pe_antisense", "se_antisense"],
 		"rename_field": {
 			"pe_sense": "percent_sense_strand",
@@ -141,7 +141,7 @@ config = {
 
     "rseqc_inner_distances.txt": {
         "delimeter": "\t",
-        "clean_sample_name": [".inner_distance_freq.txt$"],
+        "clean_sample_name": ["\.inner_distance_freq\.txt$"],
         "parse_column": ["Sample", "Inner_Dist_Maxima"],
         "rename_field": {
             "Inner_Dist_Maxima": "inner_distance_maxima"
@@ -153,7 +153,7 @@ config = {
 
 	"rseqc_median_tin.txt": {
         "delimeter": "\t",
-		"clean_sample_name": [".star_rg_added.sorted.dmark.bam$"],
+		"clean_sample_name": ["\.star_rg_added\.sorted\.dmark\.bam$"],
 		"parse_column": ["Sample", "median_tin"],
         "typecast": {
             "median_tin": float
@@ -174,7 +174,7 @@ config = {
 
 	"multiqc_star.txt": {
         "delimeter": "\t",
-		"clean_sample_name": [".p2$"],
+		"clean_sample_name": ["\.p2$"],
 		"parse_column": ["Sample", "uniquely_mapped_percent", "avg_input_read_length"],
 		"rename_field": {
 			"uniquely_mapped_percent": "percent_aligned",
@@ -188,7 +188,7 @@ config = {
 
 	"multiqc_qualimap_bamqc_genome_results.txt": {
         "delimeter": "\t",
-		"clean_sample_name": [".p2$"],
+		"clean_sample_name": ["\.p2$"],
 		"parse_column": ["Sample", "mean_insert_size", "median_insert_size", "mean_mapping_quality", "mean_coverage"],
 		"rename_field": {},
         "typecast": {
