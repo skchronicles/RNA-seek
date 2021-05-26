@@ -103,7 +103,7 @@ nav:
     - build: dev/coming-soon.md
     - cache: dev/coming-soon.md
     - unlock: dev/coming-soon.md
-  - Resources: dev/coming-soon.md
+  - Resources: RNA-seq/Resources.md
   - FAQ:
     - General Questions: general-questions.md 
     - Troubleshooting: troubleshooting.md
