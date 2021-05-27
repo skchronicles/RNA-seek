@@ -6,7 +6,7 @@ With RNA-seek, you can run your samples through our highly-reproducible pipeline
 
 Here is a list of available rna-seek `sub commands`:
    
- - **`run`**: run the rna-seq pipeline   
+ - [**`run`**](../run): run the rna-seq pipeline   
  - **`build`**: build reference files   
  - **`cache`**: cache remote resources locally  
  - **`unlock`**: unlock a working directory  
@@ -115,7 +115,7 @@ module load singularity snakemake
 rna-seek run \
     --input RNA-seek/.tests/*.R?.fastq.gz \
     --output /scratch/${USER}/runner_hg38_36/  \
-    --genome /scratch/${USER}hg38_36/hg38_36.json  \
+    --genome /scratch/${USER}/hg38_36/hg38_36.json  \
     --mode slurm \
     --star-2-pass-basic \
     --dry-run
