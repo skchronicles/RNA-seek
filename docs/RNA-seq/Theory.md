@@ -96,7 +96,7 @@ Preseq can be used to estimate the complexity of a library for each of your samp
 Picard has a particularly useful sub-command called CollectRNAseqMetrics which reports the number and percentage of reads that align to various regions: such as coding, intronic, UTR, intergenic and ribosomal regions. This is particularly useful as you would expect a library constructed with ploy(A)-selection to have a high percentage of reads that map to coding regions. Picard CollectRNAseqMetrics will also report the uniformity of coverage across all genes, which is useful for determining whether a sample has a 3' bias (observed in libraries containing degraded RNA).
 
 #### 3.2.3 RNA Quality
-This is another particularity useful package that is tailored for RNA-seq data. The package is made up of over 20 sub-module that can be used to do things like calculate the average insert size between paired-end reads (which is useful for GEO upload), annotate the percentage of reads spanning known or novel splice junctions, convert a BAM file into a normalized BigWig file, and infer RNA quality.
+This is another particularity useful package that is tailored for RNA-seq data. The package is made up of over 20 sub-module that can be used to do things like calculate the average insert size between paired-end reads (which is useful for GEO upload), annotate the percentage of reads spanning known or novel splice junctions, convert a BAM file into a normalized BigWig file, and infer RNA quality. 
 
 ### 3.3 Guidelines  
 Here is a set of generalized guidelines for different QC metrics. Some of these metrics will vary genome-to-genome depending on the quality of the assembly and annotation but that has been taken into consideration for our set of supported reference genomes. 
@@ -113,6 +113,9 @@ Here is a set of generalized guidelines for different QC metrics. Some of these 
 | *Percent Aligned to rRNA*         |             < 5%           |             < 15%        |
 | *Picard RNAseqMetrics*            |         Coding > 50%       |         Coding > 35%     |
 | *Picard RNAseqMetrics*            | Intronic + Intergenic < 25%  | Intronic + Intergenic < 40%  |
+| *RSeQC TIN*                       | medTIN > 65                | medTIN > 60              |
+
+The [median TIN value reported by RSeQC](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-0922-z) works reasonably well for quickly identifying problematic samples. 
 
 ## 4. Data Processing
 
