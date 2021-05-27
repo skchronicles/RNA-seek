@@ -7,9 +7,9 @@ With RNA-seek, you can run your samples through our highly-reproducible pipeline
 Here is a list of available rna-seek `sub commands`:
    
  - [**`run`**](../run): run the rna-seq pipeline   
- - **`build`**: build reference files   
- - **`cache`**: cache remote resources locally  
- - **`unlock`**: unlock a working directory  
+ - [**`build`**](../build): build reference files   
+ - [**`cache`**](../cache): cache remote resources locally  
+ - [**`unlock`**](../unlock): unlock a working directory  
 
 > This page contains information for building reference files and running the RNA-seek pipeline. For more information about each of the available sub commands, please see the [usage section](). 
 
