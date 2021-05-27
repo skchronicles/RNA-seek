@@ -98,11 +98,11 @@ nav:
   - About: index.md
   - Theory: RNA-seq/Theory.md
   - Getting started: RNA-seq/TLDR-RNA-seq.md
-  - Usage:
-    - run: dev/coming-soon.md
-    - build: dev/coming-soon.md
-    - cache: dev/coming-soon.md
-    - unlock: dev/coming-soon.md
+  - Usage: 
+    - run: RNA-seq/run.md
+    - build: RNA-seq/build.md
+    - cache: RNA-seq/cache.md
+    - unlock: RNA-seq/unlock.md
   - Resources: RNA-seq/Resources.md
   - FAQ:
     - General Questions: general-questions.md 
