@@ -1,4 +1,4 @@
-# `rna-seek run` 
+# <code>rna-seek <b>run</b></code>
 
 ## 1. About 
 The `rna-seek` executable is composed of several inter-related sub commands. Please see `rna-seek -h` for all available options.
@@ -40,7 +40,7 @@ Each of the following arguments are required. Failure to provide a required argu
 > 
 > ***Example:*** `--input .tests/*.R?.fastq.gz`
 
-
+---  
   `--output OUTPUT`
 > **Path to an output directory.**   
 > *type: string*
@@ -49,7 +49,7 @@ Each of the following arguments are required. Failure to provide a required argu
 > 
 > ***Example:*** `--output /scratch/$USER/RNA_hg38`
 
-
+---  
   `--genome {hg38_30,mm10_M21,custom.json}`
 > **Reference genome.**   
 > *type: string*
@@ -76,7 +76,7 @@ Each of the following arguments are optional and do not need to be provided.
 > 
 > ***Example:*** `--help`
 
-
+---  
   `--dry-run`            
 > **Dry run the pipeline.**  
 > *type: boolean*
@@ -85,7 +85,7 @@ Each of the following arguments are optional and do not need to be provided.
 >
 > ***Example:*** `--dry-run`
 
-
+---  
   `--mode {local,slurm}`  
 > **Execution Method.**</h3>  
 > *type: boolean*  
@@ -101,7 +101,7 @@ Each of the following arguments are optional and do not need to be provided.
 > 
 > ***Example:*** `--mode slurm`
 
-
+---  
   `--star-2-pass-basic`  
 > **Run STAR in per sample 2-pass mapping mode.**  
 > *type: boolean*
@@ -112,7 +112,7 @@ Each of the following arguments are optional and do not need to be provided.
 > 
 > ***Example:*** `--star-2-pass-basic`
   
-
+---  
   `--threads THREADS`   
 > **Max number of threads for each process.**  
 > *type: int*  
@@ -122,7 +122,7 @@ Each of the following arguments are optional and do not need to be provided.
 > 
 > ***Example:*** `--threads 12`
 
-
+---  
   `--singularity-cache SINGULARITY_CACHE`  
 > **Overrides the $SINGULARITY_CACHEDIR environment variable.**  
 > *type: string*  
@@ -132,7 +132,7 @@ Each of the following arguments are optional and do not need to be provided.
 > 
 > ***Example:*** `--singularity-cache /data/$USER/.singularity`
 
-
+---  
   `--sif-cache SIF_CACHE`
 > **Path where a local cache of SIFs are stored.**  
 > *type: string*  
