@@ -74,7 +74,7 @@ Each of the following arguments are required. Failure to provide a required argu
 > *type: string or int*
 >   
 > This location is where the build pipeline will create all of its output files. If the user-provided working directory has not been initialized, it will automatically be created.  
-> ***Example:*** `--output --output /scratch/$USER/refs/hg38_v36/`
+> ***Example:*** `--output /scratch/$USER/refs/hg38_v36/`
 
 ### 2.2 Options
 
