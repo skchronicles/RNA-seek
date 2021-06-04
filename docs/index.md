@@ -1,6 +1,6 @@
 # RNA-seek
 
-![Docker Pulls](https://img.shields.io/docker/pulls/nciccbr/ccbr_arriba_2.0.0) [![Build](https://github.com/skchronicles/RNA-seek/workflows/Tests/badge.svg)](https://github.com/skchronicles/RNA-seek/actions)  [![GitHub issues](https://img.shields.io/github/issues/skchronicles/RNA-seek?color=brightgreen)](https://github.com/skchronicles/RNA-seek/issues)  [![GitHub license](https://img.shields.io/github/license/skchronicles/RNA-seek)](https://github.com/skchronicles/RNA-seek/blob/main/LICENSE) 
+[![DOI](https://zenodo.org/badge/305525443.svg)](https://zenodo.org/badge/latestdoi/305525443) [![GitHub releases](https://img.shields.io/github/release/skchronicles/RNA-seek)](https://github.com/skchronicles/RNA-seek/releases) ![Docker Pulls](https://img.shields.io/docker/pulls/nciccbr/ccbr_arriba_2.0.0) [![Build](https://github.com/skchronicles/RNA-seek/workflows/Tests/badge.svg)](https://github.com/skchronicles/RNA-seek/actions)  [![GitHub issues](https://img.shields.io/github/issues/skchronicles/RNA-seek?color=brightgreen)](https://github.com/skchronicles/RNA-seek/issues)  [![GitHub license](https://img.shields.io/github/license/skchronicles/RNA-seek)](https://github.com/skchronicles/RNA-seek/blob/main/LICENSE)
 
 An open-source, reproducible, and scalable solution for analyzing RNA-sequencing data.
 
