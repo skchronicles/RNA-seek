@@ -1,0 +1,110 @@
+# Project Information
+site_name: RNA-seek Documentation
+site_author: Skyler Kuhn
+site_description: >-
+  RNA-seek is an open-source, reproducible, and scalable best
+  practices pipeline for analyzing RNA-sequencing data. 
+
+# Repository
+repo_name: CCBR/RNA-seek
+repo_url: https://github.com/skchronicles/RNA-seek
+edit_uri: https://github.com/skchronicles/RNA-seek/edit/master/docs/
+
+# Copyright
+copyright: Copyright &copy; 2021 CCBR
+
+# Configuration
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.top
+    - toc.integrate 
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+  logo: assets/icons/doc-book.svg
+  favicon: assets/favicon/favicon.ico
+
+# Plugins
+plugins:
+  - search
+  - git-revision-date
+  - minify:
+      minify_html: true
+
+
+# Customization
+extra:
+  social:
+    - icon: fontawesome/solid/users
+      link: http://bioinformatics.cancer.gov
+    - icon: fontawesome/brands/github
+      link: https://github.com/CCBR
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/orgs/nciccbr/repositories
+  version:
+    provider: mike
+
+
+# Extensions
+markdown_extensions:
+  - markdown.extensions.admonition
+  - markdown.extensions.attr_list
+  - markdown.extensions.def_list
+  - markdown.extensions.footnotes
+  - markdown.extensions.meta
+  - markdown.extensions.toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: squidfunk
+      repo: mkdocs-material
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Page Tree
+nav:
+  - About: index.md
+  - Theory: RNA-seq/Theory.md
+  - Getting started: RNA-seq/TLDR-RNA-seq.md
+  - Usage: 
+    - run: RNA-seq/run.md
+    - build: RNA-seq/build.md
+    - cache: RNA-seq/cache.md
+    - unlock: RNA-seq/unlock.md
+  - Resources: RNA-seq/Resources.md
+  - FAQ:
+    - General Questions: general-questions.md 
+    - Troubleshooting: troubleshooting.md
+  - License: license.md

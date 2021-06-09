@@ -5,7 +5,7 @@
 About:
     This is the main entry for the RNA-seek pipeline.
 USAGE:
-	$ rna-seek <run|unlock> [OPTIONS]
+	$ rna-seek <run|build|unlock|cache> [OPTIONS]
 Example:
     $ rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/RNA_hg38 --genome hg38_30 --mode local
 """
@@ -14,7 +14,7 @@ from __future__ import print_function
 import sys, os, json
 
 __author__ = 'Skyler Kuhn'
-__version__ = 'v1.1.3'
+__version__ = 'v1.2.1'
 __email__ = 'kuhnsa@nih.gov'
 
 
@@ -450,6 +450,41 @@ def add_rawdata_information(sub_args, config, ifiles):
     return config
 
 
+def image_cache(sub_args, config):
+    """Adds Docker Image URIs, or SIF paths to config if singularity cache option is provided.
+    If singularity cache option is provided and a local SIF does not exist, a warning is
+    displayed and the image will be pulled from URI in 'config/containers/images.json'.
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for run sub-command
+    @params config <file>:
+        Docker Image config file
+    @return config <dict>:
+         Updated config dictionary containing user information (username and home directory)
+    """
+    # Get absolute PATH to templates in rna-seek git repo
+    repo_path = os.path.dirname(os.path.abspath(__file__))
+    images = os.path.join(repo_path, 'config','containers', 'images.json')
+
+    # Read in config for docker image uris 
+    with open(images, 'r') as fh:
+        data = json.load(fh)
+    # Check if local sif exists 
+    for image, uri in data['images'].items():
+        if sub_args.sif_cache:
+            sif = os.path.join(sub_args.sif_cache, '{}.sif'.format(os.path.basename(uri).replace(':', '_')))
+            if not exists(sif):
+                # If local sif does not exist on in cache, print warning 
+                # and default to pulling from URI in config/containers/images.json
+                print('Warning: Local image "{}" does not exist in singularity cache'.format(sif), file=sys.stderr)
+            else:
+                # Change pointer to image from Registry URI to local SIF
+                data['images'][image] = sif
+
+    config.update(data)
+
+    return config
+
+
 def get_repo_git_commit_hash(repo_path):
     """Gets the git commit hash of the RNA-seek repo.
     @param repo_path <str>:
@@ -501,6 +536,10 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config = join_jsons(required.values()) # uses templates in the rna-seek repo
     config = add_user_information(config)
     config = add_rawdata_information(sub_args, config, ifiles)
+
+    # Resolves if an image needs to be pulled from an OCI registry or
+    # a local SIF generated from the rna-seek cache subcommand exists
+    config = image_cache(sub_args, config)
 
     # Add other cli collected info
     config['project']['annotation'] = sub_args.genome
@@ -845,7 +884,7 @@ def configure_build(sub_args, git_repo, output_path):
     @param output_path <str>:
         Path to build output directory
     @param sub_args <parser.parse_args() object>:
-        Parsed arguments for unlock sub-command
+        Parsed arguments for build sub-command
     @return additional_bind_paths list[<str>]:
         List of canocical paths for the list of input files to be added singularity bindpath
     """
@@ -899,6 +938,66 @@ def build(sub_args):
         masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = [], alt_cache = sub_args.singularity_cache, submission_script = 'builder', masterjob = 'pl:build')
         masterjob.wait()
         print('RNA-seek reference building pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
+
+
+def cache(sub_args):
+    """Caches remote resources or reference files stored on DockerHub and S3.
+    Local SIFs will be created from images defined in 'config/containers/images.json'.
+    @TODO: add option to cache other shared S3 resources (i.e. kraken db and fqscreen indices)
+    @param sub_args <parser.parse_args() object>:
+        Parsed arguments for unlock sub-command
+    """
+    import subprocess
+
+    sif_cache = sub_args.sif_cache
+    # Get absolute PATH to templates in rna-seek git repo
+    repo_path = os.path.dirname(os.path.abspath(__file__))
+    images = os.path.join(repo_path, 'config','containers', 'images.json')
+
+
+    # Create image cache
+    if not exists(sif_cache):
+        # Pipeline output directory does not exist on filesystem
+        os.makedirs(sif_cache)
+    elif exists(sif_cache) and os.path.isfile(sif_cache):
+        # Provided Path for pipeline output directory exists as file
+        raise OSError("""\n\tFatal: Failed to create provided sif cache directory!
+        User provided --sif-cache PATH already exists on the filesystem as a file.
+        Please {} cache again with a different --sif-cache PATH.
+        """.format(sys.argv[0])
+        )
+
+    # Check if local SIFs already exist on the filesystem
+    with open(images, 'r') as fh:
+        data = json.load(fh)
+
+    pull = []
+    for image, uri in data['images'].items():
+        sif = os.path.join(sif_cache, '{}.sif'.format(os.path.basename(uri).replace(':', '_')))
+        if not exists(sif):
+            # If local sif does not exist on in cache, print warning
+            # and default to pulling from URI in config/containers/images.json
+            print('Image will be pulled from "{}".'.format(uri), file=sys.stderr)
+            pull.append(uri)
+
+    if not pull:
+        # Nothing to do!
+        print('Singularity image cache is already up to update!')
+    else:
+        # There are image(s) that need to be pulled 
+        if not sub_args.dry_run:
+            # submission_script for rna-seek cache is /path/to/output/resources/cacher
+            # Quote user provided values to avoid shell injections
+            masterjob = subprocess.Popen(
+                'sbatch --parsable -J pl:cache --gres=lscratch:200  --time=10:00:00 --mail-type=BEGIN,END,FAIL ' +
+                str(os.path.join(repo_path, 'resources', 'cacher')) + ' slurm ' +
+                " -s '{}' ".format(sif_cache) +
+                " -i '{}' ".format(','.join(pull)) + 
+                " -t '/lscratch/${SLURM_JOB_ID}/.singularity/' ", 
+                cwd = sif_cache, shell=True, stderr = subprocess.STDOUT, stdout = subprocess.PIPE)
+
+            masterjob.communicate()
+            print('RNA-seek reference cacher submitted master job with exit-code: {}'.format(masterjob.returncode))
 
 
 def genome_options(parser, user_option, prebuilt):
@@ -974,6 +1073,7 @@ def parsed_arguments():
                                  [--star-2-pass-basic]
                                  [--threads THREADS]
                                  [--singularity-cache SINGULARITY_CACHE]
+                                 [--sif-cache SIF_CACHE]
 
         This section explains concepts and options for running the RNA-seek pipeline.
         Please visit "https://github.com/skchronicles/RNA-seek" for more details.
@@ -1115,9 +1215,19 @@ def parsed_arguments():
                                 type = lambda option: check_cache(parser, os.path.abspath(os.path.expanduser(option))),
                                 required = False,
                                 help = 'Overrides the $SINGULARITY_CACHEDIR environment variable. \
-                                Singularity will cache SIF container images generated from remote sources. \
+                                Singularity will cache image layers pulled from remote registries. \
                                 By default, the cache is set to \'/path/to/output/directory/.singularity/\'. \
-                                Please note that a singularity cache cannot be shared across users.')
+                                Please note that this cache cannot be shared across users.')
+    # Local SIF cache directory (default pull from Dockerhub) 
+    subparser_run.add_argument('--sif-cache',
+                                type = lambda option: os.path.abspath(os.path.expanduser(option)),
+                                required = False,
+                                help = 'Path where a local cache of SIFs are stored. \
+                                This cache can be shared across users if permissions are \
+                                set correctly. If a SIF does not exist in the SIF cache, \
+                                the image will be pulled from Dockerhub. The rna-seek cache \
+                                subcommand can be used to create a local SIF cache. Please see \
+                                rna-seek cache for more information.')
 
     # Options for the "build" sub-command
     # Grouped sub-parser arguments are currently not supported.
@@ -1133,6 +1243,7 @@ def parsed_arguments():
                                    --output OUTPUT
                                    [--dry-run]
                                    [--singularity-cache SINGULARITY_CACHE]
+                                   [--sif-cache SIF_CACHE]
 
         Builds the reference files for the RNA-seek pipeline from a genomic
         FASTA file and a GTF file. Disclaimer: If you have two GTF files,
@@ -1142,27 +1253,30 @@ def parsed_arguments():
 
         required arguments:
           --ref-fa REF_FA
-                      Genomic FASTA file of the reference genome. If you are
-                      downloading this from GENCODE, you should select the 'PRI'
-                      genomic FASTA file. This file will contain the primary
-                      genomic assembly (contains chromosomes and scaffolds).
+                                Genomic FASTA file of the reference genome. If you are
+                                downloading this from GENCODE, you should select the 'PRI'
+                                genomic FASTA file. This file will contain the primary
+                                genomic assembly (contains chromosomes and scaffolds).
           --ref-name REF_NAME
-                      Name of the input reference genome. This is the
-                      common name of the reference genome. Here is a list
-                      of common examples for different model organisms:
-                      mm10, hg38, rn6, danRer11, dm6, canFam3, sacCer3, ce11.
+                                Name of the input reference genome. This is the
+                                common name of the reference genome. Here is a list
+                                of common examples for different model organisms:
+                                mm10, hg38, rn6, danRer11, dm6, canFam3, sacCer3, ce11.
           --ref-gtf REF_GTF
-                      Annotation file or GTF file for the reference genome.
+                                Annotation file or GTF file for the reference genome.
+                                If you are downloading this from GENCODE, you should select
+                                the 'PRI' GTF file. This file contains gene annotations for 
+                                the primary assembly (contains chromosomes and scaffolds).
           --gtf-ver GTF_VER
-                      Version of the annotation file or GTF file provided.
-                      If you are using a GTF file from GENCODE, use the release
-                      number or version (i.e. 'M25' for mouse or '37' for human).
-                      Visit gencodegenes.org for more details.
+                                Version of the annotation file or GTF file provided.
+                                If you are using a GTF file from GENCODE, use the release
+                                number or version (i.e. 'M25' for mouse or '37' for human).
+                                Visit gencodegenes.org for more details.
           --output OUTPUT
-                      Path to an output directory. This location
-                      is where the pipeline will create all of its output
-                      files. If the user-provided working directory has not
-                      been initialized, it will automatically be created.
+                                Path to an output directory. This location
+                                is where the pipeline will create all of its output
+                                files. If the user-provided working directory has not
+                                been initialized, it will automatically be created.
         """)
 
     # Display example usage in epilog
@@ -1231,9 +1345,19 @@ def parsed_arguments():
                                 type = lambda option: check_cache(parser, os.path.abspath(os.path.expanduser(option))),
                                 required = False,
                                 help = 'Overrides the $SINGULARITY_CACHEDIR environment variable. \
-                                Singularity will cache SIF container images generated from remote sources. \
+                                Singularity will cache image layers pulled from remote registries. \
                                 By default, the cache is set to \'/path/to/output/directory/.singularity/\'. \
-                                Please note that a singularity cache cannot be shared across users.')
+                                Please note that this cache cannot be shared across users.')
+    # Local SIF cache directory (default pull from Dockerhub) 
+    subparser_build.add_argument('--sif-cache',
+                                type = lambda option: os.path.abspath(os.path.expanduser(option)),
+                                required = False,
+                                help = 'Path where a local cache of SIFs are stored. \
+                                This cache can be shared across users if permissions are \
+                                set correctly. If a SIF does not exist in the SIF cache, \
+                                the image will be pulled from Dockerhub. The rna-seek cache \
+                                subcommand can be used to create a local SIF cache. Please see \
+                                rna-seek cache for more information.')
 
 
     # Options for the "unlock" sub-command
@@ -1253,11 +1377,11 @@ def parsed_arguments():
 
         required arguments:
           --output OUTPUT
-                      Path to a previous run's output directory to
-                      unlock. This will remove a lock on the working directory.
-                      Please verify that the pipeline is not running before
-                      running this command.
-                      Example: --output /scratch/$USER/RNA_hg38
+                                Path to a previous run's output directory to
+                                unlock. This will remove a lock on the working 
+                                directory. Please verify that the pipeline is 
+                                not running before running this command.
+                                Example: --output /scratch/$USER/RNA_hg38
 
         """)
 
@@ -1284,10 +1408,73 @@ def parsed_arguments():
                                 required = True,
                                 help = argparse.SUPPRESS)
 
+    # Options for the "cache" sub-command
+    # Grouped sub-parser arguments are currently not supported.
+    # https://bugs.python.org/issue9341
+    # Here is a work around to create more useful help message for named
+    # options that are required! Please note: if a required arg is added the
+    # description below should be updated (i.e. update usage and add new option)
+    required_cache_options = textwrap.dedent("""\
+        usage: rna-seek cache [-h] --sif-cache SIF_CACHE
+
+        Creates a local cache resources hosted on DockerHub or AWS S3.
+        These resources are normally pulled onto the filesystem when the
+        pipeline runs; however, due to network issues or DockerHub pull
+        rate limits, it may make sense to pull the resources once so a
+        shared cache can be created. It is worth noting that a singularity
+        cache cannot normally be shared across users. Singularity strictly
+        enforces that a cache is owned by the user. To get around this
+        issue, the cache subcommand can be used to create local SIFs on
+        the filesystem from images on DockerHub.
+
+        required arguments:
+          --sif-cache SIF_CACHE
+                      Path where a local cache of SIFs will be stored.
+                      Images defined in config/containers/images.json
+                      will be pulled into the local filesystem. The
+                      path provided to this option can be passed to
+                      the --sif-cache option of the build and
+                      run subcomand. Please see rna-seek build and run
+                      for more information.
+
+                      Example: --sif-cache /scratch/$USER/cache
+
+        """)
+
+    # Display example usage in epilog
+    cache_epilog = textwrap.dedent("""\
+        example:
+          # Cache RNA-seek Resources
+          rna-seek cache --sif-cache /scratch/$USER/cache
+
+        version:
+          {}
+        """.format(__version__))
+
+    # Supressing help message of required args to overcome no sub-parser named groups
+    subparser_cache = subparsers.add_parser('cache',
+                                            help = 'Cache remote resources locally.',
+                                            usage = argparse.SUPPRESS,
+                                            formatter_class=argparse.RawDescriptionHelpFormatter,
+                                            description = required_cache_options,
+                                            epilog = cache_epilog)
+    # Output Directory (analysis working directory)
+    subparser_cache.add_argument('--sif-cache',
+                                type = lambda option: os.path.abspath(os.path.expanduser(option)),
+                                required = True,
+                                help = argparse.SUPPRESS)
+    # Dry-run RNA-seek cache (do not pull any remote resources)
+    subparser_cache.add_argument('--dry-run',
+                                action = 'store_true',
+                                required = False,
+                                default = False,
+                                help = 'Only display what remote resources would be pulled.')
+
     # Define handlers for each sub-parser
     subparser_run.set_defaults(func = run)
     subparser_unlock.set_defaults(func = unlock)
     subparser_build.set_defaults(func = build)
+    subparser_cache.set_defaults(func = cache)
 
     # Parse command-line args
     args = parser.parse_args()

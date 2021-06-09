@@ -14,7 +14,7 @@
 		"threads": "2"
 	},
 	"bbmerge": {
-		"mem": "32g",
+		"mem": "64g",
 		"threads": "4"
 	},
 	"fastqc": {

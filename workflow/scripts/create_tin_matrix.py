@@ -17,7 +17,7 @@ def create(file, tin_dict, key_index=0, parse_index=4):
 		header = next(fh).strip().split('\t')
 		colid = header[key_index]
 		file = os.path.basename(file) # Remove PATH
-		sample = file.rstrip(".star_rg_added.sorted.dmark.tin.xls")
+		sample = file.split(".star_rg_added.sorted.dmark.tin.xls")[0]
 
 		for line in fh:
 			linelist = line.strip().split('\t')

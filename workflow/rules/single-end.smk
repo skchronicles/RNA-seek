@@ -19,7 +19,7 @@ rule validator:
     params:
         rname='pl:validator',
         outdir=join(workpath,"rawQC"),
-    container: "docker://nciccbr/ccbr_fastqvalidator:v0.1.0"
+    container: config['images']['fastqvalidator']
     shell: """
     mkdir -p {params.outdir}
     fastQValidator --noeof --file {input.R1} > {output.out1}
@@ -46,7 +46,7 @@ rule rawfastqc:
         outdir=join(workpath,"rawQC"),
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
-    container: "docker://nciccbr/ccbr_fastqc_0.11.9:v1.1"
+    container: config['images']['fastqc']
     shell: """
     fastqc {input} -t {threads} -o {params.outdir};
     """
@@ -75,7 +75,7 @@ rule trim_se:
         minlen=config['bin'][pfamily]['tool_parameters']['MINLEN'],
     threads:32
     envmodules: config['bin'][pfamily]['tool_versions']['CUTADAPTVER']
-    container: "docker://nciccbr/ccbr_cutadapt_1.18:v032219"
+    container: config['images']['cutadapt']
     shell: """
     cutadapt --nextseq-trim=2 --trim-n \
         -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
@@ -106,7 +106,7 @@ rule fastqc:
         getrl=join("workflow", "scripts", "get_read_length.py"),
     threads: 32
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
-    container: "docker://nciccbr/ccbr_fastqc_0.11.9:v1.1"
+    container: config['images']['fastqc']
     shell: """
     fastqc {input} -t {threads} -o {params.outdir};
     python3 {params.getrl} {params.outdir} > {params.outdir}/readlength.txt \
@@ -144,7 +144,7 @@ rule fastq_screen:
         config['bin'][pfamily]['tool_versions']['FASTQSCREENVER'],
         config['bin'][pfamily]['tool_versions']['PERLVER'],
         config['bin'][pfamily]['tool_versions']['BOWTIE2VER'],
-    container: "docker://nciccbr/ccbr_fastq_screen_0.13.0:v2.0"
+    container: config['images']['fastq_screen']
     shell: """
     fastq_screen --conf {params.fastq_screen_config} --outdir {params.outdir} \
         --threads {threads} --subset 1000000 --aligner bowtie2 --force {input.file1}
@@ -179,7 +179,7 @@ rule kraken_se:
     envmodules:
         config['bin'][pfamily]['tool_versions']['KRAKENVER'],
         config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
-    container: "docker://nciccbr/ccbr_kraken_v2.1.1:v0.0.1"
+    container: config['images']['kraken']
     shell: """
     # Clean up tmp directory
     trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
@@ -253,7 +253,7 @@ if config['options']['star_2_pass_basic']:
             nbjuncs=config['bin'][pfamily]['NBJUNCS'],
         threads:32
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        container: config['images']['arriba']
         shell: """
         # Clean up tmp directory
         trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
@@ -340,7 +340,7 @@ else:
             adapter2=config['bin'][pfamily]['ADAPTER2'],
         threads: 32
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        container: config['images']['arriba']
         shell: """
         # Clean up tmp directory
         trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
@@ -452,7 +452,7 @@ else:
             nbjuncs=config['bin'][pfamily]['NBJUNCS'],
         threads:32
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
-        container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+        container: config['images']['arriba']
         shell: """
         # Clean up tmp directory
         trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
@@ -522,7 +522,7 @@ rule rsem:
     envmodules:
         config['bin'][pfamily]['tool_versions']['RSEMVER'],
         config['bin'][pfamily]['tool_versions']['PYTHONVER'],
-    container: "docker://nciccbr/ccbr_rsem_1.3.3:v1.0"
+    container: config['images']['rsem']
     shell: """
     # Clean up tmp directory
     trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
@@ -565,7 +565,7 @@ rule bam2bw_rnaseq_se:
         config['bin'][pfamily]['tool_versions']['BEDTOOLSVER'],
         config['bin'][pfamily]['tool_versions']['UCSCVER'],
         config['bin'][pfamily]['tool_versions']['PARALLELVER'],
-    container: "docker://nciccbr/ccbr_bam2strandedbw:v0.0.1"
+    container: config['images']['bam2strandedbw']
     shell: """
     bash {params.bashscript} {input.bam} {params.outprefix}
 
@@ -617,19 +617,20 @@ rule rnaseq_multiqc:
         pyparser=join("workflow", "scripts", "pyparser.py"),
     threads: 2
     envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
-    container: "docker://nciccbr/ccbr_multiqc_1.9:v0.0.1"
+    container: config['images']['multiqc']
     shell: """
     multiqc --ignore '*/.singularity/*' -f -c {input.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
 
     # Parse RSeQC Median TINs
     echo -e "Sample\\tmedian_tin" > {output.medtins}
-    cut -f1,3 {input.tins}  | \
+    find {params.workdir} -name '*.star_rg_added.sorted.dmark.summary.txt' -exec cut -f1,3 {{}} \\; | \
         grep -v '^Bam_file' | \
         awk -F '\\t' '{{printf "%s\\t%.3f\\n", $1,$2}}' >> {output.medtins}
 
     # Parse Flowcell and Lane information
     echo -e "Sample\\tflowcell_lanes" > {output.fclanes}
-    awk -F '\\t' -v OFS='\\t' 'FNR==2 {{print $1,$5}}' {input.fqinfo} >> {output.fclanes}
+    find {params.workdir} -name '*.fastq.info.txt' -exec awk -F '\\t' -v OFS='\\t' 'NR==2 {{print $1,$5}}' {{}} \\; \
+        >> {output.fclanes}
 
     python3 {params.pyparser} {params.logfiles} {params.outdir}
     """

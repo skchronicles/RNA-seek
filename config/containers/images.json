@@ -1,0 +1,23 @@
+{
+    "images": {
+        "arriba": "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1",
+        "bam2strandedbw": "docker://nciccbr/ccbr_bam2strandedbw:v0.0.1",
+        "bbtools": "docker://nciccbr/ccbr_bbtools_38.87:v0.0.1",
+        "build_rnaseq": "docker://nciccbr/ccbr_build_rnaseq:v0.0.1",
+        "cutadapt": "docker://nciccbr/ccbr_cutadapt_1.18:v032219",
+        "fastq_screen": "docker://nciccbr/ccbr_fastq_screen_0.13.0:v2.0",
+        "fastqc": "docker://nciccbr/ccbr_fastqc_0.11.9:v1.1",
+        "fastqvalidator": "docker://nciccbr/ccbr_fastqvalidator:v0.1.0",
+        "kraken": "docker://nciccbr/ccbr_kraken_v2.1.1:v0.0.1",
+        "miniconda": "docker://continuumio/miniconda3:4.9.2",
+        "multiqc": "docker://nciccbr/ccbr_multiqc_1.9:v0.0.1",
+        "picard": "docker://nciccbr/ccbr_picard:v0.0.1",
+        "preseq": "docker://nciccbr/ccbr_preseq:v0.0.1",
+        "python": "docker://nciccbr/ccbr_python:v0.0.1",
+        "qualimap": "docker://nciccbr/ccbr_qualimap:v0.0.1",
+        "rna": "docker://nciccbr/ccbr_rna:v0.0.1",
+        "rsem": "docker://nciccbr/ccbr_rsem_1.3.3:v1.0",
+        "rseqc": "docker://nciccbr/ccbr_rseqc_4.0.0:v1.0",
+        "rstat": "docker://nciccbr/ccbr_rstat:v0.0.1"
+    }
+}

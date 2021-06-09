@@ -55,7 +55,7 @@ rule rsem:
 		rname='bl:rsem',
 		genome=GENOME,
 		prefix=join("rsemref", GENOME)
-	container: "docker://nciccbr/ccbr_rsem_1.3.3:v1.0"
+	container: config['images']['rsem']
 	shell: """
 	rsem-prepare-reference -p {threads} --gtf {input.gtf} {input.fa} {params.prefix}
 	rsem-generate-ngvector {params.prefix}.transcripts.fa {params.prefix}.transcripts
@@ -88,7 +88,7 @@ rule annotate:
 		get_isoform=join(SCRIPTSDIR, "get_isoform_annotate.py"),
 		make_refFlat=join(SCRIPTSDIR, "make_refFlat.py"),
 		make_geneinfo=join(SCRIPTSDIR, "make_geneinfo.py")
-	container: "docker://nciccbr/ccbr_build_rnaseq:v0.0.1"
+	container: config['images']['build_rnaseq']
 	shell: """
 	python3 {params.get_gene} {input.gtf} > annotate.genes.txt
 	python3 {params.get_isoform} {input.gtf} > annotate.isoforms.txt
@@ -124,7 +124,7 @@ rule star_rl:
 	threads: 32
 	params:
 		rname='bl:star_rl',
-	container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+	container: config['images']['arriba']
 	shell: """
 	# Create Index for read length
 	rl=$(({wildcards.readlength}-1))
@@ -172,7 +172,7 @@ rule star_genome:
 	threads: 32
 	params:
 		rname='bl:star_genome',
-	container: "docker://nciccbr/ccbr_arriba_2.0.0:v0.0.1"
+	container: config['images']['arriba']
 	shell: """
 	# Clean up tmp directory
 	trap 'rm -rf "/scratch/local/${{SLURM_JOB_ID}}"' EXIT
@@ -212,7 +212,7 @@ rule rRNA_list:
 		rname='bl:rRNA_list',
 		genome=GENOME,
 		create_rRNA=join(SCRIPTSDIR, "create_rRNA_intervals.py")
-	container: "docker://nciccbr/ccbr_build_rnaseq:v0.0.1"
+	container: config['images']['build_rnaseq']
 	shell: """
 	python3 {params.create_rRNA} \
 		{input.fa} \
@@ -236,7 +236,7 @@ rule karyo_coord:
 	params:
 		rname='bl:karyo_coord',
 		get_karyoplot=join(SCRIPTSDIR, "get_karyoplot_gene_coordinates.py")
-	container: "docker://nciccbr/ccbr_build_rnaseq:v0.0.1"
+	container: config['images']['build_rnaseq']
 	shell: """
 	python3 {params.get_karyoplot} {input.gtf} > karyoplot_gene_coordinates.txt
 	"""
@@ -257,7 +257,7 @@ rule karyo_beds:
 	params:
 		rname='bl:karyo_bed',
 		get_karyoplot=join(SCRIPTSDIR, "get_karyoplot_beds.py")
-	container: "docker://nciccbr/ccbr_build_rnaseq:v0.0.1"
+	container: config['images']['build_rnaseq']
 	shell: """
 	mkdir -p karyobeds && cd karyobeds
 	python3 {params.get_karyoplot} {input.gtf}
@@ -280,7 +280,7 @@ rule tin_ref:
 		rname='bl:tin_ref',
 		gtf2protein=join(SCRIPTSDIR, "gtf2protein_coding_genes.py"),
 		gene2transcripts=join(SCRIPTSDIR, "gene2transcripts_add_length.py"),
-	container: "docker://nciccbr/ccbr_build_rnaseq:v0.0.1"
+	container: config['images']['build_rnaseq']
 	shell: """
 	python {params.gtf2protein} {input.gtf} > protein_coding_genes.lst
 	gtfToGenePred -genePredExt {input.gtf} genes.gtf.genePred
@@ -329,7 +329,7 @@ rule qualimapinfo:
 	params:
 		rname='bl:qualimapinfo',
 		generate_qualimap=join(SCRIPTSDIR, "generate_qualimap_ref.py")
-	container: "docker://nciccbr/ccbr_build_rnaseq:v0.0.1"
+	container: config['images']['build_rnaseq']
 	shell: """
 	python3 {params.generate_qualimap} \
 		-g {input.gtf} \
