@@ -989,11 +989,11 @@ def cache(sub_args):
             # submission_script for rna-seek cache is /path/to/output/resources/cacher
             # Quote user provided values to avoid shell injections
             masterjob = subprocess.Popen(
-                'sbatch --parsable -J pl:cache --gres=lscratch:200  --time=10:00:00 --mail-type=BEGIN,END,FAIL ' +
+                'sbatch --parsable -J pl:cache --time=10:00:00 --mail-type=BEGIN,END,FAIL ' +
                 str(os.path.join(repo_path, 'resources', 'cacher')) + ' slurm ' +
                 " -s '{}' ".format(sif_cache) +
                 " -i '{}' ".format(','.join(pull)) + 
-                " -t '/lscratch/${SLURM_JOB_ID}/.singularity/' ", 
+                " -t '/scratch/local/${SLURM_JOB_ID}/.singularity/' ", 
                 cwd = sif_cache, shell=True, stderr = subprocess.STDOUT, stdout = subprocess.PIPE)
 
             masterjob.communicate()
