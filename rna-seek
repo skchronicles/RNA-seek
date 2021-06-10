@@ -652,6 +652,12 @@ def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submi
     if not exists(os.path.join(outdir, 'logfiles')):
         # Create directory for logfiles
         os.makedirs(os.path.join(outdir, 'logfiles'))
+    
+    # Create .singularity directory for installations of snakemake
+    # without setuid which create a sandbox in the SINGULARITY_CACHEDIR
+    if not exists(cache):
+        # Create directory for sandbox and image layers
+        os.makedirs(cache)
 
     # Run on compute node or instance without submitting jobs to a scheduler
     if mode == 'local':
