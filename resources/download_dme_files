@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-__VERSION__="1.0.0"
+__VERSION__="1.1.0"
 
 function usage() { cat << EOF
 download_dme_files: a utility for dowloading file(s) from HPC DME.
@@ -13,9 +13,9 @@ Usage:
       --token API_TOKEN
 
 Synopsis:
-  This script provides a lower level wrapper to the HPC DME command
-line interface. Given a list of input dme file paths and an API token,
-it will download those files locally to the user provided output path. 
+  This script provides a high level wrapper to the HPC DME API.
+Given a list of input dme file paths and an API token, it will
+download those files locally to the user provided output path. 
 
 Required Arguments:
   -f, --files  FILE   [Type: Str]  Files to download from DME. 
@@ -32,6 +32,7 @@ Required Arguments:
                                      containing an API token for DME.
 Options:
   -h, --help          [Type: Bool] Displays usage and help information.
+  -v, --version       [Type: Bool] Displays version information.
 
 Example:
   $ download_dme_files -f "/CCBR_Archive/ACGT/Anon/1016-1.R1.fastq.gz" \\
@@ -47,6 +48,8 @@ EOF
 # Functions
 function err() { cat <<< "$@" 1>&2; }
 function fatal() { cat <<< "$@" 1>&2; usage; exit 1; }
+function version() { echo "${0##*/} v${__VERSION__}"; }
+function timestamp() { date +"%Y-%m-%d_%H-%M-%S"; }
 function abspath() { readlink -e "$1"; }
 function parser() {
   # Adds parsed command-line args to GLOBAL $Arguments associative array
@@ -59,6 +62,7 @@ function parser() {
     key="$1"
     case $key in
       -h  | --help) usage && exit 0;;
+      -v  | --verison) version && exit 0;;
       -f  | --files)  provided "$key" "${2:-}"; Arguments["f"]="$2"; shift; shift;;
       -o  | --output) provided "$key" "${2:-}"; Arguments["o"]="$2"; shift; shift;;
       -t  | --token)    provided "$key" "${2:-}"; Arguments["t"]="$2"; shift; shift;;
@@ -107,7 +111,9 @@ function retry() {
   # Failed attempts are padding with the following exponential 
   # back-off strategy {4, 16, 64, 256, 1024} in seconds
   # @INPUTS "$@"" = cmd to run 
+  # @CALLS timestamp() to log time of encountered error
   # @CALLS fatal() if command cannot be run in 5 attempts
+
   local n=1
   local max=5
   local attempt=true # flag for while loop
@@ -116,9 +122,9 @@ function retry() {
     "$@" && attempt=false || {
       # Try again up to 5 times 
       if [[ $n -le $max ]]; then
-        echo -e "Command failed: $@"
+        echo -e "[$(timestamp)] Command failed: $@"
         delay=$(( 4**$n ))
-        echo -e "Attempt: ${n}/${max}. Trying again in ${delay} seconds!\n"
+        echo -e "[$(timestamp)] Attempt: ${n}/${max}. Trying again in ${delay} seconds!\n"
         sleep $delay;
         ((n++))
       else
@@ -151,6 +157,9 @@ function _download(){
   # INPUT $1 = File to download from DME
   # INPUT $2 = Local output directory
   # INPUT $3 = DME API token
+  # @CALLS require() to enfore cURL installation
+  # @CALLS timestamp() to log time of file download
+  # @CALLS fatal() if curl returns a non-200 http response 
 
   # Require curl is installed
   require curl
@@ -159,9 +168,10 @@ function _download(){
   # Try to download each file from DME with 5 max attempts
   for file in ${1// /$'\t'}; do 
     local fname="$(basename "$file")"
-    echo "Downloading '${file}' from HPC DME to '$2/${fname}'"
+    echo "[$(timestamp)] Downloading '${file}' from HPC DME to '$2/${fname}'"
     response=$(retry \
                 curl \
+                  -f \
                   -X POST \
                   -o "$2/${fname}" \
                   -k "https://hpcdmeapi.nci.nih.gov:8080/v2/dataObject${file}/download" \
