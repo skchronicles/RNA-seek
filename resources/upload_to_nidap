@@ -1,0 +1,291 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+__VERSION__="1.0.0"
+
+function usage() { cat << EOF
+upload_to_nidap: a utility for uploading file(s) to NIDAP.
+
+Usage:
+  $ upload_to_nidap [-h] [-v] \\
+      --files "FILE [FILE_N ...]" \\
+      --dataid DATAID \\
+      --rid RID \\
+      --token API_TOKEN
+
+Synopsis:
+  This script provides a high level wrapper to the NIDAP API.
+Given a list of local file paths, a NIDAP API token, and a NIDAP
+dataset identifer, it will upload those files to a dataset on NIDAP. 
+
+Required Arguments:
+  -f, --files  FILE   [Type: Str]  Files to upload to NIDAP. 
+                                     One or more local file paths can
+                                     be provided. Multiple files can 
+                                     be uploaded at once by providing
+                                     a quoted space separated list of 
+                                     local files.
+  -d, --dataid DATAID [Type: Path] Dataset Identifer for NIDAP upload.
+                                     Identifer to a dataset on NIDAP 
+                                     where file(s) will be uploaded.
+  -r, --rid    RID    [Type: Str]  Request Identifer. This transaction
+                                     identifer is used to help track a 
+                                     given request. This identifer is 
+                                     also appended to any log files. 
+  -t, --token  TOKEN  [Type: Str]  API token for NIDAP. A text file 
+                                     containing an API token for NIDAP
+                                     can be provided, or the API token 
+                                     can be provided as a string.
+Options:
+  -h, --help          [Type: Bool] Displays usage and help information.
+  -v, --version       [Type: Bool] Displays version information.
+
+Example:
+  $ upload_to_nidap -f "RSEM_expected_counts.tsv multiqc_report.html" \\
+      -d ri.foundry.main.dataset.a74c12ff-eba1-4d17-9a4b-787d8ca67111 \\
+      -r ri.foundry.main.transaction.0000000b-460e-c255-bda7-ff211d105802 \\
+      -t ~/NIDAP/auth-token.txt
+
+Version:
+  ${__VERSION__}
+EOF
+}
+
+
+# Functions
+function err() { cat <<< "$@" 1>&2; }
+function fatal() { cat <<< "$@" 1>&2; usage; exit 1; }
+function version() { echo "${0##*/} v${__VERSION__}"; }
+function clean() { python -c "import urllib; print urllib.quote('$*')"; }
+function timestamp() { date +"%Y-%m-%d_%H-%M-%S"; }
+function abspath() { readlink -e "$1"; }
+function parser() {
+  # Adds parsed command-line args to GLOBAL $Arguments associative array
+  # + KEYS = short_cli_flag ("f", "t", ...)
+  # + VALUES = parsed_user_value ("file.txt" "~/token.txt", ...)
+  # @INPUT "$@" = user command-line arguments
+  # @CALLS check() to see if the user provided all the required arguments
+
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+      -h  | --help) usage && exit 0;;
+      -v  | --version) version && exit 0;;
+      -f  | --files)  provided "$key" "${2:-}"; Arguments["f"]="$2"; shift; shift;;
+      -d  | --dataid) provided "$key" "${2:-}"; Arguments["d"]="$2"; shift; shift;;
+      -r  | --rid)    provided "$key" "${2:-}"; Arguments["r"]="$2"; shift; shift;;  
+      -t  | --token)  provided "$key" "${2:-}"; Arguments["t"]="$2"; shift; shift;;
+      -*  | --*) err "Error: Failed to parse unsupported argument: '${key}'."; usage && exit 1;;
+      *) err "Error: Failed to parse unrecognized argument: '${key}'. Do any of your inputs have spaces?"; usage && exit 1;;
+    esac
+  done
+
+  # check() for required args
+  check
+}
+
+
+function provided() {
+  # Checks to see if the argument's value exists
+  # @INPUT $1 = name of user provided argument
+  # @INPUT $2 = value of user provided argument
+  # @CALLS fatal() if value is empty string or NULL
+
+  if [[ -z "${2:-}" ]]; then
+     fatal "Fatal: Failed to provide value to '${1}'!";
+  fi
+}
+
+
+function check(){
+  # Checks to see if user provided required arguments
+  # @INPUTS $Arguments = Global Associative Array
+  # @CALLS fatal() if user did NOT provide all the $required args
+
+  # List of required arguments
+  local required=("f" "d" "r" "t")
+  for arg in "${required[@]}"; do
+    value=${Arguments[${arg}]:-}
+    if [[ -z "${value}" ]]; then
+      fatal "Failed to provide all required args.. missing ${arg}"
+    fi
+  done
+}
+
+
+function retry() {
+  # Tries to run a cmd 5 times before failing 
+  # If a command is successful, it will break out of attempt loop
+  # Failed attempts are padding with the following exponential 
+  # back-off strategy {4, 16, 64, 256, 1024} in seconds
+  # @INPUTS "$@"" = cmd to run 
+  # @CALLS timestamp() to log time of encountered error
+  # @CALLS fatal() if command cannot be run in 5 attempts
+
+  local n=1
+  local max=5
+  local attempt=true # flag for while loop
+  while $attempt; do
+    # Attempt command and break if successful 
+    "$@" && attempt=false || {
+      # Try again up to 5 times 
+      if [[ $n -le $max ]]; then
+        echo -e "[$(timestamp)] Command failed: $@"
+        delay=$(( 4**$n ))
+        echo -e "[$(timestamp)] Attempt: ${n}/${max}. Trying again in ${delay} seconds!\n"
+        sleep $delay;
+        ((n++))
+      else
+        fatal "Fatal: the command has failed after max attempts!"
+      fi
+    }
+  done
+}
+
+
+function require(){
+  # Requires an executable is in $PATH
+  # as a last resort it will attempt to load 
+  # the executable as a module. If an exe is
+  # not in $PATH raises fatal().
+  # INPUT $1 = executable to check
+
+  # Check if $1 in $PATH
+  # If not, try to module load $1 as a last resort
+  command -V "$1" &> /dev/null || { 
+    command -V module &> /dev/null && 
+    module purge && module load "$1"
+  } || fatal "Error: failed to find or load '$1', not installed on target system."
+
+}
+
+
+function grab(){
+  # Grabs the contents of a file
+  # else returns input that was provided
+  # to allow for flexiable API token input 
+  # so a user can directly provide a token 
+  # as a string or point to a file containing 
+  # the token
+  # INPUT $1 = token file or string
+
+  local contents
+
+  if [ ! -f "$1" ]; then
+    contents="${1}"
+  else
+    # Return contents if provided a file
+    contents=$(cat "${1}" | tr -d '\n')
+  fi
+
+  echo "${contents}"
+}
+
+
+function _commit(){
+  # Closes an open upload API transaction on NIDAP 
+  # and commits uploaded the files to the NIDAP dataset
+  # An open transaction must be closed or the uploaded 
+  # files will remain in an un-usable/un-findable state.
+  # https://nidap.nih.gov/workspace/documentation/developer/api/general/api-overview
+  # INPUT $1 = NIDAP dataset rid
+  # INPUT $2 = NIDAP API token
+  # INPUT $3 = NIDAP Request or transaction ID
+  # @CALLS timestamp() to log time of file uploads
+  # @CALLS fatal() if curl returns a non-200 http response 
+
+  echo "[$(timestamp) @ ${3}] Committing upload transaction '$3' to NIDAP dataset '$1'"
+
+  # Commit the upload transaction
+  response=$(retry \
+              curl \
+                -X POST \
+                -H "Authorization: Bearer ${2}" \
+                -H 'content-type: application/json' \
+                -d '{}' \
+                -f \
+                -s \
+                -w "%{http_code}" \
+                "https://nidap.nih.gov/foundry-catalog/api/catalog/datasets/${1}/transactions/${3}/commit" 
+    )
+   
+    # Check http response code for any failures 
+    if [[ $response != 2?? ]]; then 
+      fatal "Error: commit request for transaction '${3}' failed with http response of '$response'!"
+    fi 
+
+}
+
+
+function _upload(){
+  # Uploads a file to NIDAP dataset 
+  # https://nidap.nih.gov/workspace/documentation/developer/api/general/api-overview
+  # INPUT $1 = File(s) to upload
+  # INPUT $2 = NIDAP dataset rid
+  # INPUT $3 = NIDAP API token
+  # INPUT $4 = NIDAP Request or transaction ID
+  # @CALLS require() to enfore cURL installation
+  # @CALLS timestamp() to log time of file uploads
+  # @CALLS fatal() if curl returns a non-200 http response 
+  # @CALLS _commit() to close an open upload transaction and commit the files to dataset
+
+  # Require curl is installed
+  require curl
+  export https_proxy=http://dtn02-e0:3128
+  
+  # Try to upload each file from NIDAP with 5 max attempts
+  for file in ${1// /$'\t'}; do 
+    local fname="$(basename <<< clean "$file")"
+    echo "[$(timestamp) @ ${4}] Uploading '${file}' to NIDAP dataset '$2' as ${fname}"
+    response=$(retry \
+                curl \
+                  -X POST \
+                  -H "Authorization: Bearer ${3}" \
+                  -f \
+                  -s \
+                  -w "%{http_code}" \
+                  -F file=@"${file}" \
+                  "https://nidap.nih.gov/foundry-data-proxy/api/dataproxy/datasets/${2}/transactions/${4}" \
+    )
+   
+    # Check http response code for any failures 
+    if [[ $response != 2?? ]]; then 
+      fatal "Error: upload request for '$file' failed with http response of '$response'!"
+    fi 
+
+  done
+  
+  # Close open upload transaction and commit files to dataset 
+  _commit "${2}" "${3}" "${4}"
+}
+
+
+function main(){
+  # Parses args and pulls remote resources
+  # @INPUT "$@" = command-line arguments
+  # @CALLS _upload() to push local files to NIDAP
+
+  if [ $# -eq 0 ]; then usage; exit 1; fi
+
+  # Associative array to store parsed args
+  declare -Ag Arguments
+
+  # Parses user provided command-line arguments
+  parser "${@}" 
+  local_files="${Arguments[f]}"
+  upload_nidap_dataset="${Arguments[d]}"
+  token=$(grab "${Arguments[t]}") # grab contents if file provided
+  requestid="${Arguments[r]}"
+
+  # Upload local files to NIDAP Dataset 
+  # INPUT $1 = File(s) to upload
+  # INPUT $2 = NIDAP dataset rid
+  # INPUT $3 = NIDAP API token
+  # INPUT $4 = NIDAP Request or transaction ID
+  _upload "${local_files}" "${upload_nidap_dataset}" "${token}" "${requestid}"
+
+}
+
+
+# Main: check usage, parse args, and run pipeline
+main "$@"

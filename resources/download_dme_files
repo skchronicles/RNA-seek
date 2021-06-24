@@ -225,7 +225,7 @@ function _download(){
   # Try to download each file from DME with 5 max attempts
   for file in ${1// /$'\t'}; do 
     local fname="$(basename "$file")"
-    echo "[$(timestamp) @ ${4}]  Downloading '${file}' from HPC DME to '$2/${fname}'"
+    echo "[$(timestamp) @ ${4}] Downloading '${file}' from HPC DME to '$2/${fname}'"
     response=$(retry \
                 curl \
                   -f \
