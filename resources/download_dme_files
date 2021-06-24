@@ -7,10 +7,11 @@ function usage() { cat << EOF
 download_dme_files: a utility for dowloading file(s) from HPC DME.
 
 Usage:
-  $ download_dme_files [-h] \\
+  $ download_dme_files [-h] [-v] \\
       --files "FILE [FILE_N ...]" \\
       --output OUTPUT \\
-      --token API_TOKEN
+      --token API_TOKEN \\
+      [--rid RID] 
 
 Synopsis:
   This script provides a high level wrapper to the HPC DME API.
@@ -28,8 +29,10 @@ Required Arguments:
                                      downloaded. If the provided output
                                      directory does not exist, it will be
                                      initialized automatically.
-  -t, --token  TOKEN  [Type: Str]  API token for HPC DME. Text file 
-                                     containing an API token for DME.
+  -t, --token  TOKEN  [Type: Str]  API token for HPC DME. A text file 
+                                     containing an API token for DME
+                                     can be provided, or the API token 
+                                     can be provided as a string.
 Options:
   -r, --rid    RID    [Type: Str]  Request Identifer. This is an optional 
                                      string to help track a given request. 
@@ -45,7 +48,8 @@ Options:
 Example:
   $ download_dme_files -f "/CCBR_Archive/ACGT/Anon/1016-1.R1.fastq.gz" \\
       -o /scratch/$USER/dme_download/ \\
-      -t ~/HPC_DME_APIs/utils/tokens/hpcdme-auth.txt
+      -t ~/HPC_DME_APIs/utils/tokens/hpcdme-auth.txt \\
+      -r ri.foundry.main.transaction.0000000b-460e-c255-bda7-ff211d105802
 
 Version:
   ${__VERSION__}
@@ -110,6 +114,28 @@ function check(){
       fatal "Failed to provide all required args.. missing ${arg}"
     fi
   done
+}
+
+
+function grab(){
+  # Grabs the contents of a file
+  # else returns input that was provided
+  # to allow for flexiable API token input 
+  # so a user can directly provide a token 
+  # as a string or point to a file containing 
+  # the token
+  # INPUT $1 = token file or string
+
+  local contents
+
+  if [ ! -f "$1" ]; then
+    contents="${1}"
+  else
+    # Return contents if provided a file
+    contents=$(cat "${1}" | tr -d '\n')
+  fi
+
+  echo "${contents}"
 }
 
 
@@ -236,7 +262,7 @@ function main(){
   parser "${@}" # Remove first item of list
   mkdir -p "${Arguments[o]}" && outdir=$(abspath "${Arguments[o]}")
   dmefiles="${Arguments[f]}"
-  token=$(cat "${Arguments[t]}" | tr -d '\n')
+  token=$(grab "${Arguments[t]}")  # grab contents if file provided
   requestid="${Arguments[r]:-$(_id)}"
 
   # Download files from DME to local output directory 
