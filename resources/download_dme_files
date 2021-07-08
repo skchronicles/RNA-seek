@@ -1,0 +1,279 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+__VERSION__="1.2.0"
+
+function usage() { cat << EOF
+download_dme_files: a utility for dowloading file(s) from HPC DME.
+
+Usage:
+  $ download_dme_files [-h] [-v] \\
+      --files "FILE [FILE_N ...]" \\
+      --output OUTPUT \\
+      --token API_TOKEN \\
+      [--rid RID] 
+
+Synopsis:
+  This script provides a high level wrapper to the HPC DME API.
+Given a list of input dme file paths and an API token, it will
+download those files locally to the user provided output path. 
+
+Required Arguments:
+  -f, --files  FILE   [Type: Str]  Files to download from DME. 
+                                     One or more dme file paths can
+                                     be provided. Multiple files can 
+                                     be downloaded at once by providing
+                                     a quoted space separated list of files.
+  -o, --output OUTPUT [Type: Path] Path to an output directory.
+                                     Local path where file(s) will be
+                                     downloaded. If the provided output
+                                     directory does not exist, it will be
+                                     initialized automatically.
+  -t, --token  TOKEN  [Type: Str]  API token for HPC DME. A text file 
+                                     containing an API token for DME
+                                     can be provided, or the API token 
+                                     can be provided as a string.
+Options:
+  -r, --rid    RID    [Type: Str]  Request Identifer. This is an optional 
+                                     string to help track a given request. 
+                                     This identifer is appended to any log 
+                                     files. If a request identifer is not 
+                                     provided, a request identifer will be 
+                                     generated from an MD5 checksum based 
+                                     on the time of the request and the 
+                                     other user provided options. 
+  -h, --help          [Type: Bool] Displays usage and help information.
+  -v, --version       [Type: Bool] Displays version information.
+
+Example:
+  $ download_dme_files -f "/CCBR_Archive/ACGT/Anon/1016-1.R1.fastq.gz" \\
+      -o /scratch/$USER/dme_download/ \\
+      -t ~/HPC_DME_APIs/utils/tokens/hpcdme-auth.txt \\
+      -r ri.foundry.main.transaction.0000000b-460e-c255-bda7-ff211d105802
+
+Version:
+  ${__VERSION__}
+EOF
+}
+
+
+# Functions
+function err() { cat <<< "$@" 1>&2; }
+function fatal() { cat <<< "$@" 1>&2; usage; exit 1; }
+function version() { echo "${0##*/} v${__VERSION__}"; }
+function timestamp() { date +"%Y-%m-%d_%H-%M-%S"; }
+function abspath() { readlink -e "$1"; }
+function parser() {
+  # Adds parsed command-line args to GLOBAL $Arguments associative array
+  # + KEYS = short_cli_flag ("j", "o", ...)
+  # + VALUES = parsed_user_value ("MasterJobName" "/scratch/hg38", ...)
+  # @INPUT "$@" = user command-line arguments
+  # @CALLS check() to see if the user provided all the required arguments
+
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+      -h  | --help) usage && exit 0;;
+      -v  | --verison) version && exit 0;;
+      -f  | --files)  provided "$key" "${2:-}"; Arguments["f"]="$2"; shift; shift;;
+      -o  | --output) provided "$key" "${2:-}"; Arguments["o"]="$2"; shift; shift;;
+      -t  | --token)  provided "$key" "${2:-}"; Arguments["t"]="$2"; shift; shift;;
+      -r  | --rid)    provided "$key" "${2:-}"; Arguments["r"]="$2"; shift; shift;;  
+      -*  | --*) err "Error: Failed to parse unsupported argument: '${key}'."; usage && exit 1;;
+      *) err "Error: Failed to parse unrecognized argument: '${key}'. Do any of your inputs have spaces?"; usage && exit 1;;
+    esac
+  done
+
+  # check() for required args
+  check
+}
+
+
+function provided() {
+  # Checks to see if the argument's value exists
+  # @INPUT $1 = name of user provided argument
+  # @INPUT $2 = value of user provided argument
+  # @CALLS fatal() if value is empty string or NULL
+
+  if [[ -z "${2:-}" ]]; then
+     fatal "Fatal: Failed to provide value to '${1}'!";
+  fi
+}
+
+
+function check(){
+  # Checks to see if user provided required arguments
+  # @INPUTS $Arguments = Global Associative Array
+  # @CALLS fatal() if user did NOT provide all the $required args
+
+  # List of required arguments
+  local required=("f" "o" "t")
+  for arg in "${required[@]}"; do
+    value=${Arguments[${arg}]:-}
+    if [[ -z "${value}" ]]; then
+      fatal "Failed to provide all required args.. missing ${arg}"
+    fi
+  done
+}
+
+
+function grab(){
+  # Grabs the contents of a file
+  # else returns input that was provided
+  # to allow for flexiable API token input 
+  # so a user can directly provide a token 
+  # as a string or point to a file containing 
+  # the token
+  # INPUT $1 = token file or string
+
+  local contents
+
+  if [ ! -f "$1" ]; then
+    contents="${1}"
+  else
+    # Return contents if provided a file
+    contents=$(cat "${1}" | tr -d '\n')
+  fi
+
+  echo "${contents}"
+}
+
+
+function retry() {
+  # Tries to run a cmd 5 times before failing 
+  # If a command is successful, it will break out of attempt loop
+  # Failed attempts are padding with the following exponential 
+  # back-off strategy {4, 16, 64, 256, 1024} in seconds
+  # @INPUTS "$@"" = cmd to run 
+  # @CALLS timestamp() to log time of encountered error
+  # @CALLS fatal() if command cannot be run in 5 attempts
+
+  local n=1
+  local max=5
+  local attempt=true # flag for while loop
+  while $attempt; do
+    # Attempt command and break if successful 
+    "$@" && attempt=false || {
+      # Try again up to 5 times 
+      if [[ $n -le $max ]]; then
+        echo -e "[$(timestamp)] Command failed: $@"
+        delay=$(( 4**$n ))
+        echo -e "[$(timestamp)] Attempt: ${n}/${max}. Trying again in ${delay} seconds!\n"
+        sleep $delay;
+        ((n++))
+      else
+        fatal "Fatal: the command has failed after max attempts!"
+      fi
+    }
+  done
+}
+
+
+function require(){
+  # Requires an executable is in $PATH
+  # as a last resort it will attempt to load 
+  # the executable as a module. If an exe is
+  # not in $PATH raises fatal().
+  # INPUT $1 = executable to check
+
+  # Check if $1 in $PATH
+  # If not, try to module load $1 as a last resort
+  command -V "$1" &> /dev/null || { 
+    command -V module &> /dev/null && 
+    module purge && module load "$1"
+  } || fatal "Error: failed to find or load '$1', not installed on target system."
+
+}
+
+
+function _id(){
+  # Generates a default request identifer 
+  # if the -r or --rid option is not provided.
+  # The default identifer is generated by generating
+  # an md5 checksum of the required user inputs and 
+  # the timestamp
+  
+  # List of required arguments
+  local features
+  local identifer
+  local required=("f" "o" "t" "$(timestamp)")
+  for arg in "${required[@]}"; do
+    value=${Arguments[${arg}]:-}
+    features+="${value}"
+  done
+  
+  identifer=$(md5sum <<< "${features}" | awk '{print $1}')
+
+  echo "${identifer}"
+} 
+
+
+function _download(){
+  # Downloads a file from HPC DME 
+  # INPUT $1 = File to download from DME
+  # INPUT $2 = Local output directory
+  # INPUT $3 = DME API token
+  # INPUT $4 = Request ID, see _id() for default
+  # @CALLS require() to enfore cURL installation
+  # @CALLS timestamp() to log time of file download
+  # @CALLS fatal() if curl returns a non-200 http response 
+
+  # Require curl is installed
+  require curl
+  export https_proxy=http://dtn02-e0:3128
+  
+  # Try to download each file from DME with 5 max attempts
+  for file in ${1// /$'\t'}; do 
+    local fname="$(basename "$file")"
+    echo "[$(timestamp) @ ${4}] Downloading '${file}' from HPC DME to '$2/${fname}'"
+    response=$(retry \
+                curl \
+                  -f \
+                  -X POST \
+                  -o "$2/${fname}" \
+                  -k "https://hpcdmeapi.nci.nih.gov:8080/v2/dataObject${file}/download" \
+                  -d "{}" \
+                  -H "Authorization: Bearer ${3}" \
+                  -H "Content-Type: application/json" \
+                  -s \
+                  -w "%{http_code}"
+    )
+
+    # Check http response code for any failures 
+    if [ $response != "200" ]; then 
+      fatal "Error: download request for '$file' failed with http response of '$response'!"
+    fi 
+
+  done
+}
+
+
+function main(){
+  # Parses args and pulls remote resources
+  # @INPUT "$@" = command-line arguments
+  # @CALLS pull()
+
+  if [ $# -eq 0 ]; then usage; exit 1; fi
+
+  # Associative array to store parsed args
+  declare -Ag Arguments
+
+  # Parses user provided command-line arguments
+  parser "${@}" # Remove first item of list
+  mkdir -p "${Arguments[o]}" && outdir=$(abspath "${Arguments[o]}")
+  dmefiles="${Arguments[f]}"
+  token=$(grab "${Arguments[t]}")  # grab contents if file provided
+  requestid="${Arguments[r]:-$(_id)}"
+
+  # Download files from DME to local output directory 
+  # INPUT $1 = Files to download from DME
+  # INPUT $2 = Local output directory
+  # INPUT $3 = DME API token
+  # INPUT $4 = Request Identifer, see _id() for default
+  _download "${dmefiles}" "${outdir}" "${token}" "${requestid}"
+
+}
+
+
+# Main: check usage, parse args, and run pipeline
+main "$@"
