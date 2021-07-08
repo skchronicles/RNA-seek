@@ -120,6 +120,7 @@ function retry() {
   # back-off strategy {4, 16, 64, 256, 1024} in seconds
   # @INPUTS "$@"" = cmd to run 
   # @CALLS timestamp() to log time of encountered error
+  # @CALLS err() to redirect logging information to stderr
   # @CALLS fatal() if command cannot be run in 5 attempts
 
   local n=1
@@ -130,9 +131,9 @@ function retry() {
     "$@" && attempt=false || {
       # Try again up to 5 times 
       if [[ $n -le $max ]]; then
-        echo -e "[$(timestamp)] Command failed: $@"
+        err "[$(timestamp)] Command failed: $@"
         delay=$(( 4**$n ))
-        echo -e "[$(timestamp)] Attempt: ${n}/${max}. Trying again in ${delay} seconds!\n"
+        err "[$(timestamp)] Attempt: ${n}/${max}. Trying again in ${delay} seconds!"
         sleep $delay;
         ((n++))
       else
