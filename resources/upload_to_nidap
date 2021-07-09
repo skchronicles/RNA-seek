@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-__VERSION__="1.0.0"
+__VERSION__="1.1.0"
 
 function usage() { cat << EOF
 upload_to_nidap: a utility for uploading file(s) to NIDAP.
@@ -11,7 +11,8 @@ Usage:
       --files "FILE [FILE_N ...]" \\
       --dataid DATAID \\
       --rid RID \\
-      --token API_TOKEN
+      --token API_TOKEN \\
+      --proxy HTTPS_PROXY
 
 Synopsis:
   This script provides a high level wrapper to the NIDAP API.
@@ -37,6 +38,12 @@ Required Arguments:
                                      can be provided, or the API token 
                                      can be provided as a string.
 Options:
+  -p, --proxy PROXY   [Type: Str]  HTTPS Proxy. This option can be used 
+                                     to set or override the following 
+                                     environment variable: https_proxy.
+                                     By default, a https proxy will not
+                                     be utilized unless it is inherited
+                                     from a parent shell.
   -h, --help          [Type: Bool] Displays usage and help information.
   -v, --version       [Type: Bool] Displays version information.
 
@@ -44,7 +51,8 @@ Example:
   $ upload_to_nidap -f "RSEM_expected_counts.tsv multiqc_report.html" \\
       -d ri.foundry.main.dataset.a74c12ff-eba1-4d17-9a4b-787d8ca67111 \\
       -r ri.foundry.main.transaction.0000000b-460e-c255-bda7-ff211d105802 \\
-      -t ~/NIDAP/auth-token.txt
+      -t ~/NIDAP/auth-token.txt \\
+      -p http://dtn02-e0:3128
 
 Version:
   ${__VERSION__}
@@ -75,6 +83,7 @@ function parser() {
       -d  | --dataid) provided "$key" "${2:-}"; Arguments["d"]="$2"; shift; shift;;
       -r  | --rid)    provided "$key" "${2:-}"; Arguments["r"]="$2"; shift; shift;;  
       -t  | --token)  provided "$key" "${2:-}"; Arguments["t"]="$2"; shift; shift;;
+      -p  | --proxy)  provided "$key" "${2:-}"; Arguments["p"]="$2"; shift; shift;; 
       -*  | --*) err "Error: Failed to parse unsupported argument: '${key}'."; usage && exit 1;;
       *) err "Error: Failed to parse unrecognized argument: '${key}'. Do any of your inputs have spaces?"; usage && exit 1;;
     esac
@@ -225,6 +234,7 @@ function _upload(){
   # INPUT $2 = NIDAP dataset rid
   # INPUT $3 = NIDAP API token
   # INPUT $4 = NIDAP Request or transaction ID
+  # INPUT $5 = HTTPS Proxy, defaults to no proxy set
   # @CALLS require() to enfore cURL installation
   # @CALLS timestamp() to log time of file uploads
   # @CALLS fatal() if curl returns a non-200 http response 
@@ -232,7 +242,9 @@ function _upload(){
 
   # Require curl is installed
   require curl
-  export https_proxy=http://dtn02-e0:3128
+
+  # Check if a proxy needs to be set
+  if [[ ! -z "${5:-}" ]]; then export https_proxy="${5}"; fi
   
   # Try to upload each file from NIDAP with 5 max attempts
   for file in ${1// /$'\t'}; do 
@@ -277,13 +289,15 @@ function main(){
   upload_nidap_dataset="${Arguments[d]}"
   token=$(grab "${Arguments[t]}") # grab contents if file provided
   requestid="${Arguments[r]}"
+  proxy="${Arguments[p]:-}"
 
   # Upload local files to NIDAP Dataset 
   # INPUT $1 = File(s) to upload
   # INPUT $2 = NIDAP dataset rid
   # INPUT $3 = NIDAP API token
   # INPUT $4 = NIDAP Request or transaction ID
-  _upload "${local_files}" "${upload_nidap_dataset}" "${token}" "${requestid}"
+  # INPUT $5 = Optional HTTPS proxy server
+  _upload "${local_files}" "${upload_nidap_dataset}" "${token}" "${requestid}" "${proxy}"
 
 }
 
