@@ -1,7 +1,7 @@
 from os.path import join, basename
 
 # Global Workflow variables
-configfile:join("config","build.yml")
+configfile: join("config","containers","images.json")
 GENOME=config["GENOME"].strip().replace(' ', '')
 READLENGTHS=config["READLENGTHS"]
 REFFA=config["REFFA"]
