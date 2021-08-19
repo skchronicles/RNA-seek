@@ -867,6 +867,9 @@ def _configure(sub_args, filename, git_repo):
     """
     # Save config to output directory
     print("\nGenerating config file in '{}'... ".format(filename), end = "")
+    # Resolves if an image needs to be pulled from an OCI registry or
+    # a local SIF generated from the rna-seek cache subcommand exists
+    sif_config = image_cache(sub_args, {})
     # Creates config file /path/to/output/config/build.yml
     with open(filename, 'w') as fh:
         fh.write('GENOME: "{}"\n'.format(sub_args.ref_name))
@@ -880,6 +883,12 @@ def _configure(sub_args, filename, git_repo):
         read_lengths = ['50', '75', '100', '125', '150']
         for rl in read_lengths:
             fh.write('  - {}\n'.format(rl))
+        # Add singularity images URIs or local SIFs
+        # Converts a nested json file to yaml format
+        for k in sif_config.keys():
+            fh.write('{}: \n'.format(k))
+            for tag, uri in sif_config[k].items():
+                fh.write('  {}: "{}"\n'.format(tag, uri))
     print("Done!")
 
 
