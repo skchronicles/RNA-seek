@@ -118,7 +118,7 @@ def excel_writer(files, spreadsheet= 'test.xlsx'):
 	"""
 
 	writer = pd.ExcelWriter(spreadsheet, engine='xlsxwriter')
-
+	
 	# Create a spreadsheet from the contents of each file
 	for file in files:
 		print('Reading in {}'.format(file))
@@ -126,9 +126,9 @@ def excel_writer(files, spreadsheet= 'test.xlsx'):
 		sheet = os.path.splitext(os.path.basename(file))[0]
 		try:
 			# Sheet name cannot exceed 31 characters in length
-			df.to_excel(writer, sheet_name = sheet)
+			df.to_excel(writer, sheet_name = sheet, index = False, freeze_panes = (1,0))
 		except xlsxwriter.exceptions.InvalidWorksheetName as e:
-			df.to_excel(writer, sheet_name = sheet[:31])
+			df.to_excel(writer, sheet_name = sheet[:31], index = False,freeze_panes = (1,0))
 
 	writer.save()
 
