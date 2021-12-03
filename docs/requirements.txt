@@ -7,7 +7,7 @@ htmlmin==0.1.12
 importlib-metadata==1.7.0
 Jinja2==2.11.2
 joblib==0.16.0
-jsmin==2.2.2
+jsmin==3.0.0
 livereload==2.6.1
 lunr==0.5.8
 Markdown==3.2.2
