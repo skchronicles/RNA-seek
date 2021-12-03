@@ -135,24 +135,40 @@ If not, the GTF file may need to be manually curated until these conditions are 
 Here is an example feature from a hand-curated Biotyn_probe GTF file:
 
 ```bash
-Biot1	BiotynProbe	gene	1	21	0.000000	+	.	gene_id "Biot1"; gene_name "Biot1"; gene_biotype "biotynlated_probe_control";
-Biot1	BiotynProbe	transcript	1	21	0.000000	+	.	gene_id "Biot1"; gene_name "Biot1"; gene_biotype "biotynlated_probe_control"; transcript_id "Biot1"; transcript_name "Biot1"; transcript_type "biotynlated_probe_control";
-Biot1	BiotynProbe	exon	1	21	0.000000	+	.	gene_id "Biot1"; transcript_id "Biot1"; transcript_type "biotynlated_probe_control";
+Biot1   BiotynProbe gene    1   21  0.000000    +   .   gene_id "Biot1"; gene_name "Biot1"; gene_biotype "biotynlated_probe_control";
+Biot1   BiotynProbe transcript  1   21  0.000000    +   .   gene_id "Biot1"; gene_name "Biot1"; gene_biotype "biotynlated_probe_control"; transcript_id "Biot1"; transcript_name "Biot1"; transcript_type "biotynlated_probe_control";
+Biot1   BiotynProbe exon    1   21  0.000000    +   .   gene_id "Biot1"; gene_biotype "biotynlated_probe_control"; transcript_id "Biot1"; transcript_type "biotynlated_probe_control";
 ```
 
 In this tab-delimited example above, 
 
- * ***line 1:*** the `gene` feature has 2 required attributes in column 9: `gene_id` and `gene_name`
-     * *Please note:* `gene_biotype` is *optional*
+ * ***line 1:*** the `gene` feature has 3 required attributes in column 9: `gene_id` and `gene_name` and `gene_biotype`
  * ***line 2:*** the `transcript` entry for the above `gene` repeats the same attributes with following required fields: `transcript_id ` and `transcript_name`
      * *Please note:* `transcript_type` is *optional*
- * ***line 3:*** the `exon` entry for the above `transcript` has 2 required attributes: `gene_id` and `transcript_id`
+ * ***line 3:*** the `exon` entry for the above `transcript` has 3 required attributes: `gene_id` and `transcript_id` and `gene_biotype`
      * *Please note:* `transcript_type` is *optional*
 
 For a given gene, the combination of the `gene_id` AND `gene_name` should form a unique string. There should be no instances where two different genes share the same `gene_id` AND `gene_name`. 
 
 
-## 4. Example
+## 4. Convert NCBI GFF3 to GTF format
+
+It is worth noting that RNA-seek comes bundled with a script to convert GFF3 files downloaded from NCBI to GTF file format. This convenience script is useful as the `rna-seek build` sub command takes a GTF file as one of its inputs. 
+
+Please note that this script has only been tested with GFF3 files downloaded from NCBI, and _it is **not** recommended to use with GFF3 files originating from other sources like Ensembl or GENCODE_. If you are selecting an annotation from Ensembl or GENCODE, please download the GTF file option.
+
+The only dependecy of the script is the python package argparse, which comes bundled with the following python2/3 distributions: `python>=2.7.18` or `python>=3.2`. If argparse is not installed, it can be downloaded with pip by running the following command:
+
+```bash
+pip install argparse
+```
+
+For more information about the script and its usage, please run:
+```bash
+./resources/gff3togtf.py -h
+```
+
+## 5. Example
 ```bash 
 # Step 0.) Grab an interactive node (do not run on head node)
 srun -N 1 -n 1 --time=12:00:00 -p interactive --mem=8gb  --cpus-per-task=4 --pty bash
