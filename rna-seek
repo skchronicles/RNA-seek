@@ -183,7 +183,7 @@ def rename(filename):
         Please rename the file list above before trying again.
         Here is example of acceptable input file extensions:
           sampleName.R1.fastq.gz      sampleName.R2.fastq.gz
-          sampleName_R1_001.fastq.gz  sampleName_R1_001.fastq.gz
+          sampleName_R1_001.fastq.gz  sampleName_R2_001.fastq.gz
           sampleName_1.fastq.gz       sampleName_2.fastq.gz
         Please also check that your input files are gzipped?
         If they are not, please gzip them before proceeding again.
