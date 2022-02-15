@@ -32,6 +32,10 @@ def get_id_and_type(last_column):
 
 	gene_id = get_value('gene_id', pairs)
 	gene_type = get_value('gene_type', pairs)
+	if not gene_type:
+		# gene_type does not exist
+		# default to using gene_biotype
+		gene_type = get_value('gene_biotype', pairs)
 
 	return gene_id, gene_type
 
