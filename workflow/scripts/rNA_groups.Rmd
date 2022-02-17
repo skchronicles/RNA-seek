@@ -43,7 +43,7 @@ suppressMessages(library(ComplexHeatmap))
 suppressMessages(library(circlize))
 
 # Reading in raw counts matrix, TIN matrix, and QC metadata
-rawcounts = read.table(file = params$raw, sep = '\t', header = TRUE, row.names = 1)
+rawcounts = read.table(file = params$raw, sep = '\t', header = TRUE, row.names = 1, quote = "")
 #rawcounts = read.table(file = 'data/Test_Raw_RSEM_Genes_Dataset.txt', sep = '\t', header = TRUE, row.names = 1)
 
 tincounts = read.table(file = params$tin, sep = '\t', header = TRUE, row.names = 1)
@@ -52,7 +52,7 @@ tincounts = read.table(file = params$tin, sep = '\t', header = TRUE, row.names =
 # Remove zero variance rows prior to PC
 tincounts = tincounts[apply(tincounts, 1, var) != 0, ]
 
-multiQC = read.table(file = params$qc, sep = '\t', header = TRUE)
+multiQC = read.table(file = params$qc, sep = '\t', header = TRUE, stringsAsFactors = TRUE)
 rownames(multiQC) = make.names(multiQC$Sample)
 
 # Create DGEList
