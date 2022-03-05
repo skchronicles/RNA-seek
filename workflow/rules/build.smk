@@ -11,6 +11,12 @@ OUTDIR=config["OUTDIR"]
 SCRIPTSDIR=config["SCRIPTSDIR"]
 workdir:OUTDIR
 
+# Ensures backwards compatibility 
+try:
+	SMALL_GENOME=config["SMALL_GENOME"]
+except KeyError:
+	SMALL_GENOME="False"
+
 
 rule all:
 	input:
@@ -129,54 +135,115 @@ rule star_rl:
 	# Create Index for read length
 	rl=$(({wildcards.readlength}-1))
 
-	STAR \
-		--runThreadN {threads} \
-		--runMode genomeGenerate \
-		--genomeDir STAR/2.7.6a/genes-{wildcards.readlength} \
-		--genomeFastaFiles {input.fa} \
-		--sjdbGTFfile {input.gtf} \
-		--sjdbOverhang $rl \
-		--outFileNamePrefix STAR/2.7.6a/build_{wildcards.readlength}_ \
+	STAR \\
+		--runThreadN {threads} \\
+		--runMode genomeGenerate \\
+		--genomeDir STAR/2.7.6a/genes-{wildcards.readlength} \\
+		--genomeFastaFiles {input.fa} \\
+		--sjdbGTFfile {input.gtf} \\
+		--sjdbOverhang $rl \\
+		--outFileNamePrefix STAR/2.7.6a/build_{wildcards.readlength}_ \\
 		--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_{wildcards.readlength}
 	"""
 
-
-rule star_genome:
-    """
-    Builds STAR Index to align reads against reference genome without the
-	GTF or readlength provided. This index only contain information pertaining
-	to the asssembly or reference genome in FASTA format. This indice represents a
-	base index from which processing annotations from a GTF and insert junctions
-	on the fly. This has the advantage of saving diskspace as an index will not be
-	created for a list of predefined readlengths. This rule replaces star_rl above.
-    @Input:
-    	Genomic FASTA file
-    @Output:
-        Generates 'chrName.txt', 'chrLength.txt', 'chrStart.txt',
-		'chrNameLength.txt', 'exonGeTrInfo.tab', 'geneInfo.tab',
-		'transcriptInfo.tab', 'exonInfo.tab', 'sjdbList.fromGTF.out.tab',
-		'sjdbInfo.txt', 'sjdbList.out.tab', 'genomeParameters.txt',
-		'Genome', 'SA', 'SAindex' which are used by STAR internally.
-	"""
-	input:
-		fa=REFFA,
-		gtf=GTFFILE
-	output:
-		join("STAR", "2.7.6a", "genome", "SA")
-	threads: 32
-	params:
-		rname='bl:star_genome',
-	container: config['images']['arriba']
-	shell: """
-	STAR \
-		--runThreadN {threads} \
-		--runMode genomeGenerate \
-		--genomeDir STAR/2.7.6a/genome \
-		--genomeFastaFiles {input.fa} \
-		--outFileNamePrefix STAR/2.7.6a/build_genome_ \
-		--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_genome
-	"""
-
+if SMALL_GENOME == "True":
+	# Build a index that is optimized for 
+	# small genomes. For small genomes, the 
+	# parameter --genomeSAindexNbases must 
+	# to be scaled down, with a typical value 
+	# of min(14, log2(GenomeLength)/2 - 1). 
+	# For example, for 1 megaBase genome, this 
+	# is equal to 9, for 100 kiloBase genome, 
+	# this is equal to 7. Using this guidance
+	# from the author of STAR, we will dynamically
+	# determine what the optimal value should be 
+	# based on the provided reference genome size.
+	rule star_genome:
+	    """
+	    Builds STAR Index to align reads against reference genome without the
+		GTF or readlength provided. This index only contain information pertaining
+		to the asssembly or reference genome in FASTA format. This indice represents a
+		base index from which processing annotations from a GTF and insert junctions
+		on the fly. This has the advantage of saving diskspace as an index will not be
+		created for a list of predefined readlengths. This rule replaces star_rl above.
+		This rule dynamically determine the optimal --genomeSAindexNbases value before 
+		running STAR generateGenome based on the size of the provided reference. This is 
+		needed for very small reference genomes. 
+	    @Input:
+	    	Genomic FASTA file
+	    @Output:
+	        Generates 'chrName.txt', 'chrLength.txt', 'chrStart.txt',
+			'chrNameLength.txt', 'exonGeTrInfo.tab', 'geneInfo.tab',
+			'transcriptInfo.tab', 'exonInfo.tab', 'sjdbList.fromGTF.out.tab',
+			'sjdbInfo.txt', 'sjdbList.out.tab', 'genomeParameters.txt',
+			'Genome', 'SA', 'SAindex' which are used by STAR internally.
+		"""
+		input:
+			fa=REFFA,
+			gtf=GTFFILE
+		output:
+			join("STAR", "2.7.6a", "genome", "SA")
+		threads: 32
+		params:
+			rname='bl:star_genome',
+		container: config['images']['arriba']
+		shell: """
+		# Build an index optimized
+		# for small reference genomes
+		genomeSize=$(grep -v '^>' {input.fa} | awk '{{sum+=length($0)}}; END {{print sum}}')
+		# Calculate min(14, log2(GenomeSize)/2 - 1)
+		genomeSAindexNbases=$(python -c "import math; print(min(14,int((math.log($genomeSize,2)/2)-1)))")
+		echo "Building index with --genomeSAindexNbases $genomeSAindexNbases"
+		STAR \\
+			--runThreadN {threads} \\
+			--runMode genomeGenerate \\
+			--genomeSAindexNbases ${{genomeSAindexNbases}} \\
+			--genomeDir STAR/2.7.6a/genome \\
+			--genomeFastaFiles {input.fa} \\
+			--outFileNamePrefix STAR/2.7.6a/build_genome_ \\
+			--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_genome
+		"""
+else:
+	# Build a normal genomic index
+	# built with the assumption that
+	# the user provided a large genome,
+	# i.e. most mammalian genomes like
+	# mouse or human
+	rule star_genome:
+	    """
+	    Builds STAR Index to align reads against reference genome without the
+		GTF or readlength provided. This index only contain information pertaining
+		to the asssembly or reference genome in FASTA format. This indice represents a
+		base index from which processing annotations from a GTF and insert junctions
+		on the fly. This has the advantage of saving diskspace as an index will not be
+		created for a list of predefined readlengths. This rule replaces star_rl above.
+	    @Input:
+	    	Genomic FASTA file
+	    @Output:
+	        Generates 'chrName.txt', 'chrLength.txt', 'chrStart.txt',
+			'chrNameLength.txt', 'exonGeTrInfo.tab', 'geneInfo.tab',
+			'transcriptInfo.tab', 'exonInfo.tab', 'sjdbList.fromGTF.out.tab',
+			'sjdbInfo.txt', 'sjdbList.out.tab', 'genomeParameters.txt',
+			'Genome', 'SA', 'SAindex' which are used by STAR internally.
+		"""
+		input:
+			fa=REFFA,
+			gtf=GTFFILE
+		output:
+			join("STAR", "2.7.6a", "genome", "SA")
+		threads: 32
+		params:
+			rname='bl:star_genome',
+		container: config['images']['arriba']
+		shell: """
+		STAR \\
+			--runThreadN {threads} \\
+			--runMode genomeGenerate \\
+			--genomeDir STAR/2.7.6a/genome \\
+			--genomeFastaFiles {input.fa} \\
+			--outFileNamePrefix STAR/2.7.6a/build_genome_ \\
+			--outTmpDir /lscratch/$SLURM_JOB_ID/tmp_genome
+		"""
 
 rule rRNA_list:
     """
@@ -202,9 +269,9 @@ rule rRNA_list:
 		create_rRNA=join(SCRIPTSDIR, "create_rRNA_intervals.py")
 	container: config['images']['build_rnaseq']
 	shell: """
-	python3 {params.create_rRNA} \
-		{input.fa} \
-		{input.gtf} \
+	python3 {params.create_rRNA} \\
+		{input.fa} \\
+		{input.gtf} \\
 		{params.genome} > {params.genome}.rRNA_interval_list
 	"""
 
@@ -274,25 +341,27 @@ rule tin_ref:
 	gtfToGenePred -genePredExt {input.gtf} genes.gtf.genePred
 	genePredToBed genes.gtf.genePred genes.gtf.genePred.bed
 
-	awk -F '\\t' -v OFS='\\t' '{{print $12,$1}}' genes.gtf.genePred \
+	awk -F '\\t' -v OFS='\\t' '{{print $12,$1}}' genes.gtf.genePred \\
 		| sort -k1,1n > gene2transcripts
 
 	while read gene; do
 		grep "${{gene}}" gene2transcripts;
 	done < protein_coding_genes.lst > gene2transcripts.protein_coding_only
 
-	python {params.gene2transcripts} gene2transcripts.protein_coding_only genes.gtf.genePred.bed \
+	python {params.gene2transcripts} \\
+		gene2transcripts.protein_coding_only \\
+		genes.gtf.genePred.bed \\
 		> gene2transcripts.protein_coding_only.with_len
 
-	sort -k1,1 -k3,3nr gene2transcripts.protein_coding_only.with_len | \
+	sort -k1,1 -k3,3nr gene2transcripts.protein_coding_only.with_len | \\
 		awk -F '\\t' '{{if (!seen[$1]) {{seen[$1]++; print $2}}}}' > protein_coding_only.txt
 
 	while read transcript; do
 		grep -m1 "${{transcript}}" genes.gtf.genePred.bed;
 	done < <(awk -F '.' '{{print $1}}' protein_coding_only.txt) > transcripts.protein_coding_only.bed12
 
-	rm -f "protein_coding_genes.lst" "genes.gtf.genePred" "genes.gtf.genePred.bed" \
-		"gene2transcripts" "gene2transcripts.protein_coding_only" "protein_coding_only.txt" \
+	rm -f "protein_coding_genes.lst" "genes.gtf.genePred" "genes.gtf.genePred.bed" \\
+		"gene2transcripts" "gene2transcripts.protein_coding_only" "protein_coding_only.txt" \\
 		"gene2transcripts.protein_coding_only.with_len" "protein_coding_only.txt"
 	"""
 
@@ -319,10 +388,10 @@ rule qualimapinfo:
 		generate_qualimap=join(SCRIPTSDIR, "generate_qualimap_ref.py")
 	container: config['images']['build_rnaseq']
 	shell: """
-	python3 {params.generate_qualimap} \
-		-g {input.gtf} \
-		-f {input.fa} \
-		-o {output} \
+	python3 {params.generate_qualimap} \\
+		-g {input.gtf} \\
+		-f {input.fa} \\
+		-o {output} \\
 		--ignore-strange-chrom 2> qualimap_error.log
 	"""
 
