@@ -880,6 +880,7 @@ def _configure(sub_args, filename, git_repo):
         fh.write('OUTDIR: "{}"\n'.format(sub_args.output))
         fh.write('SCRIPTSDIR: "{}/workflow/scripts/builder"\n'.format(sub_args.output))
         fh.write('BUILD_HOME: "{}"\n'.format(git_repo))
+        fh.write('SMALL_GENOME: "{}"\n'.format(sub_args.small_genome))
         fh.write('READLENGTHS:\n')
         read_lengths = ['50', '75', '100', '125', '150']
         for rl in read_lengths:
@@ -1258,6 +1259,7 @@ def parsed_arguments():
                                    --gtf-ver GTF_VER
                                    --output OUTPUT
                                    [--dry-run]
+                                   [--small-genome]
                                    [--singularity-cache SINGULARITY_CACHE]
                                    [--sif-cache SIF_CACHE]
 
@@ -1356,6 +1358,15 @@ def parsed_arguments():
                                 help = 'Do not execute anything, \
                                 and only display what steps in the pipeline remain or will \
                                 be run.')
+    # Small Genome build option for STAR
+    subparser_build.add_argument('--small-genome',
+                                action = 'store_true',
+                                required = False,
+                                default = False,
+                                help = 'Builds a small genome index. For small genomes, it is recommeded \
+                                running STAR with a scaled down --genomeSAindexNbases value. This option \
+                                runs the build pipeline in a mode where it dynamically finds the optimal \
+                                value, min(14, log2(GenomeSize)/2 - 1).')                                
     # Singularity cache directory (default uses output directory)
     subparser_build.add_argument('--singularity-cache',
                                 type = lambda option: check_cache(parser, os.path.abspath(os.path.expanduser(option))),
