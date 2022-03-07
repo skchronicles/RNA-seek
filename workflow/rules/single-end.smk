@@ -51,37 +51,71 @@ rule rawfastqc:
     fastqc {input} -t {threads} -o {params.outdir};
     """
 
-
-rule trim_se:
-    """
-    Data-processing step to remove adapter sequences and perform quality trimming
-    prior to alignment the reference genome.  Adapters are composed of synthetic
-    sequences and should be removed prior to alignment.
-    @Input:
-        Raw FastQ file (scatter)
-    @Output:
-        Trimmed FastQ file
-    """
-    input:
-        infq=join(workpath,"{name}.R1.fastq.gz"),
-    output:
-        outfq=temp(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"))
-    params:
-        rname='pl:trim_se',
-        # Exposed Parameters: modify config/templates/tools.json to change defaults
-        fastawithadaptersetd=config['bin'][pfamily]['tool_parameters']['FASTAWITHADAPTERSETD'],
-        leadingquality=config['bin'][pfamily]['tool_parameters']['LEADINGQUALITY'],
-        trailingquality=config['bin'][pfamily]['tool_parameters']['TRAILINGQUALITY'],
-        minlen=config['bin'][pfamily]['tool_parameters']['MINLEN'],
-    threads:32
-    envmodules: config['bin'][pfamily]['tool_versions']['CUTADAPTVER']
-    container: config['images']['cutadapt']
-    shell: """
-    cutadapt --nextseq-trim=2 --trim-n \
-        -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
-        -m {params.minlen} -b file:{params.fastawithadaptersetd} -j {threads} \
-        -o {output.outfq} {input.infq}
-    """
+if config['options']['small_rna']:
+    # Run STAR with ENCODE's recommendations for small RNA sequencing.
+    # Set the min read legth to 
+    rule trim_se:
+        """
+        Data-processing step to remove adapter sequences and perform quality trimming
+        prior to alignment the reference genome.  Adapters are composed of synthetic
+        sequences and should be removed prior to alignment.
+        @Input:
+            Raw FastQ file (scatter)
+        @Output:
+            Trimmed FastQ file
+        """
+        input:
+            infq=join(workpath,"{name}.R1.fastq.gz"),
+        output:
+            outfq=temp(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"))
+        params:
+            rname='pl:trim_se',
+            # Exposed Parameters: modify config/templates/tools.json to change defaults
+            fastawithadaptersetd=config['bin'][pfamily]['tool_parameters']['FASTAWITHADAPTERSETD'],
+            leadingquality=config['bin'][pfamily]['tool_parameters']['LEADINGQUALITY'],
+            trailingquality=config['bin'][pfamily]['tool_parameters']['TRAILINGQUALITY'],
+            minlen=config['bin'][pfamily]['tool_parameters']['MINLEN'],
+        threads:32
+        envmodules: config['bin'][pfamily]['tool_versions']['CUTADAPTVER']
+        container: config['images']['cutadapt']
+        shell: """
+        cutadapt --nextseq-trim=2 --trim-n \
+            -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
+            -m 16:16 -b file:{params.fastawithadaptersetd} -j {threads} \
+            -o {output.outfq} {input.infq}
+        """
+else:
+    # Use default trimming rule for long RNAs
+    rule trim_se:
+        """
+        Data-processing step to remove adapter sequences and perform quality trimming
+        prior to alignment the reference genome.  Adapters are composed of synthetic
+        sequences and should be removed prior to alignment.
+        @Input:
+            Raw FastQ file (scatter)
+        @Output:
+            Trimmed FastQ file
+        """
+        input:
+            infq=join(workpath,"{name}.R1.fastq.gz"),
+        output:
+            outfq=temp(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"))
+        params:
+            rname='pl:trim_se',
+            # Exposed Parameters: modify config/templates/tools.json to change defaults
+            fastawithadaptersetd=config['bin'][pfamily]['tool_parameters']['FASTAWITHADAPTERSETD'],
+            leadingquality=config['bin'][pfamily]['tool_parameters']['LEADINGQUALITY'],
+            trailingquality=config['bin'][pfamily]['tool_parameters']['TRAILINGQUALITY'],
+            minlen=config['bin'][pfamily]['tool_parameters']['MINLEN'],
+        threads:32
+        envmodules: config['bin'][pfamily]['tool_versions']['CUTADAPTVER']
+        container: config['images']['cutadapt']
+        shell: """
+        cutadapt --nextseq-trim=2 --trim-n \
+            -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
+            -m {params.minlen} -b file:{params.fastawithadaptersetd} -j {threads} \
+            -o {output.outfq} {input.infq}
+        """
 
 
 rule fastqc:
@@ -279,6 +313,84 @@ if config['options']['star_2_pass_basic']:
             --outSAMtype BAM SortedByCoordinate \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
+            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --sjdbOverhang ${{readlength}}
+
+        mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
+        mv {params.prefix}.Log.final.out {workpath}/{log_dir}
+        """
+elif config['options']['small_rna']:
+    # Run STAR with ENCODE's recommendations for small RNA sequencing.
+    rule star_small:
+        """
+        Data processing step to align reads against reference genome using STAR using
+        ENCODE's recommendations for small RNA. 
+        Please see this links for more information:
+        https://www.encodeproject.org/pipelines/ENCPL337CSA/
+        https://github.com/ENCODE-DCC/long-rna-seq-pipeline/tree/master/dnanexus/small-rna
+        @Input:
+            Trimmed FastQ files (scatter)
+        @Output:
+            Genomic and transcriptomic BAM file
+        """
+        input:
+            file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+            qcrl=join(workpath,"QC","readlength.txt"),
+        output:
+            out1=temp(join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam")),
+            out2=join(workpath,star_dir,"{name}.p2.ReadsPerGene.out.tab"),
+            out3=join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),
+            out5=join(workpath,log_dir,"{name}.p2.Log.final.out"),
+        params:
+            rname='pl:star_small',
+            prefix=join(workpath, star_dir, "{name}.p2"),
+            best_rl_script=join("workflow", "scripts", "optimal_read_length.py"),
+            # Exposed Parameters: modify config/genomes/{genome}.json to change default
+            stardir=config['references'][pfamily]['GENOME_STARDIR'],
+            gtffile=config['references'][pfamily]['GTFFILE'],
+            # Exposed STAR Parameters: modify config/templates/tools.json to change defaults
+            filterintronmotifs=config['bin'][pfamily]['FILTERINTRONMOTIFS'],
+            samstrandfield=config['bin'][pfamily]['SAMSTRANDFIELD'],
+            filtertype=config['bin'][pfamily]['FILTERTYPE'],
+            filtermultimapnmax=config['bin'][pfamily]['FILTERMULTIMAPNMAX'],
+            alignsjoverhangmin=config['bin'][pfamily]['ALIGNSJOVERHANGMIN'],
+            alignsjdboverhangmin=config['bin'][pfamily]['ALIGNSJDBOVERHANGMIN'],
+            filtermismatchnmax=config['bin'][pfamily]['FILTERMISMATCHNMAX'],
+            filtermismatchnoverlmax=config['bin'][pfamily]['FILTERMISMATCHNOVERLMAX'],
+            alignintronmin=config['bin'][pfamily]['ALIGNINTRONMIN'],
+            alignintronmax=config['bin'][pfamily]['ALIGNINTRONMAX'],
+            alignmatesgapmax=config['bin'][pfamily]['ALIGNMATESGAPMAX'],
+            adapter1=config['bin'][pfamily]['ADAPTER1'],
+            adapter2=config['bin'][pfamily]['ADAPTER2'],
+            outsamunmapped=config['bin'][pfamily]['OUTSAMUNMAPPED'],
+            wigtype=config['bin'][pfamily]['WIGTYPE'],
+            wigstrand=config['bin'][pfamily]['WIGSTRAND'],
+            nbjuncs=config['bin'][pfamily]['NBJUNCS'],
+        threads:32
+        envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
+        container: config['images']['arriba']
+        shell: """
+        # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
+        readlength=$(zcat {input.file1} | awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; END {{print maxlen-1}}')
+        echo "sjdbOverhang for STAR: ${{readlength}}"
+
+        STAR --genomeDir {params.stardir} \
+            --outFilterMultimapNmax {params.filtermultimapnmax} \
+            --alignSJDBoverhangMin 1000 \
+            --outFilterScoreMinOverLread 0 \
+            --outFilterMatchNminOverLread 0 \
+            --outFilterMatchNmin 16 \
+            --outFilterMismatchNoverLmax {params.filtermismatchnoverlmax} \
+            --alignIntronMax 1 \
+            --clip3pAdapterSeq {params.adapter1} {params.adapter2} \
+            --readFilesIn {input.file1} --readFilesCommand zcat \
+            --runThreadN {threads} \
+            --outFileNamePrefix {params.prefix}. \
+            --outSAMunmapped Within \
+            --sjdbGTFfile {params.gtffile} \
+            --limitSjdbInsertNsj {params.nbjuncs} \
+            --quantMode TranscriptomeSAM GeneCounts \
+            --outSAMtype BAM SortedByCoordinate \
             --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
