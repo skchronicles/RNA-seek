@@ -549,6 +549,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
     # Add optional cli workflow steps
     config['options'] = {}
     config['options']['star_2_pass_basic'] = sub_args.star_2_pass_basic
+    config['options']['small_rna'] = sub_args.small_rna
 
     # Get latest git commit hash
     git_hash = get_repo_git_commit_hash(repo_path)
@@ -1087,6 +1088,7 @@ def parsed_arguments():
                                  --genome {hg38_30, mm10_M21}
                                  [--mode {local, slurm}]
                                  [--dry-run]
+                                 [--small-rna]
                                  [--star-2-pass-basic]
                                  [--threads THREADS]
                                  [--singularity-cache SINGULARITY_CACHE]
@@ -1219,6 +1221,16 @@ def parsed_arguments():
                                 approach where the set of splice junctions detected across all samples are provided to \
                                 the second pass of STAR. This option overrides the default behavior so each sample will \
                                 be processed in a per sample two-pass basic mode.')
+    # Run pipeline using ENCODE's recommendations for small RNA processing
+    subparser_run.add_argument('--small-rna',
+                                action = 'store_true',
+                                required = False,
+                                default = False,
+                                help = 'Uses ENCODE\'s recomendations for small RNA. \
+                                This option should be used with small RNA libraries. These are rRNA-depleted libraries \
+                                that have been size selected to be shorter than 200bp. Size selection enriches for small \
+                                RNA species such as miRNAs, siRNAs, or piRNAs. This option is only supported with single-end \
+                                data.')
     # Number of threads for the RNA-seek pipeline's main proceess
     subparser_run.add_argument('--threads',
                                 type = int,
