@@ -81,7 +81,7 @@ if config['options']['small_rna']:
         shell: """
         cutadapt --nextseq-trim=2 --trim-n \
             -n 5 -O 5 -q {params.leadingquality},{params.trailingquality} \
-            -m 16:16 -b file:{params.fastawithadaptersetd} -j {threads} \
+            -m 16 -b file:{params.fastawithadaptersetd} -j {threads} \
             -o {output.outfq} {input.infq}
         """
 else:

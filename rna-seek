@@ -14,7 +14,7 @@ from __future__ import print_function
 import sys, os, json
 
 __author__ = 'Skyler Kuhn'
-__version__ = 'v1.3.0'
+__version__ = 'v1.4.0'
 __email__ = 'kuhnsa@nih.gov'
 
 
@@ -1220,7 +1220,8 @@ def parsed_arguments():
                                 related samples. By default, the pipeline ultilizes a multi sample 2-pass mapping \
                                 approach where the set of splice junctions detected across all samples are provided to \
                                 the second pass of STAR. This option overrides the default behavior so each sample will \
-                                be processed in a per sample two-pass basic mode.')
+                                be processed in a per sample two-pass basic mode. This option should not be combined with \
+                                the small RNA option.')
     # Run pipeline using ENCODE's recommendations for small RNA processing
     subparser_run.add_argument('--small-rna',
                                 action = 'store_true',
@@ -1230,7 +1231,7 @@ def parsed_arguments():
                                 This option should be used with small RNA libraries. These are rRNA-depleted libraries \
                                 that have been size selected to be shorter than 200bp. Size selection enriches for small \
                                 RNA species such as miRNAs, siRNAs, or piRNAs. This option is only supported with single-end \
-                                data.')
+                                data. This option should not be combined with the star 2-pass basic option')
     # Number of threads for the RNA-seek pipeline's main proceess
     subparser_run.add_argument('--threads',
                                 type = int,
