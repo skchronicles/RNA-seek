@@ -390,10 +390,17 @@ elif config['options']['small_rna']:
             --sjdbGTFfile {params.gtffile} \
             --limitSjdbInsertNsj {params.nbjuncs} \
             --quantMode TranscriptomeSAM GeneCounts \
-            --outSAMtype BAM SortedByCoordinate \
+            --outSAMtype BAM Unsorted \
             --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
+        # SAMtools sort (uses less memory than STAR SortedByCoordinate)
+        samtools sort -@ {threads} \
+            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
+            -O bam {params.prefix}.Aligned.out.bam \
+            > {output.out1}
+
+        rm {params.prefix}.Aligned.out.bam
         mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
         mv {params.prefix}.Log.final.out {workpath}/{log_dir}
         """
