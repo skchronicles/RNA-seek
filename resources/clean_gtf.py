@@ -128,7 +128,7 @@ def formatted(metadata):
 
 def main():
     if len(sys.argv) != 2:
-        print('Usage: python {} genes.gtf > protein_coding_genes.lst'.format(sys.argv[0]))
+        print('Usage: python {} genes.gtf > clean.gtf'.format(sys.argv[0]))
         print('\nError: failed to provide all positional arguments!', file=sys.stderr)
         sys.exit(1)
 
