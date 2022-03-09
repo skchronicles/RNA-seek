@@ -26,10 +26,10 @@ Use you can always use the `-h` option for information on a specific command.
 
   `--output OUTPUT` 
 > **Output directory to unlock.**  
-> *type: string*
+> *type: path*
 > 
 > Path to a previous run's output directory to unlock. This will remove a lock on the working  directory. Please verify that the pipeline is not running before running this command.  
-> ***Example:*** `--output /scratch/$USER/RNA_hg38`
+> ***Example:*** `--output /data/$USER/RNA_hg38`
 
 ### 2.2 Options
 
@@ -52,5 +52,5 @@ module purge
 module load singularity snakemake
 
 # Step 1.) Unlock a pipeline output directory
-rna-seek unlock --output /scratch/$USER/RNA_hg38
+rna-seek unlock --output /data/$USER/RNA_hg38
 ```

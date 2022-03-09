@@ -25,8 +25,8 @@ Use you can always use the `-h` option for information on a specific command.
 
  `--sif-cache SIF_CACHE` 
  
-> **Path where a local cache of SIFs will be stored..**  
-> *type: string*
+> **Path where a local cache of SIFs will be stored.**  
+> *type: path*
 > 
 > Any images defined in *config/containers/images.json* will be pulled into the local filesystem. The path provided to this option can be passed to the `--sif-cache` option of the <code>rna-seek <b>build</b></code> and <code>rna-seek <b>run</b></code> subcomand. This allows for running the build and run pipelines in an offline mode where no requests are made to external sources. This is useful for avoiding network issues or DockerHub pull rate limits. Please see rna-seek build and run for more information.
 > 
@@ -61,9 +61,9 @@ module purge
 module load singularity snakemake
 
 # Step 1.) Dry run cache to see what will be pulled
-./rna-seek cache --sif-cache /scratch/$USER/cache \
+./rna-seek cache --sif-cache /data/$USER/cache \
                  --dry-run  
 
 # Step 2.) Cache remote resources locally 
-./rna-seek cache --sif-cache /scratch/$USER/cache  
+./rna-seek cache --sif-cache /data/$USER/cache  
 ```
