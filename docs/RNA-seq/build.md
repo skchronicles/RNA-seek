@@ -15,6 +15,7 @@ $ ./rna-seek build [-h] --ref-fa REF_FA
                         --gtf-ver GTF_VER
                         --output OUTPUT
                         [--dry-run]
+                        [--small-genome]
                         [--singularity-cache SINGULARITY_CACHE]
                         [--sif-cache SIF_CACHE]
 ```
@@ -35,7 +36,7 @@ Each of the following arguments are required. Failure to provide a required argu
 
   `--ref-fa REF_FA`  
 > **Genomic FASTA file of the reference genome.**  
-> *type: string*
+> *type: file*
 > 
 > This file represents the genome sequence of the reference assembly in FASTA format. If you are downloading this from GENCODE, you should select the *PRI* genomic FASTA file. This file will contain the primary genomic assembly (contains chromosomes and scaffolds). This input file should not be compressed. Sequence identifers in this file must match with sequence identifers in the GTF file provided to `--ref-gtf`.  
 > 
@@ -55,7 +56,7 @@ Each of the following arguments are required. Failure to provide a required argu
 --- 
   `--ref-gtf REF_GTF`  
 > **Gene annotation or GTF file for the reference genome.**  
-> *type: string*
+> *type: file*
 > 
 > This file represents the reference genome's gene annotation in GTF format. If you are downloading this from GENCODE, you should select the 'PRI' GTF file. This file contains gene annotations for the primary assembly (contains chromosomes and scaffolds). This input file should not be compressed. Sequence identifers (column 1) in this file must match with sequence identifers in the FASTA file provided to `--ref-fa`.  
 > ***Example:***  `--ref-gtf gencode.v36.primary_assembly.annotation.gtf`
@@ -70,11 +71,11 @@ Each of the following arguments are required. Failure to provide a required argu
   
 --- 
   `--output OUTPUT`
-> **Version of the gene annotation or GTF file provided.**  
-> *type: string or int*
+> **Path to an output directory.**  
+> *type: path*
 >   
 > This location is where the build pipeline will create all of its output files. If the user-provided working directory has not been initialized, it will automatically be created.  
-> ***Example:*** `--output /scratch/$USER/refs/hg38_v36/`
+> ***Example:*** `--output /data/$USER/refs/hg38_v36/`
 
 ### 2.2 Options
 
@@ -97,10 +98,21 @@ Each of the following arguments are optional and do not need to be provided.
 >
 > ***Example:*** `--dry-run`
 
+---  
+  `--small-genome`            
+> **Builds a small genome index.**  
+> *type: boolean*
+> 
+> For small genomes, it is recommeded running STAR with a scaled down `--genomeSAindexNbases` value. This option runs the build pipeline in a mode where it dynamically finds the optimal value for this option using the following formula: `min(14, log2(GenomeSize)/2 - 1)`. Generally speaking, this option is not really applicable for most mammalian reference genomes, i.e. human and mouse; however, researcher working with very small reference genomes, like S. cerevisiae ~ 12Mb, should provide this option.
+>
+> When in doubt feel free to provide this option, as the optimal value will be found based on your input. 
+>
+> ***Example:*** `--small-genome`
+
 --- 
   `--singularity-cache SINGULARITY_CACHE`  
 > **Overrides the $SINGULARITY_CACHEDIR environment variable.**  
-> *type: string*  
+> *type: path*  
 > *default: `--output OUTPUT/.singularity`*
 >
 > Singularity will cache image layers pulled from remote registries. This ultimately speeds up the process of pull an image from DockerHub if an image layer already exists in the singularity cache directory. By default, the cache is set to the value provided to the `--output` argument. Please note that this cache cannot be shared across users. Singularity strictly enforces you own the cache directory and will return a non-zero exit code if you do not own the cache directory! See the `--sif-cache` option to create a shareable resource. 
@@ -110,7 +122,7 @@ Each of the following arguments are optional and do not need to be provided.
 ---  
   `--sif-cache SIF_CACHE`
 > **Path where a local cache of SIFs are stored.**  
-> *type: string*  
+> *type: path*  
 >
 > Uses a local cache of SIFs on the filesystem. This SIF cache can be shared across users if permissions are set correctly. If a SIF does not exist in the SIF cache, the image will be pulled from Dockerhub and a warning message will be displayed. The `rna-seek cache` subcommand can be used to create a local SIF cache. Please see `rna-seek cache` for more information. This command is extremely useful for avoiding DockerHub pull rate limits. It also remove any potential errors that could occur due to network issues or DockerHub being temporarily unavailable. We recommend running RNA-seek with this option when ever possible.
 > 
@@ -160,6 +172,7 @@ Please note that this script has only been tested with GFF3 files downloaded fro
 The only dependecy of the script is the python package argparse, which comes bundled with the following python2/3 distributions: `python>=2.7.18` or `python>=3.2`. If argparse is not installed, it can be downloaded with pip by running the following command:
 
 ```bash
+pip install --upgrade pip
 pip install argparse
 ```
 
@@ -180,7 +193,7 @@ module load singularity snakemake
                  --ref-name mm39 \
                  --ref-gtf gencode.vM26.annotation.gtf \
                  --gtf-ver M26 \
-                 --output /scratch/$USER/refs/mm39_M26 \
+                 --output /data/$USER/refs/mm39_M26 \
                  --dry-run
 
 # Step 2.) Build new RNA-seek reference files 
@@ -188,5 +201,5 @@ module load singularity snakemake
                  --ref-name mm39 \
                  --ref-gtf gencode.vM26.annotation.gtf \
                  --gtf-ver M26 \
-                 --output /scratch/$USER/refs/mm39_M26
+                 --output /data/$USER/refs/mm39_M26
 ```
