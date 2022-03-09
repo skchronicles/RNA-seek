@@ -49,7 +49,6 @@ if paired_end:
             expand(join(workpath,"rawQC","{name}.R2_fastqc.zip"), name=samples),
             expand(join(workpath,"QC","{name}.R1.trim_fastqc.zip"), name=samples),
             expand(join(workpath,"QC","{name}.R2.trim_fastqc.zip"), name=samples),
-            join(workpath,"QC","readlength.txt"),
 
             # BBtools Insert Size
             expand(join(workpath,"QC","{name}_insert_sizes.txt"), name=samples),
@@ -129,7 +128,6 @@ elif not paired_end:
             # FastQC (before and after trimming)
             expand(join(workpath,"rawQC","{name}.R1_fastqc.zip"), name=samples),
             expand(join(workpath,"QC","{name}.R1.trim_fastqc.zip"), name=samples),
-            join(workpath,"QC","readlength.txt"),
 
             # FastQ Screen
             expand(join(workpath,"FQscreen","{name}.R1.trim_screen.txt"),name=samples),

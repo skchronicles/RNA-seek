@@ -41,11 +41,11 @@ rule rawfastqc:
         List of FastQC reports and zip file containing data quality information
     """
     input:
-        expand(join(workpath,"{name}.R1.fastq.gz"), name=samples),
-        expand(join(workpath,"{name}.R2.fastq.gz"), name=samples)
+        R1=join(workpath,"{name}.R1.fastq.gz"),
+        R2=join(workpath,"{name}.R2.fastq.gz"),
     output:
-        expand(join(workpath,"rawQC","{name}.R1_fastqc.zip"), name=samples),
-        expand(join(workpath,"rawQC","{name}.R2_fastqc.zip"), name=samples)
+        join(workpath,"rawQC","{name}.R1_fastqc.zip"),
+        join(workpath,"rawQC","{name}.R2_fastqc.zip"),
     priority: 2
     params:
         rname='pl:rawfastqc',
@@ -54,7 +54,7 @@ rule rawfastqc:
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
     container: config['images']['fastqc']
     shell: """
-    fastqc {input} -t {threads} -o {params.outdir};
+    fastqc {input.R1} {input.R2} -t {threads} -o {params.outdir};
     """
 
 
@@ -106,12 +106,11 @@ rule fastqc:
         List of FastQC reports and zip file containing data quality information
     """
     input:
-        expand(join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"), name=samples),
-        expand(join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"), name=samples)
+        R1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
+        R2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
     output:
-        expand(join(workpath,"QC","{name}.R1.trim_fastqc.zip"), name=samples),
-        expand(join(workpath,"QC","{name}.R2.trim_fastqc.zip"), name=samples),
-        join(workpath,"QC","readlength.txt"),
+        join(workpath,"QC","{name}.R1.trim_fastqc.zip"),
+        join(workpath,"QC","{name}.R2.trim_fastqc.zip"),
     priority: 2
     params:
         rname='pl:fastqc',
@@ -121,9 +120,7 @@ rule fastqc:
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
     container: config['images']['fastqc']
     shell: """
-    fastqc {input} -t {threads} -o {params.outdir};
-    python3 {params.getrl} {params.outdir} > {params.outdir}/readlength.txt \
-        2> {params.outdir}/readlength.err
+    fastqc {input.R1} {input.R2} -t {threads} -o {params.outdir};
     """
 
 
@@ -269,7 +266,6 @@ if config['options']['star_2_pass_basic']:
         input:
             file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
             file2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
-            qcrl=join(workpath,"QC","readlength.txt"),
         output:
             out1=temp(join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam")),
             out2=join(workpath,star_dir,"{name}.p2.ReadsPerGene.out.tab"),
@@ -371,7 +367,6 @@ else:
         input:
             file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
             file2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
-            qcrl=join(workpath,"QC","readlength.txt"),
         output:
             out1= join(workpath,star_dir,"{name}.SJ.out.tab"),
             out3= temp(join(workpath,star_dir,"{name}.Aligned.out.bam")),
@@ -478,7 +473,6 @@ else:
             file1=join(workpath,trim_dir,"{name}.R1.trim.fastq.gz"),
             file2=join(workpath,trim_dir,"{name}.R2.trim.fastq.gz"),
             tab=join(workpath,star_dir,"uniq.filtered.SJ.out.tab"),
-            qcrl=join(workpath,"QC","readlength.txt"),
         output:
             out1=temp(join(workpath,star_dir,"{name}.p2.Aligned.sortedByCoord.out.bam")),
             out2=join(workpath,star_dir,"{name}.p2.ReadsPerGene.out.tab"),
