@@ -27,7 +27,7 @@ for i in list(filter(lambda x:x[2]=="gene",filter(lambda x:not x[0].startswith("
 			gene_biotype=j[k+1][1:-2]
 		elif j[k]=="gene_type":
 			gene_biotype=j[k+1][1:-2]
-	if gene_biotype=="rRNA":
+	if gene_biotype.lower()=="rrna":
 		#out.write("%s\t%s\t%s\t%s\t%s\n"%(i[0],i[3],i[4],i[6],gene_id))
 		print("%s\t%s\t%s\t%s\t%s"%(i[0],i[3],i[4],i[6],gene_id))
 #out.close()
