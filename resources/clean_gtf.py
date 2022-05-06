@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
-"""clean_gtf.py: Takes a gtf file from agat_convert_sp_gff2gtf.pl
+# Python standard library
+from __future__ import print_function
+import sys, re, csv
+
+_help = """clean_gtf.py: Takes a gtf file from agat_convert_sp_gff2gtf.pl
 to add extra required fields in the 9th column containing key,
 value keys for metadata.Here is more information about required field:
 https://www.sudosight.com/RNA-seek/RNA-seq/build/#3-hybrid-genomes
@@ -26,9 +30,43 @@ module load python/3.9
 ./clean_gtf.py /path/to/converted.gtf > /path/to/clean.gtf
 """
 
-# Python standard library
-from __future__ import print_function
-import sys, re
+def url_escape_inside_quotes(line, delimiter=';', url_encoding = '%3B'):
+    """See the following issue for description and context:
+    https://github.com/NBISweden/AGAT/issues/250
+
+    Assumes the quote character in the 9th column is a double 
+    quote or <"> character. This is the correct character to 
+    use based on the speficiation. 
+    """
+    quote_count = 0
+    inside_quotes = False
+    fixed = ''
+    for c in line:
+        if c == '"':
+            # Entered the border or ending of 
+            # a quote, increase the counter and
+            # check where we are in the string
+            quote_count += 1
+            inside_quotes = True
+
+            if quote_count > 1:
+                # Reached end border of quote,
+                # reset boolean flag and counters
+                inside_quotes = False
+                quote_count = 0
+
+        if inside_quotes:
+            # Fix evil mistakes of the past, 
+            # replace reserved delimeter with 
+            # another character, let's use a 
+            # url encoding of the character
+            if c == delimiter:
+                c = url_encoding
+
+        # Add the existing/converted character 
+        fixed += c
+    
+    return fixed 
 
 
 def stripped(v):
@@ -66,7 +104,7 @@ def parse(linelist):
     and index (dictionary) of all fields.
     """
     tags = {}  # store key, value pairs in 9th column 
-    metadata = re.split('; ', linelist[8].rstrip(';'))
+    metadata = re.split('; ', url_escape_inside_quotes(linelist[8].rstrip(';')))
     for field in metadata: 
         k,v = field.split(' ', 1)
         tags[k] = v.strip('"').strip("'")
@@ -126,10 +164,12 @@ def formatted(metadata):
     out = out.rstrip(' ')
     return out
 
+
 def main():
     if len(sys.argv) != 2:
+        print(_help)
         print('Usage: python {} genes.gtf > clean.gtf'.format(sys.argv[0]))
-        print('\nError: failed to provide all positional arguments!', file=sys.stderr)
+        print('Error: failed to provide all positional arguments!', file=sys.stderr)
         sys.exit(1)
 
     input_gtf = sys.argv[1]
@@ -171,4 +211,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
