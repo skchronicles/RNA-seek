@@ -30,6 +30,58 @@ module load python/3.9
 ./clean_gtf.py /path/to/converted.gtf > /path/to/clean.gtf
 """
 
+def replace_nested_quotes(line, find_char = '"', replace_char = ''):
+    """
+    Assumes the quote character in the 9th column is a double 
+    quote or <"> character. This is the correct character to 
+    use based on the speficiation. 
+    """
+    # Normal:
+    #   protein_id "XP_040355194.1"; 
+    # Bad: 
+    #   transl_except "(pos:956284..956286)" "(pos:956290..956292)";
+    # Fixed:
+    #   transl_except "(pos:956284..956286) (pos:956290..956292)";
+    quote_count = 0
+    inside_quotes = False
+    fixed = ''
+
+    for i in range(len(line)):
+        curr_char = line[i]
+        # Scan for next character to determine
+        # if reached end of quotation.
+        try: next_char = line[i+1]
+        except IndexError: next_char = ''
+
+        if curr_char  == '"':
+            # Entered the border or ending of
+            # a quote, increase the counter and
+            # check where we are in the string
+            quote_count += 1
+            if quote_count == 1:
+                inside_quotes = True
+
+        if next_char  == ';':
+            # Reached end border of quote,
+            # reset boolean flag and counters
+            inside_quotes = False
+            quote_count = 0
+
+        if inside_quotes:
+            # Fix evil mistakes of the past,
+            # replace reserved delimeter with
+            # another character, let's use a
+            # url encoding of the character
+            if curr_char  == find_char and quote_count > 1:
+                curr_char  = replace_char
+
+        # Add the existing/converted character
+        fixed += curr_char
+
+    return fixed
+
+
+
 def url_escape_inside_quotes(line, delimiter=';', url_encoding = '%3B'):
     """See the following issue for description and context:
     https://github.com/NBISweden/AGAT/issues/250
@@ -65,7 +117,7 @@ def url_escape_inside_quotes(line, delimiter=';', url_encoding = '%3B'):
 
         # Add the existing/converted character 
         fixed += c
-    
+
     return fixed 
 
 
@@ -104,7 +156,7 @@ def parse(linelist):
     and index (dictionary) of all fields.
     """
     tags = {}  # store key, value pairs in 9th column 
-    metadata = re.split('; ', url_escape_inside_quotes(linelist[8].rstrip(';')))
+    metadata = re.split('; ', replace_nested_quotes(url_escape_inside_quotes(linelist[8].rstrip(';'))))
     for field in metadata: 
         k,v = field.split(' ', 1)
         tags[k] = v.strip('"').strip("'")
@@ -114,7 +166,8 @@ def parse(linelist):
 def default(v, d):
     """Returns d when v is empty (string, list, etc) or false"""
     if not v:
-        v = d    
+        v = d
+
     return v
 
 
@@ -211,5 +264,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
