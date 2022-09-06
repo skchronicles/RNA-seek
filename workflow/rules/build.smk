@@ -338,7 +338,7 @@ rule tin_ref:
 	container: config['images']['build_rnaseq']
 	shell: """
 	python {params.gtf2protein} {input.gtf} > protein_coding_genes.lst
-	gtfToGenePred -genePredExt {input.gtf} genes.gtf.genePred
+	gtfToGenePred -ignoreGroupsWithoutExons -genePredExt {input.gtf} genes.gtf.genePred
 	genePredToBed genes.gtf.genePred genes.gtf.genePred.bed
 
 	awk -F '\\t' -v OFS='\\t' '{{print $12,$1}}' genes.gtf.genePred \\
