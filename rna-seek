@@ -693,7 +693,7 @@ def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submi
         masterjob = subprocess.Popen([
                 str(os.path.join(outdir, 'resources', str(submission_script))), mode,
                 '-j', str(masterjob), '-b', str(bindpaths),
-                '-o', str(outdir), '-c', str(cache), str(wait)
+                '-o', str(outdir), '-c', str(cache), '-w', str(wait)
             ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
 
     return masterjob
