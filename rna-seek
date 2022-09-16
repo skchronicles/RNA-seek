@@ -602,7 +602,7 @@ def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Sna
     return dryrun_output
 
 
-def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submission_script='runner', masterjob='pl:rna-seek'):
+def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submission_script='runner', masterjob='pl:rna-seek', wait=''):
     """Runs RNA-seek pipeline via selected executor: local or slurm.
     If 'local' is selected, the pipeline is executed locally on a compute node/instance.
     If 'slurm' is selected, jobs will be submited to the cluster using SLURM job scheduler.
@@ -671,7 +671,8 @@ def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submi
                 '--use-singularity',
                 '--singularity-args', "'-B {}'".format(bindpaths),
                 '--cores', str(threads),
-                '--configfile=config.json'
+                '--configfile=config.json',
+                str(wait)
             ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
 
     # Submitting jobs to cluster via SLURM's job scheduler
@@ -692,7 +693,7 @@ def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submi
         masterjob = subprocess.Popen([
                 str(os.path.join(outdir, 'resources', str(submission_script))), mode,
                 '-j', str(masterjob), '-b', str(bindpaths),
-                '-o', str(outdir), '-c', str(cache),
+                '-o', str(outdir), '-c', str(cache), str(wait)
             ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
 
     return masterjob
@@ -767,6 +768,10 @@ def run(sub_args):
     dryrun_output = dryrun(outdir = sub_args.output) # python3 returns byte-string representation
     print("\nDry-running RNA-seek pipeline:\n{}".format(dryrun_output.decode("utf-8")))
 
+    # determine "wait"
+    wait = ''
+    if sub_args.wait: wait = '--wait'
+
     # Run pipeline
     if not sub_args.dry_run:
         # Resolve all Singularity Bindpaths
@@ -780,7 +785,7 @@ def run(sub_args):
         genome_bind_paths = resolve_additional_bind_paths(list(config['references']['rnaseq'].values()) + fq_screen_paths + kraken_db_path)
         all_bind_paths = "{},{}".format(",".join(genome_bind_paths), rawdata_bind_paths)
 
-        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = all_bind_paths, alt_cache = sub_args.singularity_cache,  threads = sub_args.threads)
+        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = all_bind_paths, alt_cache = sub_args.singularity_cache,  threads = sub_args.threads, wait = wait)
 
         print("\nRunning RNA-seek pipeline in '{}' mode...".format(sub_args.mode))
         masterjob.wait()
@@ -939,9 +944,13 @@ def build(sub_args):
     # python3 returns byte-string representation
     print("\nDry-running RNA-seek Reference building pipeline:\n{}".format(dryrun_output.decode("utf-8")))
 
+    # determine "wait"
+    wait = ''
+    if sub_args.wait: wait = '--wait'
+
     # Run RNA-seek reference building pipeline
     if not sub_args.dry_run:
-        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = [], alt_cache = sub_args.singularity_cache, submission_script = 'builder', masterjob = 'pl:build')
+        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = [], alt_cache = sub_args.singularity_cache, submission_script = 'builder', masterjob = 'pl:build', wait = wait)
         masterjob.wait()
         print('RNA-seek reference building pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
 
@@ -1080,6 +1089,7 @@ def parsed_arguments():
                                  [--threads THREADS]
                                  [--singularity-cache SINGULARITY_CACHE]
                                  [--sif-cache SIF_CACHE]
+                                 [--wait] 
 
         This section explains concepts and options for running the RNA-seek pipeline.
         Please visit "https://github.com/skchronicles/RNA-seek" for more details.
@@ -1234,6 +1244,16 @@ def parsed_arguments():
                                 the image will be pulled from Dockerhub. The rna-seek cache \
                                 subcommand can be used to create a local SIF cache. Please see \
                                 rna-seek cache for more information.')
+    # wait until master job finishes ... required for HPC API execution 
+    subparser_run.add_argument('--wait',
+                                action = 'store_true',
+                                required = False,
+                                default = False,
+                                help = 'Wait until master job completes. This is required if \
+                                the job is submitted using HPC API. If not provided \
+                                the API may interpret submission of master job as \
+                                completion of the pipeline!'
+    )
 
     # Options for the "build" sub-command
     # Grouped sub-parser arguments are currently not supported.
