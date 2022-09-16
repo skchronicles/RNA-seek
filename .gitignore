@@ -156,3 +156,5 @@ site/
 
 # GNU Parallel
 .parallel/
+
+**/.koparde*
