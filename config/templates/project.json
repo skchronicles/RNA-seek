@@ -1,39 +1,39 @@
 {
-	"project": {
-		"MINCOUNTGENEJUNCTIONS": "0.5",
-		"MINCOUNTGENES": "0.5",
-		"MINCOUNTJUNCTIONS": "0.5",
-		"MINSAMPLES": "0.5",
-		"annotation": "",
-		"binset": "standard-bin",
-		"cluster": "resources/cluster.json",
-		"contrasts": {
-			"rcontrasts": ""
-		},
-		"custom": [],
-		"datapath": "/path/to/rawdata/dir",
-		"description": "Enter CCBR Project Description and Notes here.\n",
-		"efiletype": "fastq",
-		"filetype": "fastq.gz",
-		"groups": {
-			"rgroups": [],
-			"rlabels": [],
-			"rsamps": []
-		},
-		"id": "RNA-seek",
-		"nends": -1,
-		"organism": "",
-		"pairs": {},
-		"pfamily": "rnaseq",
-		"pipehome": "",
-		"userhome": "",
-		"pipeline": "RNA-seek",
-		"poc": "",
-		"rgid": {},
-		"samples": {},
-		"units": {},
-		"username": "",
-		"version": "",
-		"workpath": ""
-	}
+    "project": {
+        "MINCOUNTGENEJUNCTIONS": "0.5",
+        "MINCOUNTGENES": "0.5",
+        "MINCOUNTJUNCTIONS": "0.5",
+        "MINSAMPLES": "0.5",
+        "annotation": "",
+        "binset": "standard-bin",
+        "cluster": "resources/cluster.json",
+        "contrasts": {
+            "rcontrasts": ""
+        },
+        "custom": [],
+        "datapath": "/path/to/rawdata/dir",
+        "description": "Enter CCBR Project Description and Notes here.\n",
+        "efiletype": "fastq",
+        "filetype": "fastq.gz",
+        "groups": {
+            "rgroups": [],
+            "rlabels": [],
+            "rsamps": []
+        },
+        "id": "RNA-seek",
+        "nends": -1,
+        "organism": "",
+        "pairs": {},
+        "pfamily": "rnaseq",
+        "pipehome": "",
+        "userhome": "",
+        "pipeline": "RNA-seek",
+        "poc": "",
+        "rgid": {},
+        "samples": {},
+        "units": {},
+        "username": "",
+        "version": "",
+        "workpath": ""
+    }
 }
