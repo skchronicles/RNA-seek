@@ -39,7 +39,7 @@ If you do not have access to Biowulf or you are looking for a reference genome a
 | RSEM<sup>14</sup>        | 1.3.3   | [nciccbr/ccbr_rsem_1.3.3](https://hub.docker.com/repository/docker/nciccbr/ccbr_rsem_1.3.3)         | **Data processing step** to quantify gene and isoform counts                                           |
 | Arriba<sup>15<sup>       | 2.0.0   | [nciccbr/ccbr_arriba_2.0.0](https://hub.docker.com/repository/docker/nciccbr/ccbr_arriba_2.0.0)     | **Data processing step** to quantify gene-fusions                                     |
 | RNA Report   | [custom](https://github.com/CCBR/rNA)   | [nciccbr/ccbr_rna](https://hub.docker.com/repository/docker/nciccbr/ccbr_rna)   | **Summarization step** to identify outliers and assess techincal sources of variation                   |
-| MultiQC<sup>16</sup>      | 1.9     | [nciccbr/ccbr_multiqc_1.9](https://hub.docker.com/repository/docker/nciccbr/ccbr_multiqc_1.9)      | **Reporting step** to aggregate sample statistics and quality-control information across all sample    |
+| MultiQC<sup>16</sup>      | 1.12     | [skchronicles/multiqc](https://hub.docker.com/repository/docker/skchronicles/multiqc/)      | **Reporting step** to aggregate sample statistics and quality-control information across all sample    |
 
 ## 3. Acknowledgements
 
