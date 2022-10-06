@@ -779,7 +779,6 @@ rule rnaseq_multiqc:
         expand(join(workpath,degall_dir,"{name}.RSEM.genes.results"),name=samples),
         expand(join(workpath,rseqc_dir,"{name}.Rdist.info"),name=samples),
         fqinfo=expand(join(workpath,"rawQC","{name}.fastq.info.txt"),name=samples),
-        qcconfig=abstract_location(config['bin'][pfamily]['CONFMULTIQC']),
         innerdists=expand(join(workpath,rseqc_dir,"{name}.inner_distance_freq.txt"),name=samples),
         tins=expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
     output:
@@ -794,11 +793,12 @@ rule rnaseq_multiqc:
         outdir=join(workpath,"Reports"),
         logfiles=join(workpath,"Reports","multiqc_data","*.txt"),
         pyparser=join("workflow", "scripts", "pyparser.py"),
+        qcconfig=config['bin'][pfamily]['CONFMULTIQC'],
     threads: 2
     envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
     container: config['images']['multiqc']
     shell: """
-    multiqc --ignore '*/.singularity/*' -f -c {input.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
+    multiqc --ignore '*/.singularity/*' -f -c {params.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
 
     # Parse RSeQC Inner Distance Maximas
     echo -e "Sample\\tInner_Dist_Maxima" > {output.maximas}

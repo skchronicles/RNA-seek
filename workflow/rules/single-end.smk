@@ -684,7 +684,6 @@ rule rnaseq_multiqc:
         expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples),
         expand(join(workpath,"rawQC","{name}.fastq.info.txt"),name=samples),
         fqinfo=expand(join(workpath,"rawQC","{name}.fastq.info.txt"),name=samples),
-        qcconfig=abstract_location(config['bin'][pfamily]['CONFMULTIQC']),
         tins=expand(join(workpath,rseqc_dir,"{name}.star_rg_added.sorted.dmark.summary.txt"),name=samples)
     output:
         join(workpath,"Reports","multiqc_report.html"),
@@ -697,11 +696,12 @@ rule rnaseq_multiqc:
         outdir=join(workpath,"Reports"),
         logfiles=join(workpath,"Reports","multiqc_data","*.txt"),
         pyparser=join("workflow", "scripts", "pyparser.py"),
+        qcconfig=config['bin'][pfamily]['CONFMULTIQC'],
     threads: 2
     envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
     container: config['images']['multiqc']
     shell: """
-    multiqc --ignore '*/.singularity/*' -f -c {input.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
+    multiqc --ignore '*/.singularity/*' -f -c {params.qcconfig} --interactive --outdir {params.outdir} {params.workdir}
 
     # Parse RSeQC Median TINs
     echo -e "Sample\\tmedian_tin" > {output.medtins}
