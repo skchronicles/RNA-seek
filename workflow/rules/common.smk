@@ -1,5 +1,8 @@
 from snakemake.utils import validate
-from scripts.common import abstract_location
+from scripts.common import (
+    abstract_location,
+    allocated
+)
 
 # This container defines the underlying OS for each job when using the workflow
 # with --use-conda --use-singularity
@@ -52,14 +55,15 @@ rule picard:
     params:
         rname='pl:picard',
         sampleName="{name}",
-    threads: 6
+        memory=allocated("mem", "picard", cluster).lower().rstrip('g'),
+    threads: int(allocated("threads", "picard", cluster))-1,
     envmodules: config['bin'][pfamily]['tool_versions']['PICARDVER'],
     container: config['images']['picard']
     shell: """
-    java -Xmx110g  -XX:ParallelGCThreads=5 -jar ${{PICARDJARPATH}}/picard.jar AddOrReplaceReadGroups \
+    java -Xmx{params.memory}g  -XX:ParallelGCThreads={threads} -jar ${{PICARDJARPATH}}/picard.jar AddOrReplaceReadGroups \
         I={input.file1} O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
         TMP_DIR=/lscratch/$SLURM_JOBID RGID=id RGLB=library RGPL=illumina RGPU=machine RGSM=sample VALIDATION_STRINGENCY=SILENT;
-    java -Xmx110g -XX:ParallelGCThreads=5 -jar ${{PICARDJARPATH}}/picard.jar MarkDuplicates \
+    java -Xmx{params.memory}g -XX:ParallelGCThreads={threads} -jar ${{PICARDJARPATH}}/picard.jar MarkDuplicates \
         I=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
         O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam \
         TMP_DIR=/lscratch/$SLURM_JOBID CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT METRICS_FILE={output.metrics};
@@ -110,13 +114,14 @@ rule qualibam:
         rname='pl:qualibam',
         outdir=join(workpath,"QualiMap","{name}"),
         gtfFile=config['references'][pfamily]['GTFFILE'],
-    threads: 8
+        memory=int(allocated("mem", "qualibam", cluster).lower().rstrip('g'))-1,
+    threads: int(allocated("threads", "qualibam", cluster)),
     envmodules: config['bin'][pfamily]['tool_versions']['QUALIMAPVER']
     container: config['images']['qualimap']
     shell: """
     unset DISPLAY;
     qualimap bamqc -bam {input.bamfile} --feature-file {params.gtfFile} \
-        -outdir {params.outdir} -nt {threads} --java-mem-size=11G
+        -outdir {params.outdir} -nt {threads} --java-mem-size={params.memory}G
     """
 
 
@@ -144,13 +149,14 @@ rule stats:
         rrnalist=config['references'][pfamily]['RRNALIST'],
         picardstrand=config['bin'][pfamily]['PICARDSTRAND'],
         statscript=join("workflow", "scripts", "bam_count_concord_stats.py"),
+        memory=allocated("mem", "stats", cluster).lower().rstrip('g'),
     envmodules:
         config['bin'][pfamily]['tool_versions']['PICARDVER'],
         config['bin'][pfamily]['tool_versions']['SAMTOOLSVER'],
         config['bin'][pfamily]['tool_versions']['PYTHONVER']
     container: config['images']['rstat']
     shell: """
-    java -Xmx110g -jar ${{PICARDJARPATH}}/picard.jar CollectRnaSeqMetrics \
+    java -Xmx{params.memory}g -jar ${{PICARDJARPATH}}/picard.jar CollectRnaSeqMetrics \
         REF_FLAT={params.refflat} I={input.file1} O={output.outstar1} \
         RIBOSOMAL_INTERVALS={params.rrnalist} \
         STRAND_SPECIFICITY=SECOND_READ_TRANSCRIPTION_STRAND \

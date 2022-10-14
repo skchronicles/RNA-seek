@@ -1,15 +1,32 @@
-from snakemake.workflow import workflow as wf_api
-from snakemake.utils import R
-from scripts.common import provided, references
+# Python standard library
 from os.path import join
 from os import listdir
 import os, sys
+
+# 3rd party imports from pypi
+from snakemake.workflow import workflow as wf_api
+from snakemake.utils import R
+
+# Local imports
+from scripts.common import (
+    allocated,
+    provided, 
+    references
+)
 
 # Global workflow variables
 configfile: 'config.json'                     # rna-seek config file
 samples=config['project']['groups']['rsamps'] # sample basenames
 pfamily=config['project']['pfamily']          # rnaseq
 workpath = config['project']['workpath']      # Parent Output directory
+
+# Read in resource information,
+# containing information about 
+# threads, mem, walltimes, etc.
+# TODO: Add handler for when the
+# mode is set to local.
+with open(join('resources', 'cluster.json')) as fh:
+    cluster = json.load(fh)
 
 # Check for SE or PE FastQ files:
 convert = {1: False, 2: True}                     # 1 = SE, 2 = PE, -1 = Unknown

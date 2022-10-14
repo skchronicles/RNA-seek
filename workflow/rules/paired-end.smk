@@ -1,5 +1,9 @@
 # Paired-end snakemake rules imported in the main Snakefile.
-from scripts.common import abstract_location, references
+from scripts.common import (
+    abstract_location, 
+    allocated,
+    references
+)
 
 # Pre Alignment Rules
 rule validator:
@@ -50,7 +54,7 @@ rule rawfastqc:
     params:
         rname='pl:rawfastqc',
         outdir=join(workpath,"rawQC"),
-    threads: 32
+    threads: int(allocated("threads", "rawfastqc", cluster)),
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
     container: config['images']['fastqc']
     shell: """
@@ -83,7 +87,7 @@ rule trim_pe:
         leadingquality=config['bin'][pfamily]['tool_parameters']['LEADINGQUALITY'],
         trailingquality=config['bin'][pfamily]['tool_parameters']['TRAILINGQUALITY'],
         minlen=config['bin'][pfamily]['tool_parameters']['MINLEN'],
-    threads:32
+    threads: int(allocated("threads", "trim_pe", cluster)),
     envmodules: config['bin'][pfamily]['tool_versions']['CUTADAPTVER']
     container: config['images']['cutadapt']
     shell: """
@@ -116,7 +120,7 @@ rule fastqc:
         rname='pl:fastqc',
         outdir=join(workpath,"QC"),
         getrl=join("workflow", "scripts", "get_read_length.py"),
-    threads: 32
+    threads: int(allocated("threads", "fastqc", cluster)),
     envmodules: config['bin'][pfamily]['tool_versions']['FASTQCVER']
     container: config['images']['fastqc']
     shell: """
@@ -143,7 +147,8 @@ rule bbmerge:
     params:
         rname='pl:bbmerge',
         encoding=join("workflow", "scripts", "phred_encoding.py"),
-    threads: 4
+        memory=allocated("mem", "bbmerge", cluster).lower().rstrip('g'),
+    threads: int(allocated("threads", "bbmerge", cluster)),
     envmodules: config['bin'][pfamily]['tool_versions']['BBTOOLSVER']
     container: config['images']['bbtools']
     shell: """
@@ -152,7 +157,7 @@ rule bbmerge:
     echo "Detected Phred+${{encoding}} ASCII encoding"
 
     bbtools bbmerge-auto in1={input.R1} in2={input.R2} qin=${{encoding}} \
-        ihist={output} k=62 extend2=200 rem ecct -Xmx64G
+        ihist={output} k=62 extend2=200 rem ecct -Xmx{params.memory}G
     """
 
 
@@ -187,7 +192,7 @@ rule fastq_screen:
         # locations to bowtie2 indices
         fastq_screen_config=config['bin'][pfamily]['tool_parameters']['FASTQ_SCREEN_CONFIG'],
         fastq_screen_config2=config['bin'][pfamily]['tool_parameters']['FASTQ_SCREEN_CONFIG2'],
-    threads: 24
+    threads: int(allocated("threads", "fastq_screen", cluster)),
     envmodules:
         config['bin'][pfamily]['tool_versions']['FASTQSCREENVER'],
         config['bin'][pfamily]['tool_versions']['PERLVER'],
@@ -226,7 +231,7 @@ rule kraken_pe:
         rname='pl:kraken',
         outdir=join(workpath,kraken_dir),
         bacdb=config['bin'][pfamily]['tool_parameters']['KRAKENBACDB'],
-    threads: 24
+    threads: int(allocated("threads", "kraken_pe", cluster)),
     envmodules:
         config['bin'][pfamily]['tool_versions']['KRAKENVER'],
         config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
@@ -297,7 +302,7 @@ if config['options']['star_2_pass_basic']:
             wigtype=config['bin'][pfamily]['WIGTYPE'],
             wigstrand=config['bin'][pfamily]['WIGSTRAND'],
             nbjuncs=config['bin'][pfamily]['NBJUNCS'],
-        threads: 32
+        threads: int(allocated("threads", "star_basic", cluster)),
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: config['images']['arriba']
         shell: """
@@ -391,7 +396,7 @@ else:
             alignmatesgapmax=config['bin'][pfamily]['ALIGNMATESGAPMAX'],
             adapter1=config['bin'][pfamily]['ADAPTER1'],
             adapter2=config['bin'][pfamily]['ADAPTER2'],
-        threads: 32
+        threads: int(allocated("threads", "star1p", cluster)),
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: config['images']['arriba']
         shell: """
@@ -504,7 +509,7 @@ else:
             wigtype=config['bin'][pfamily]['WIGTYPE'],
             wigstrand=config['bin'][pfamily]['WIGSTRAND'],
             nbjuncs=config['bin'][pfamily]['NBJUNCS'],
-        threads: 32
+        threads: int(allocated("threads", "star2p", cluster)),
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: config['images']['arriba']
         shell: """
@@ -594,7 +599,7 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
             stardir=config['references'][pfamily]['GENOME_STARDIR'],
             gtffile=config['references'][pfamily]['GTFFILE'],
             reffa=config['references'][pfamily]['GENOME']
-        threads: 32
+        threads: int(allocated("threads", "arriba", cluster)),
         envmodules: config['bin'][pfamily]['tool_versions']['ARRIBAVER']
         container: config['images']['arriba']
         shell: """
@@ -682,7 +687,7 @@ rule rsem:
         config['bin'][pfamily]['tool_versions']['RSEMVER'],
         config['bin'][pfamily]['tool_versions']['PYTHONVER'],
     container: config['images']['rsem']
-    threads: 16
+    threads: int(allocated("threads", "rsem", cluster)),
     shell: """
     # Get strandedness to calculate Forward Probability
     fp=$(tail -n1 {input.file2} | awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}')
@@ -737,7 +742,7 @@ rule bam2bw_rnaseq_pe:
         rname='pl:bam2bw',
         outprefix=join(workpath,bams_dir,"{name}"),
         bashscript=join("workflow", "scripts", "bam2strandedbw.pe.sh")
-    threads: 4
+    threads: int(allocated("threads", "bam2bw_rnaseq_pe", cluster)),
     envmodules:
         config['bin'][pfamily]['tool_versions']['SAMTOOLSVER'],
         config['bin'][pfamily]['tool_versions']['BEDTOOLSVER'],
@@ -794,7 +799,7 @@ rule rnaseq_multiqc:
         logfiles=join(workpath,"Reports","multiqc_data","*.txt"),
         pyparser=join("workflow", "scripts", "pyparser.py"),
         qcconfig=config['bin'][pfamily]['CONFMULTIQC'],
-    threads: 2
+    threads: int(allocated("threads", "rnaseq_multiqc", cluster)),
     envmodules: config['bin'][pfamily]['tool_versions']['MULTIQCVER'],
     container: config['images']['multiqc']
     shell: """
