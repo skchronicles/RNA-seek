@@ -14,7 +14,7 @@ from __future__ import print_function
 import sys, os, json
 
 __author__ = 'Skyler Kuhn'
-__version__ = 'v1.5.1'
+__version__ = 'v1.6.0'
 __email__ = 'kuhnsa@nih.gov'
 
 
