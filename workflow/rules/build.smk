@@ -11,11 +11,43 @@ OUTDIR=config["OUTDIR"]
 SCRIPTSDIR=config["SCRIPTSDIR"]
 workdir:OUTDIR
 
+# Read in resource information,
+# containing information about 
+# threads, mem, walltimes, etc.
+# TODO: Add handler for when the
+# mode is set to local.
+with open(join(OUTDIR, 'resources', 'build_cluster.json')) as fh:
+    cluster = json.load(fh)
+
 # Ensures backwards compatibility 
 try:
 	SMALL_GENOME=config["SMALL_GENOME"]
 except KeyError:
 	SMALL_GENOME="False"
+
+
+def allocated(resource, rule, lookup, default="__default__"):
+    """Pulls resource information for a given rule. If a rule does not have any information 
+    for a given resource type, then it will pull from the default. Information is pulled from
+    definitions in the cluster.json (which is used a job submission). This ensures that any 
+    resources used at runtime mirror the resources that were allocated.
+    :param resource <str>: resource type to look in cluster.json (i.e. threads, mem, time, gres)
+    :param rule <str>: rule to lookup its information
+    :param lookup <dict>: Lookup containing allocation information (i.e. cluster.json)
+    :param default <str>: default information to use if rule information cannot be found
+    :return allocation <str>: 
+        allocation information for a given resource type for a given rule
+    """
+
+    try: 
+        # Try to get allocation information
+        # for a given rule
+        allocation = lookup[rule][resource]
+    except KeyError:
+        # Use default allocation information
+        allocation = lookup[default][resource]
+    
+    return allocation
 
 
 rule all:
@@ -53,14 +85,14 @@ rule rsem:
 	"""
 	input:
 		fa=REFFA,
-		gtf=GTFFILE
+		gtf=GTFFILE,
 	output:
-		join("rsemref","{genome}.transcripts.ump")
-	threads: 32
+		join("rsemref","{genome}.transcripts.ump"),
 	params:
 		rname='bl:rsem',
 		genome=GENOME,
-		prefix=join("rsemref", GENOME)
+		prefix=join("rsemref", GENOME),
+	threads: int(allocated("threads", "rsem", cluster)),
 	container: config['images']['rsem']
 	shell: """
 	rsem-prepare-reference -p {threads} --gtf {input.gtf} {input.fa} {params.prefix}
@@ -87,13 +119,13 @@ rule annotate:
 		"annotate.genes.txt",
 		"refFlat.txt",
 		"genes.ref.bed",
-		"geneinfo.bed"
+		"geneinfo.bed",
 	params:
 		rname='bl:annotate',
 		get_gene=join(SCRIPTSDIR, "get_gene_annotate.py"),
 		get_isoform=join(SCRIPTSDIR, "get_isoform_annotate.py"),
 		make_refFlat=join(SCRIPTSDIR, "make_refFlat.py"),
-		make_geneinfo=join(SCRIPTSDIR, "make_geneinfo.py")
+		make_geneinfo=join(SCRIPTSDIR, "make_geneinfo.py"),
 	container: config['images']['build_rnaseq']
 	shell: """
 	python3 {params.get_gene} {input.gtf} > annotate.genes.txt
@@ -124,12 +156,12 @@ rule star_rl:
 	"""
 	input:
 		fa=REFFA,
-		gtf=GTFFILE
+		gtf=GTFFILE,
 	output:
-		join("STAR", "2.7.6a", "genes-{readlength}", "SA")
-	threads: 32
+		join("STAR", "2.7.6a", "genes-{readlength}", "SA"),
 	params:
 		rname='bl:star_rl',
+	threads: int(allocated("threads", "star_rl", cluster)),
 	container: config['images']['arriba']
 	shell: """
 	# Create Index for read length
@@ -180,12 +212,12 @@ if SMALL_GENOME == "True":
 		"""
 		input:
 			fa=REFFA,
-			gtf=GTFFILE
+			gtf=GTFFILE,
 		output:
-			join("STAR", "2.7.6a", "genome", "SA")
-		threads: 32
+			join("STAR", "2.7.6a", "genome", "SA"),
 		params:
 			rname='bl:star_genome',
+		threads: int(allocated("threads", "star_genome", cluster)),
 		container: config['images']['arriba']
 		shell: """
 		# Build an index optimized
@@ -228,12 +260,12 @@ else:
 		"""
 		input:
 			fa=REFFA,
-			gtf=GTFFILE
+			gtf=GTFFILE,
 		output:
 			join("STAR", "2.7.6a", "genome", "SA")
-		threads: 32
 		params:
 			rname='bl:star_genome',
+		threads: int(allocated("threads", "star_genome", cluster)),
 		container: config['images']['arriba']
 		shell: """
 		STAR \\
@@ -262,11 +294,11 @@ rule rRNA_list:
 		fa=REFFA,
 		gtf=GTFFILE,
 	output:
-		"{genome}.rRNA_interval_list"
+		"{genome}.rRNA_interval_list",
 	params:
 		rname='bl:rRNA_list',
 		genome=GENOME,
-		create_rRNA=join(SCRIPTSDIR, "create_rRNA_intervals.py")
+		create_rRNA=join(SCRIPTSDIR, "create_rRNA_intervals.py"),
 	container: config['images']['build_rnaseq']
 	shell: """
 	python3 {params.create_rRNA} \\
@@ -285,12 +317,12 @@ rule karyo_coord:
         Generates 'karyoplot_gene_coordinates.txt' which is used by DE reports internally.
 	"""
 	input:
-		gtf=GTFFILE
+		gtf=GTFFILE,
 	output:
-		"karyoplot_gene_coordinates.txt"
+		"karyoplot_gene_coordinates.txt",
 	params:
 		rname='bl:karyo_coord',
-		get_karyoplot=join(SCRIPTSDIR, "get_karyoplot_gene_coordinates.py")
+		get_karyoplot=join(SCRIPTSDIR, "get_karyoplot_gene_coordinates.py"),
 	container: config['images']['build_rnaseq']
 	shell: """
 	python3 {params.get_karyoplot} {input.gtf} > karyoplot_gene_coordinates.txt
@@ -306,12 +338,12 @@ rule karyo_beds:
         Generates 'karyobeds/karyobed.bed' which is used by DE reports internally.
 	"""
 	input:
-		gtf=GTFFILE
+		gtf=GTFFILE,
 	output:
-		join("karyobeds", "karyobed.bed")
+		join("karyobeds", "karyobed.bed"),
 	params:
 		rname='bl:karyo_bed',
-		get_karyoplot=join(SCRIPTSDIR, "get_karyoplot_beds.py")
+		get_karyoplot=join(SCRIPTSDIR, "get_karyoplot_beds.py"),
 	container: config['images']['build_rnaseq']
 	shell: """
 	mkdir -p karyobeds && cd karyobeds
@@ -328,9 +360,9 @@ rule tin_ref:
         Generates 'transcripts.protein_coding_only.bed12' which is used by RSeQC tin.py internally.
 	"""
 	input:
-		gtf=GTFFILE
+		gtf=GTFFILE,
 	output:
-		"transcripts.protein_coding_only.bed12"
+		"transcripts.protein_coding_only.bed12",
 	params:
 		rname='bl:tin_ref',
 		gtf2protein=join(SCRIPTSDIR, "gtf2protein_coding_genes.py"),
@@ -380,12 +412,12 @@ rule qualimapinfo:
 	"""
 	input:
 		fa=REFFA,
-		gtf=GTFFILE
+		gtf=GTFFILE,
 	output:
-		"qualimap_info.txt"
+		"qualimap_info.txt",
 	params:
 		rname='bl:qualimapinfo',
-		generate_qualimap=join(SCRIPTSDIR, "generate_qualimap_ref.py")
+		generate_qualimap=join(SCRIPTSDIR, "generate_qualimap_ref.py"),
 	container: config['images']['build_rnaseq']
 	shell: """
 	python3 {params.generate_qualimap} \\
@@ -408,13 +440,13 @@ rule jsonmaker:
 	"""
 	input:
 		fa=REFFA,
-		gtf=GTFFILE
+		gtf=GTFFILE,
 	output:
-		json="{genome}.json"
+		json="{genome}.json",
 	params:
 		rname='bl:jsonmaker',
 		workdir=OUTDIR,
-		genome=GENOME
+		genome=GENOME,
 	run:
 		import json
 		outdir=params.workdir

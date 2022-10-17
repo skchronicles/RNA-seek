@@ -595,7 +595,7 @@ def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Sna
         # Singularity is NOT in $PATH
         # Tell user to load both main dependencies to avoid the OSError below
         print('Are singularity and snakemake in your PATH? Please check before proceeding again!')
-        sys.exit("{}\n{}".format(e, e.output))
+        sys.exit("{}\n{}".format(e, e.output.decode("utf-8")))
     except OSError as e:
         # Catch: OSError: [Errno 2] No such file or directory
         #  Occurs when command returns a non-zero exit-code
