@@ -56,19 +56,28 @@ rule picard:
         rname='pl:picard',
         sampleName="{name}",
         memory=allocated("mem", "picard", cluster).lower().rstrip('g'),
+        tmpdir = tmpdir,
     threads: int(allocated("threads", "picard", cluster))-1,
     envmodules: config['bin'][pfamily]['tool_versions']['PICARDVER'],
     container: config['images']['picard']
     shell: """
+    # Setups temporary directory for
+    # intermediate files with built-in 
+    # mechanism for deletion on exit
+    if [ ! -d "{params.tmpdir}" ]; then mkdir -p "{params.tmpdir}"; fi
+    tmp=$(mktemp -d -p "{params.tmpdir}")
+    trap 'rm -rf "${{tmp}}"' EXIT
+
     java -Xmx{params.memory}g  -XX:ParallelGCThreads={threads} -jar ${{PICARDJARPATH}}/picard.jar AddOrReplaceReadGroups \
-        I={input.file1} O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
-        TMP_DIR=/lscratch/$SLURM_JOBID RGID=id RGLB=library RGPL=illumina RGPU=machine RGSM=sample VALIDATION_STRINGENCY=SILENT;
+        I={input.file1} O=${{tmp}}/{params.sampleName}.star_rg_added.sorted.bam \
+        TMP_DIR=${{tmp}} RGID=id RGLB=library RGPL=illumina RGPU=machine RGSM=sample VALIDATION_STRINGENCY=SILENT;
     java -Xmx{params.memory}g -XX:ParallelGCThreads={threads} -jar ${{PICARDJARPATH}}/picard.jar MarkDuplicates \
-        I=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.bam \
-        O=/lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam \
-        TMP_DIR=/lscratch/$SLURM_JOBID CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT METRICS_FILE={output.metrics};
-    mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bam {output.bam};
-    mv /lscratch/$SLURM_JOBID/{params.sampleName}.star_rg_added.sorted.dmark.bai {output.bai};
+        I=${{tmp}}/{params.sampleName}.star_rg_added.sorted.bam \
+        O=${{tmp}}/{params.sampleName}.star_rg_added.sorted.dmark.bam \
+        TMP_DIR=${{tmp}} CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT METRICS_FILE={output.metrics};
+    
+    mv ${{tmp}}/{params.sampleName}.star_rg_added.sorted.dmark.bam {output.bam};
+    mv ${{tmp}}/{params.sampleName}.star_rg_added.sorted.dmark.bai {output.bai};
     sed -i 's/MarkDuplicates/picard.sam.MarkDuplicates/g' {output.metrics};
     """
 
@@ -150,17 +159,25 @@ rule stats:
         picardstrand=config['bin'][pfamily]['PICARDSTRAND'],
         statscript=join("workflow", "scripts", "bam_count_concord_stats.py"),
         memory=allocated("mem", "stats", cluster).lower().rstrip('g'),
+        tmpdir = tmpdir,
     envmodules:
         config['bin'][pfamily]['tool_versions']['PICARDVER'],
         config['bin'][pfamily]['tool_versions']['SAMTOOLSVER'],
         config['bin'][pfamily]['tool_versions']['PYTHONVER']
     container: config['images']['rstat']
     shell: """
+    # Setups temporary directory for
+    # intermediate files with built-in 
+    # mechanism for deletion on exit
+    if [ ! -d "{params.tmpdir}" ]; then mkdir -p "{params.tmpdir}"; fi
+    tmp=$(mktemp -d -p "{params.tmpdir}")
+    trap 'rm -rf "${{tmp}}"' EXIT
+
     java -Xmx{params.memory}g -jar ${{PICARDJARPATH}}/picard.jar CollectRnaSeqMetrics \
         REF_FLAT={params.refflat} I={input.file1} O={output.outstar1} \
         RIBOSOMAL_INTERVALS={params.rrnalist} \
         STRAND_SPECIFICITY=SECOND_READ_TRANSCRIPTION_STRAND \
-        TMP_DIR=/lscratch/$SLURM_JOBID  VALIDATION_STRINGENCY=SILENT;
+        TMP_DIR=${{tmp}}  VALIDATION_STRINGENCY=SILENT;
     sed -i 's/CollectRnaSeqMetrics/picard.analysis.CollectRnaSeqMetrics/g' {output.outstar1}
     samtools flagstat {input.file1} > {output.outstar2};
     python3 {params.statscript} {input.file1} >> {output.outstar2}

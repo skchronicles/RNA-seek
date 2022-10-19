@@ -231,16 +231,25 @@ rule kraken_pe:
         rname='pl:kraken',
         outdir=join(workpath,kraken_dir),
         bacdb=config['bin'][pfamily]['tool_parameters']['KRAKENBACDB'],
+        tmpdir=tmpdir,
     threads: int(allocated("threads", "kraken_pe", cluster)),
     envmodules:
         config['bin'][pfamily]['tool_versions']['KRAKENVER'],
         config['bin'][pfamily]['tool_versions']['KRONATOOLSVER'],
     container: config['images']['kraken']
     shell: """
-    # Copy kraken2 db to /lscratch or /dev/shm (RAM-disk) to reduce filesystem strain
-    cp -rv {params.bacdb} /lscratch/$SLURM_JOBID/;
+    # Setups temporary directory for
+    # intermediate files with built-in 
+    # mechanism for deletion on exit
+    if [ ! -d "{params.tmpdir}" ]; then mkdir -p "{params.tmpdir}"; fi
+    tmp=$(mktemp -d -p "{params.tmpdir}")
+    trap 'rm -rf "${{tmp}}"' EXIT
+
+    # Copy kraken2 db to /lscratch or temp 
+    # location to reduce filesystem strain
+    cp -rv {params.bacdb} ${{tmp}}/;
     kdb_base=$(basename {params.bacdb})
-    kraken2 --db /lscratch/$SLURM_JOBID/${{kdb_base}} \
+    kraken2 --db ${{tmp}}/${{kdb_base}} \
         --threads {threads} --report {output.krakentaxa} \
         --output {output.krakenout} \
         --gzip-compressed \
@@ -302,10 +311,18 @@ if config['options']['star_2_pass_basic']:
             wigtype=config['bin'][pfamily]['WIGTYPE'],
             wigstrand=config['bin'][pfamily]['WIGSTRAND'],
             nbjuncs=config['bin'][pfamily]['NBJUNCS'],
+            tmpdir=tmpdir,
         threads: int(allocated("threads", "star_basic", cluster)),
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: config['images']['arriba']
         shell: """
+        # Setups temporary directory for
+        # intermediate files with built-in 
+        # mechanism for deletion on exit
+        if [ ! -d "{params.tmpdir}" ]; then mkdir -p "{params.tmpdir}"; fi
+        tmp=$(mktemp -d -p "{params.tmpdir}")
+        trap 'rm -rf "${{tmp}}"' EXIT
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
             zcat {input.file1} | \
@@ -342,12 +359,12 @@ if config['options']['star_2_pass_basic']:
             --outSAMtype BAM Unsorted \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
-            --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{wildcards.name} \
+            --outTmpDir=${{tmp}}/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
         # SAMtools sort (uses less memory than STAR SortedByCoordinate)
         samtools sort -@ {threads} \
-            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
+            -m 2G -T ${{tmp}}/SORTtmp_{wildcards.name} \
             -O bam {params.prefix}.Aligned.out.bam \
             > {output.out1}
 
@@ -396,10 +413,18 @@ else:
             alignmatesgapmax=config['bin'][pfamily]['ALIGNMATESGAPMAX'],
             adapter1=config['bin'][pfamily]['ADAPTER1'],
             adapter2=config['bin'][pfamily]['ADAPTER2'],
+            tmpdir=tmpdir,
         threads: int(allocated("threads", "star1p", cluster)),
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: config['images']['arriba']
         shell: """
+        # Setups temporary directory for
+        # intermediate files with built-in 
+        # mechanism for deletion on exit
+        if [ ! -d "{params.tmpdir}" ]; then mkdir -p "{params.tmpdir}"; fi
+        tmp=$(mktemp -d -p "{params.tmpdir}")
+        trap 'rm -rf "${{tmp}}"' EXIT
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
             zcat {input.file1} | \
@@ -430,7 +455,7 @@ else:
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
             --sjdbGTFfile {params.gtffile} \
-            --outTmpDir=/lscratch/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
+            --outTmpDir=${{tmp}}/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
         """
 
@@ -509,10 +534,18 @@ else:
             wigtype=config['bin'][pfamily]['WIGTYPE'],
             wigstrand=config['bin'][pfamily]['WIGSTRAND'],
             nbjuncs=config['bin'][pfamily]['NBJUNCS'],
+            tmpdir=tmpdir,
         threads: int(allocated("threads", "star2p", cluster)),
         envmodules: config['bin'][pfamily]['tool_versions']['STARVER']
         container: config['images']['arriba']
         shell: """
+        # Setups temporary directory for
+        # intermediate files with built-in 
+        # mechanism for deletion on exit
+        if [ ! -d "{params.tmpdir}" ]; then mkdir -p "{params.tmpdir}"; fi
+        tmp=$(mktemp -d -p "{params.tmpdir}")
+        trap 'rm -rf "${{tmp}}"' EXIT
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
             zcat {input.file1} | \
@@ -549,12 +582,12 @@ else:
             --outSAMtype BAM Unsorted \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
-            --outTmpDir=/lscratch/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
+            --outTmpDir=${{tmp}}/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
         # SAMtools sort (uses less memory than STAR SortedByCoordinate)
         samtools sort -@ {threads} \
-            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
+            -m 2G -T ${{tmp}}/SORTtmp_{wildcards.name} \
             -O bam {params.prefix}.Aligned.out.bam \
             > {output.out1}
 
@@ -598,11 +631,19 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
             chimericbam="{name}.p2.arriba.Aligned.out.bam",
             stardir=config['references'][pfamily]['GENOME_STARDIR'],
             gtffile=config['references'][pfamily]['GTFFILE'],
-            reffa=config['references'][pfamily]['GENOME']
+            reffa=config['references'][pfamily]['GENOME'],
+            tmpdir=tmpdir,
         threads: int(allocated("threads", "arriba", cluster)),
         envmodules: config['bin'][pfamily]['tool_versions']['ARRIBAVER']
         container: config['images']['arriba']
         shell: """
+        # Setups temporary directory for
+        # intermediate files with built-in 
+        # mechanism for deletion on exit
+        if [ ! -d "{params.tmpdir}" ]; then mkdir -p "{params.tmpdir}"; fi
+        tmp=$(mktemp -d -p "{params.tmpdir}")
+        trap 'rm -rf "${{tmp}}"' EXIT
+
         # Optimal readlength for sjdbOverhang = max(ReadLength) - 1 [Default: 100]
         readlength=$(
             zcat {input.R1} | \
@@ -633,9 +674,9 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
             --chimSegmentReadGapMax 3 \
             --chimMultimapNmax 50 \
             --twopassMode Basic \
-            --outTmpDir=/lscratch/${{SLURM_JOB_ID}}/STARtmp_{wildcards.name} \
+            --outTmpDir=${{tmp}}/STARtmp_{wildcards.name} \
             --outFileNamePrefix {params.prefix}. \
-        | tee /lscratch/$SLURM_JOB_ID/{params.chimericbam} | \
+        | tee ${{tmp}}/{params.chimericbam} | \
         arriba -x /dev/stdin \
             -o {output.fusions} \
             -O {output.discarded} \
@@ -645,12 +686,12 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
 
         # Sorting and Indexing BAM files is required for Arriba's Visualization
         samtools sort -@ {threads} \
-            -m 2G -T /lscratch/${{SLURM_JOB_ID}}/SORTtmp_{wildcards.name} \
-            -O bam /lscratch/$SLURM_JOB_ID/{params.chimericbam} \
+            -m 2G -T ${{tmp}}/SORTtmp_{wildcards.name} \
+            -O bam ${{tmp}}/{params.chimericbam} \
             > {output.bam}
 
         samtools index {output.bam} {output.bai}
-        rm /lscratch/$SLURM_JOB_ID/{params.chimericbam}
+        rm ${{tmp}}/{params.chimericbam}
 
         # Generate Gene Fusions Visualization
         draw_fusions.R \
@@ -683,19 +724,27 @@ rule rsem:
         prefix=join(workpath,degall_dir,"{name}.RSEM"),
         rsemref=config['references'][pfamily]['RSEMREF'],
         annotate=config['references'][pfamily]['ANNOTATE'],
+        tmpdir=tmpdir,
     envmodules:
         config['bin'][pfamily]['tool_versions']['RSEMVER'],
         config['bin'][pfamily]['tool_versions']['PYTHONVER'],
     container: config['images']['rsem']
     threads: int(allocated("threads", "rsem", cluster)),
     shell: """
+    # Setups temporary directory for
+    # intermediate files with built-in 
+    # mechanism for deletion on exit
+    if [ ! -d "{params.tmpdir}" ]; then mkdir -p "{params.tmpdir}"; fi
+    tmp=$(mktemp -d -p "{params.tmpdir}")
+    trap 'rm -rf "${{tmp}}"' EXIT
+
     # Get strandedness to calculate Forward Probability
     fp=$(tail -n1 {input.file2} | awk '{{if($NF > 0.75) print "0.0"; else if ($NF<0.25) print "1.0"; else print "0.5";}}')
 
     echo "Forward Probability Passed to RSEM: $fp"
     rsem-calculate-expression --no-bam-output --calc-ci --seed 12345  \
         --bam --paired-end -p {threads}  {input.file1} {params.rsemref} {params.prefix} --time \
-        --temporary-folder /lscratch/$SLURM_JOBID --keep-intermediate-files --forward-prob=${{fp}} --estimate-rspd
+        --temporary-folder ${{tmp}} --keep-intermediate-files --forward-prob=${{fp}} --estimate-rspd
     """
 
 
