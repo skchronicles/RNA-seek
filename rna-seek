@@ -612,10 +612,13 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config['options'] = {}
     config['options']['star_2_pass_basic'] = sub_args.star_2_pass_basic
     config['options']['small_rna'] = sub_args.small_rna
+    config['options']['tmp_dir'] = sub_args.tmp_dir
 
     # Get latest git commit hash
     git_hash = get_repo_git_commit_hash(repo_path)
     config['project']['git_commit_hash'] = git_hash
+
+
 
     # Save config to output directory
     print("\nGenerating config file in '{}'... ".format(os.path.join(output_path, 'config.json')), end = "")
@@ -664,7 +667,11 @@ def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Sna
     return dryrun_output
 
 
-def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submission_script='runner', masterjob='pl:rna-seek'):
+def orchestrate(
+        mode, outdir, additional_bind_paths, alt_cache, threads=2, 
+        submission_script='runner', masterjob='pl:rna-seek', 
+        tmp_dir = '/lscratch/$SLURM_JOBID/'
+    ):
     """Runs RNA-seek pipeline via selected executor: local or slurm.
     If 'local' is selected, the pipeline is executed locally on a compute node/instance.
     If 'slurm' is selected, jobs will be submited to the cluster using SLURM job scheduler.
@@ -689,13 +696,26 @@ def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submi
         Name of the master job
     @return masterjob <subprocess.Popen() object>:
     """
-    # Bind PATH must be an absolute PATH
+    # Add additional singularity bind PATHs
+    # to mount the local filesystem to the 
+    # containers filesystem, NOTE: these 
+    # PATHs must be an absolute PATHs
     outdir = os.path.abspath(outdir)
+    # Add any default PATHs to bind to 
+    # the container's filesystem, like 
+    # tmp directories, /lscratch
+    addpaths = []
+    temp = os.path.dirname(tmp_dir.rstrip('/'))
+    if temp == os.sep:
+        temp = tmp_dir.rstrip('/')
+    if outdir not in additional_bind_paths:
+        addpaths.append(outdir)
+    if temp not in additional_bind_paths:
+        addpaths.append(temp)
+    bindpaths = ','.join(addpaths)
 
-    # Default PATHs to bind to the container's filesystem
-    bindpaths = "{},/lscratch".format(outdir)
-
-    # Set ENV variable 'SINGULARITY_CACHEDIR' to output directory
+    # Set ENV variable 'SINGULARITY_CACHEDIR'
+    # to output directory
     my_env = {}; my_env.update(os.environ)
     cache = os.path.join(outdir, ".singularity")
     my_env['SINGULARITY_CACHEDIR'] = cache
@@ -706,8 +726,10 @@ def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submi
         cache = alt_cache
 
     if additional_bind_paths:
-        # Add Bind PATHs for rawdata directories
-        bindpaths = "{},{}".format(additional_bind_paths,bindpaths)
+        # Add Bind PATHs for outdir and tmp dir
+        if bindpaths:
+            bindpaths = ",{}".format(bindpaths)
+        bindpaths = "{}{}".format(additional_bind_paths,bindpaths)
 
     if not exists(os.path.join(outdir, 'logfiles')):
         # Create directory for logfiles
@@ -732,7 +754,7 @@ def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submi
                 '--singularity-args', "'-B {}'".format(bindpaths),
                 '--cores', str(threads),
                 '--configfile=config.json'
-            ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
+            ], cwd = outdir, env=my_env)
 
     # Submitting jobs to cluster via SLURM's job scheduler
     elif mode == 'slurm':
@@ -752,7 +774,7 @@ def orchestrate(mode, outdir, additional_bind_paths, alt_cache, threads=2, submi
         masterjob = subprocess.Popen([
                 str(os.path.join(outdir, 'resources', str(submission_script))), mode,
                 '-j', str(masterjob), '-b', str(bindpaths),
-                '-o', str(outdir), '-c', str(cache),
+                '-o', str(outdir), '-c', str(cache), '-t', str(tmp_dir)
             ], cwd = outdir, stderr=subprocess.STDOUT, stdout=logfh, env=my_env)
 
     return masterjob
@@ -822,31 +844,54 @@ def run(sub_args):
     # Step pipeline for execution, create config.json config file from templates
     config = setup(sub_args, ifiles = input_files, repo_path = git_repo, output_path = sub_args.output)
 
-    # Dryrun pipeline
-    dryrun_output = dryrun(outdir = sub_args.output) # python3 returns byte-string representation
-    print("\nDry-running RNA-seek pipeline:\n{}".format(dryrun_output.decode("utf-8")))
+    # Optional Step: Dry-run pipeline
+    if sub_args.dry_run:
+        dryrun_output = dryrun(outdir = sub_args.output) # python3 returns byte-string representation
+        print("\nDry-running RNA-seek pipeline:\n{}".format(dryrun_output.decode("utf-8")))
+        sys.exit(0)
+
+
+    # Resolve all Singularity Bindpaths
+    rawdata_bind_paths = config['project']['datapath']
+    
+    # Get FastQ Screen Database paths
+    # and other reference genome file paths
+    fqscreen_cfg1=config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG']
+    fqscreen_cfg2=config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG2']
+    fq_screen_paths = get_fastq_screen_paths([os.path.join(sub_args.output,fqscreen_cfg1), os.path.join(sub_args.output,fqscreen_cfg2)])
+    kraken_db_path = [config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB']]
+    genome_bind_paths = resolve_additional_bind_paths(list(config['references']['rnaseq'].values()) + fq_screen_paths + kraken_db_path)
+    all_bind_paths = "{},{}".format(",".join(genome_bind_paths), rawdata_bind_paths)
 
     # Run pipeline
-    if not sub_args.dry_run:
-        # Resolve all Singularity Bindpaths
-        rawdata_bind_paths = config['project']['datapath']
-        # Get FastQ Screen Database paths
-        # and other reference genome file paths
-        fqscreen_cfg1=config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG']
-        fqscreen_cfg2=config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG2']
-        fq_screen_paths = get_fastq_screen_paths([os.path.join(sub_args.output,fqscreen_cfg1), os.path.join(sub_args.output,fqscreen_cfg2)])
-        kraken_db_path = [config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB']]
-        genome_bind_paths = resolve_additional_bind_paths(list(config['references']['rnaseq'].values()) + fq_screen_paths + kraken_db_path)
-        all_bind_paths = "{},{}".format(",".join(genome_bind_paths), rawdata_bind_paths)
+    masterjob = orchestrate(
+        mode = sub_args.mode, 
+        outdir = sub_args.output, 
+        additional_bind_paths = all_bind_paths, 
+        alt_cache = sub_args.singularity_cache,  
+        threads = sub_args.threads, 
+        tmp_dir = sub_args.tmp_dir
+    )
 
-        masterjob = orchestrate(mode = sub_args.mode, outdir = sub_args.output, additional_bind_paths = all_bind_paths, alt_cache = sub_args.singularity_cache,  threads = sub_args.threads)
+    # Wait for subprocess to complete,
+    # this is blocking
+    masterjob.wait()
 
-        print("\nRunning RNA-seek pipeline in '{}' mode...".format(sub_args.mode))
-        masterjob.wait()
-        if sub_args.mode == 'local':
-            print('RNA-seek pipeline has completed with exit-code: {}'.format(masterjob.returncode))
-        elif sub_args.mode == 'slurm':
-            print('RNA-seek pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
+    # Relay information about submission
+    # of the master job or the exit code of the 
+    # pipeline that ran in local mode
+    if sub_args.mode == 'local':
+        if int(masterjob.returncode) == 0:
+            print('{} pipeline has successfully completed'.format(_name))
+        else:
+            fatal('{} pipeline failed. Please see standard output for more information.')
+    elif sub_args.mode == 'slurm':
+        jobid = open(os.path.join(sub_args.output, 'logfiles', 'mjobid.log')).read().strip()
+        if int(masterjob.returncode) == 0:
+            print('Successfully submitted master job: ', end="")
+        else:
+            fatal('Error occurred when submitting the master job.')
+        print(jobid)
 
 
 def unlock(sub_args):
@@ -935,6 +980,7 @@ def _configure(sub_args, filename, git_repo):
         fh.write('SCRIPTSDIR: "{}/workflow/scripts/builder"\n'.format(sub_args.output))
         fh.write('BUILD_HOME: "{}"\n'.format(git_repo))
         fh.write('SMALL_GENOME: "{}"\n'.format(sub_args.small_genome))
+        fh.write('TMP_DIR: "{}"\n'.format(sub_args.tmp_dir))
         fh.write('READLENGTHS:\n')
         read_lengths = ['50', '75', '100', '125', '150']
         for rl in read_lengths:
@@ -997,16 +1043,41 @@ def build(sub_args):
     additional_bind_paths =  ','.join(additional_bind_paths)
 
     # Dryrun pipeline
-    dryrun_output = dryrun(outdir = output_path, config = os.path.join('config', 'build.yml'), snakefile = os.path.join('workflow', 'rules', 'build.smk'))
-
-    # python3 returns byte-string representation
-    print("\nDry-running RNA-seek Reference building pipeline:\n{}".format(dryrun_output.decode("utf-8")))
+    if sub_args.dry_run:
+        dryrun_output = dryrun(outdir = output_path, config = os.path.join('config', 'build.yml'), snakefile = os.path.join('workflow', 'rules', 'build.smk'))
+        # python3 returns byte-string representation
+        print("\nDry-running RNA-seek Reference building pipeline:\n{}".format(dryrun_output.decode("utf-8")))
+        sys.exit(0)
 
     # Run RNA-seek reference building pipeline
-    if not sub_args.dry_run:
-        masterjob = orchestrate(mode = 'slurm', outdir = output_path, additional_bind_paths = [], alt_cache = sub_args.singularity_cache, submission_script = 'builder', masterjob = 'pl:build')
-        masterjob.wait()
-        print('RNA-seek reference building pipeline submitted master job with exit-code: {}'.format(masterjob.returncode))
+    masterjob = orchestrate(
+        mode = 'slurm', 
+        outdir = output_path,
+        additional_bind_paths = [], 
+        alt_cache = sub_args.singularity_cache,
+        submission_script = 'builder', 
+        masterjob = 'pl:build',
+        tmp_dir = sub_args.tmp_dir
+    )
+
+    masterjob.wait()
+
+    # Relay information about submission
+    # of the master job or the exit code of the 
+    # pipeline that ran in local mode
+    sub_args.mode = 'slurm'
+    if sub_args.mode == 'local':
+        if int(masterjob.returncode) == 0:
+            print('{} pipeline has successfully completed'.format(_name))
+        else:
+            fatal('{} pipeline failed. Please see standard output for more information.')
+    elif sub_args.mode == 'slurm':
+        jobid = open(os.path.join(sub_args.output, 'logfiles', 'bjobid.log')).read().strip()
+        if int(masterjob.returncode) == 0:
+            print('Successfully submitted master job: ', end="")
+        else:
+            fatal('Error occurred when submitting the master job.')
+        print(jobid)
 
 
 def cache(sub_args):
@@ -1055,12 +1126,13 @@ def cache(sub_args):
         if not sub_args.dry_run:
             # submission_script for rna-seek cache is /path/to/output/resources/cacher
             # Quote user provided values to avoid shell injections
+            username = os.environ.get('USER', os.environ.get('USERNAME'))
             masterjob = subprocess.Popen(
-                'sbatch --parsable -J pl:cache --gres=lscratch:200  --time=10:00:00 --mail-type=BEGIN,END,FAIL ' +
+                'sbatch --parsable -J pl:cache --time=10:00:00 --mail-type=BEGIN,END,FAIL ' +
                 str(os.path.join(repo_path, 'resources', 'cacher')) + ' slurm ' +
                 " -s '{}' ".format(sif_cache) +
                 " -i '{}' ".format(','.join(pull)) + 
-                " -t '/lscratch/${SLURM_JOB_ID}/.singularity/' ", 
+                " -t '{0}/{1}/.singularity/' ".format(sif_cache, username),
                 cwd = sif_cache, shell=True, stderr = subprocess.STDOUT, stdout = subprocess.PIPE)
 
             masterjob.communicate()
