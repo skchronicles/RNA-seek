@@ -9,7 +9,7 @@ GTFFILE=config["GTFFILE"]
 GTFVER=config["GTFVER"].strip().replace(' ', '')
 OUTDIR=config["OUTDIR"]
 SCRIPTSDIR=config["SCRIPTSDIR"]
-tmpdir='/lscratch/$SLURM_JOBID/'  
+tmpdir=config["TMP_DIR"]
 workdir:OUTDIR
 
 # Read in resource information,

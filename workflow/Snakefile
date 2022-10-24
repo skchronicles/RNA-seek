@@ -19,7 +19,7 @@ configfile: 'config.json'                        # rna-seek config file
 samples  = config['project']['groups']['rsamps'] # sample basenames
 pfamily  = config['project']['pfamily']          # rnaseq
 workpath = config['project']['workpath']         # Parent Output directory
-tmpdir   = '/lscratch/$SLURM_JOBID/'             # Temporary directory
+tmpdir   = config['options']['tmp_dir']          # Temporary directory
 
 # Read in resource information,
 # containing information about 
