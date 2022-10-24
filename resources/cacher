@@ -117,13 +117,13 @@ function retry() {
     "$@" && attempt=false || {
       # Try again up to 5 times 
       if [[ $n -le $max ]]; then
-        echo -e "Command failed: $@"
+        err "Command failed: $@"
         delay=$(( 4**$n ))
-        echo -e "Attempt: ${n}/${max}. Trying again in ${delay} seconds!\n"
+        err "Attempt: ${n}/${max}. Trying again in ${delay} seconds"
         sleep $delay;
         ((n++))
       else
-        fatal "Fatal: the command has failed after max attempts!"
+        fatal "Fatal: the command has failed after max attempts"
       fi
     }
   done
@@ -198,8 +198,9 @@ function main(){
 
   # Setting defaults for non-required arguments
   tmp="${Arguments[t]:-/tmp/$USER/cacher/.singularity/}"
-  # Sanitize single quoted input
-  tmp=$(echo "$tmp" | sed "s/\${SLURM_JOB_ID}/${SLURM_JOB_ID}/g" | sed "s/\$SLURM_JOB_ID/${SLURM_JOB_ID}/g")
+  # Expand single single quoted input
+  # for singularity cache directory
+  eval tmp=$(echo "$tmp")
   mkdir -p "$tmp"
   tmp=$(abspath "${tmp}")
 
