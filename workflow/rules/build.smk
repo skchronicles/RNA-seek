@@ -1,5 +1,67 @@
 from os.path import join, basename
 
+# Helper Functions
+def allocated(resource, rule, lookup, default="__default__"):
+    """Pulls resource information for a given rule. If a rule does not have any information 
+    for a given resource type, then it will pull from the default. Information is pulled from
+    definitions in the cluster.json (which is used a job submission). This ensures that any 
+    resources used at runtime mirror the resources that were allocated.
+    :param resource <str>: resource type to look in cluster.json (i.e. threads, mem, time, gres)
+    :param rule <str>: rule to lookup its information
+    :param lookup <dict>: Lookup containing allocation information (i.e. cluster.json)
+    :param default <str>: default information to use if rule information cannot be found
+    :return allocation <str>: 
+        allocation information for a given resource type for a given rule
+    """
+
+    try: 
+        # Try to get allocation information
+        # for a given rule
+        allocation = lookup[rule][resource]
+    except KeyError:
+        # Use default allocation information
+        allocation = lookup[default][resource]
+    
+    return allocation
+
+
+def provided(samplelist, condition):
+    """
+    Determines if optional rules should run. If an empty list is provided to rule all,
+    snakemake will not try to generate that set of target files. If a given condition
+    is not met (i.e. False) then it will not try to run that rule.
+    """   
+    if not str_bool(condition):
+        # If condition is False, 
+        # returns an empty list 
+        # to prevent rule from 
+        # running
+        samplelist = []
+    return samplelist
+
+
+def str_bool(s):
+    """Converts a string to boolean. It is dangerous to try to
+    typecast a string into a boolean value using the built-in 
+    `bool()` function. This function avoids any issues that can
+    arise when using `bool()`. 
+    Example:
+      boolean('True') returns True
+      boolean('False') returns False
+      boolean('asdas') raises TypeError
+    """
+    if not s:
+        return False
+    val = s.lower()
+    if val in ['true', '1', 'y', 'yes']:
+        return True
+    elif val in ['false', '0', 'n', 'no', '', 'none']:
+        return False
+    else:
+        # Provided a string or path
+        return s
+
+
 # Global Workflow variables
 configfile:join("config","build.yml")
 GENOME=config["GENOME"].strip().replace(' ', '')
@@ -26,29 +88,10 @@ try:
 except KeyError:
     SMALL_GENOME="False"
 
-
-def allocated(resource, rule, lookup, default="__default__"):
-    """Pulls resource information for a given rule. If a rule does not have any information 
-    for a given resource type, then it will pull from the default. Information is pulled from
-    definitions in the cluster.json (which is used a job submission). This ensures that any 
-    resources used at runtime mirror the resources that were allocated.
-    :param resource <str>: resource type to look in cluster.json (i.e. threads, mem, time, gres)
-    :param rule <str>: rule to lookup its information
-    :param lookup <dict>: Lookup containing allocation information (i.e. cluster.json)
-    :param default <str>: default information to use if rule information cannot be found
-    :return allocation <str>: 
-        allocation information for a given resource type for a given rule
-    """
-
-    try: 
-        # Try to get allocation information
-        # for a given rule
-        allocation = lookup[rule][resource]
-    except KeyError:
-        # Use default allocation information
-        allocation = lookup[default][resource]
-    
-    return allocation
+try:
+    SHARED_PATH=config["SHARED_RESOURCES"]
+except KeyError:
+    SHARED_PATH="None"
 
 
 rule all:
@@ -65,7 +108,31 @@ rule all:
         "karyoplot_gene_coordinates.txt",
         "qualimap_info.txt",
         "karyobeds/karyobed.bed",
-        "transcripts.protein_coding_only.bed12"
+        "transcripts.protein_coding_only.bed12",
+        # FastQ Screen P1 Reference files,
+        # conditional runs with --shared-resources option
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "hg19", "hg19.{ext}.bt2"), ext=["1", "2", "3", "4"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "mm9", "mm9.{ext}.bt2"), ext=["1", "2", "3", "4"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "Virus", "virus.{ext}.bt2"), ext=["1", "2", "3", "4"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "hg19", "hg19.rev.{ext}.bt2"), ext=["1", "2"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "mm9", "mm9.rev.{ext}.bt2"), ext=["1", "2"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "Virus", "virus.rev.{ext}.bt2"), ext=["1", "2"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "Bacteria", "bacteria.{ext}.bt2l"), ext=["1", "2", "3", "4"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "Fungi", "fungi.{ext}.bt2l"), ext=["1", "2", "3", "4"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "Bacteria", "bacteria.rev.{ext}.bt2l"), ext=["1", "2"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "Fungi", "fungi.rev.{ext}.bt2l"), ext=["1", "2"]), SHARED_PATH),
+        # FastQ Screen P2 Reference files,
+        # conditional runs with --shared-resources option
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "UniVec_vectors", "UniVec_vectors.{ext}.bt2"), ext=["1", "2", "3", "4"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "rRNA", "rRNA.{ext}.bt2"), ext=["1", "2", "3", "4"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "UniVec_vectors", "UniVec_vectors.rev.{ext}.bt2"), ext=["1", "2"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "rRNA", "rRNA.rev.{ext}.bt2"), ext=["1", "2"]), SHARED_PATH),
+        # FastQ Screeen confs,
+        # conditional runs with --shared-resources option
+        provided(expand(join(SHARED_PATH, "fastq_screen_db", "fastq_screen_p{ext}.conf"), ext=["1", "2"]), SHARED_PATH),
+        # Kraken2 Database,
+        # conditional runs with --shared-resources option
+        provided(expand(join(SHARED_PATH, "20180907_standard_kraken2", "{ref}.k2d"), ref=["hash", "opts", "taxo"]), SHARED_PATH),
 
 
 rule rsem:
@@ -187,6 +254,7 @@ rule star_rl:
         --outTmpDir ${{tmp}}/tmp_{wildcards.readlength}
     """
 
+
 if SMALL_GENOME == "True":
     # Build a index that is optimized for 
     # small genomes. For small genomes, the 
@@ -301,6 +369,7 @@ else:
             --outFileNamePrefix STAR/2.7.6a/build_genome_ \\
             --outTmpDir ${{tmp}}/tmp_genome
         """
+
 
 rule rRNA_list:
     """
@@ -453,6 +522,135 @@ rule qualimapinfo:
     """
 
 
+rule fqscreen_db1:
+    """
+    Downloads fastq screen bowtie2 databases from the OpenOmics public resource bundle.
+    Currently, there are fastq screen indices for the following organisms: hg19, mm9, 
+    bateria, fungi, virus, univec vector sequences, and rRNA.
+
+    @Input:
+        Genomic FASTA file
+        Annotation file in GTF format
+    @Output:
+        Downloaded bowtie2 indices for hg19, mm9, virus, univec, and rRNA
+    """
+    input:
+        fa=REFFA,
+        gtf=GTFFILE,
+    output:
+        fwd=expand(
+            join(SHARED_PATH, "fastq_screen_db", "{{genome}}", "{{ref}}.{ext}.bt2"),
+            ext=["1", "2", "3", "4"]
+        ),
+        rev=expand(
+            join(SHARED_PATH, "fastq_screen_db", "{{genome}}", "{{ref}}.rev.{ext}.bt2"),
+            ext=["1", "2"]
+        ),
+    params:
+        rname='bl:fqscreen_db1',
+        tarname=join("fastq_screen_db.{genome}.tar"),
+        tarfile=join(SHARED_PATH, "fastq_screen_db.{genome}.tar"),
+        outdir=SHARED_PATH,
+    container: config['images']['build_rnaseq']
+    shell: """
+    wget https://hpc.nih.gov/~OpenOmics/common/{params.tarname} -O {params.tarfile}
+    tar vxf {params.tarfile} -C {params.outdir} && rm {params.tarfile}
+    """
+
+
+rule fqscreen_db2:
+    """
+    Downloads fastq screen bowtie2 databases from the OpenOmics public resource bundle.
+    Currently, there are fastq screen indices for the following organisms: hg19, mm9, 
+    bateria, fungi, virus, univec vector sequences, and rRNA.
+
+    @Input:
+        Genomic FASTA file
+        Annotation file in GTF format
+    @Output:
+        Downloaded bowtie2 indices for bateria, fungi
+    """
+    input:
+        fa=REFFA,
+        gtf=GTFFILE,
+    output:
+        fwd=expand(
+            join(SHARED_PATH, "fastq_screen_db", "{{genome}}", "{{ref}}.{ext}.bt2l"),
+            ext=["1", "2", "3", "4"]
+        ),
+        rev=expand(
+            join(SHARED_PATH, "fastq_screen_db", "{{genome}}", "{{ref}}.rev.{ext}.bt2l"),
+            ext=["1", "2"]
+        ),
+    params:
+        rname='bl:fqscreen_db2',
+        tarname=join("fastq_screen_db.{genome}.tar"),
+        tarfile=join(SHARED_PATH, "fastq_screen_db.{genome}.tar"),
+        outdir=SHARED_PATH,
+    container: config['images']['build_rnaseq']
+    shell: """
+    wget https://hpc.nih.gov/~OpenOmics/common/{params.tarname} -O {params.tarfile}
+    tar vxf {params.tarfile} -C {params.outdir} && rm {params.tarfile}
+    """
+
+
+rule fqscreen_conf:
+    """
+    Downloads fastq screen confs from the OpenOmics public resource bundle.
+    @Input:
+        Genomic FASTA file
+        Annotation file in GTF format
+    @Output:
+        Downloaded bowtie2 indices for bateria, fungi
+    """
+    input:
+        fa=REFFA,
+        gtf=GTFFILE,
+    output:
+        conf1=join(SHARED_PATH, "fastq_screen_db", "fastq_screen_p1.conf"),
+        conf2=join(SHARED_PATH, "fastq_screen_db", "fastq_screen_p2.conf"),
+    params:
+        rname='bl:fqscreen_conf',
+        conf1="fastq_screen_p1.conf",
+        conf2="fastq_screen_p2.conf",
+        new=join(SHARED_PATH).rstrip('/'),
+        outdir=join(SHARED_PATH, "fastq_screen_db")
+    container: config['images']['build_rnaseq']
+    shell: """
+    mkdir -p "{params.outdir}"
+    wget https://hpc.nih.gov/~OpenOmics/common/{params.conf1} -O {output.conf1}
+    wget https://hpc.nih.gov/~OpenOmics/common/{params.conf2} -O {output.conf2}
+    sed -i 's@/data/OpenOmics/references/common@{params.new}@g' {output.conf1}
+    sed -i 's@/data/OpenOmics/references/common@{params.new}@g' {output.conf2}
+    """
+
+
+rule kraken2_db:
+    """
+    Downloads kraken2 database from the OpenOmics public resource bundle.
+    @Input:
+        Genomic FASTA file
+        Annotation file in GTF format
+    @Output:
+        Downloaded kraken2 db for contamination screening
+    """
+    input:
+        fa=REFFA,
+        gtf=GTFFILE,
+    output:
+        expand(join(SHARED_PATH, "20180907_standard_kraken2", "{ref}.k2d"), ref=["hash", "opts", "taxo"]),
+    params:
+        rname='bl:kraken2_db',
+        outfh=join(SHARED_PATH, "20180907_standard_kraken2.tar"),
+        tarfile="20180907_standard_kraken2.tar",
+        outdir=SHARED_PATH,
+    container: config['images']['build_rnaseq']
+    shell: """
+    wget https://hpc.nih.gov/~OpenOmics/common/{params.tarfile} -O {params.outfh}
+    tar vxf {params.outfh} -C {params.outdir} && rm {params.outfh}
+    """
+
+
 rule jsonmaker:
     """
     Builds reference genome reference JSON file. This is a config file for the
@@ -527,3 +725,4 @@ rule jsonmaker:
 
         with open(output.json, 'w') as fp:
             json.dump(refdict, fp, indent=4)
+

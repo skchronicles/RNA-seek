@@ -21,7 +21,7 @@ import argparse  # potential python3 3rd party package, added in python/3.5
 
 # Pipeline Metadata and globals 
 __author__   = 'Skyler Kuhn'
-__version__  = 'v1.6.0'
+__version__  = 'v1.7.0'
 __email__    = 'kuhnsa@nih.gov'
 __home__     =  os.path.dirname(os.path.abspath(__file__))
 _name        = os.path.basename(sys.argv[0])
@@ -613,12 +613,17 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config['options']['star_2_pass_basic'] = sub_args.star_2_pass_basic
     config['options']['small_rna'] = sub_args.small_rna
     config['options']['tmp_dir'] = sub_args.tmp_dir
+    config['options']['shared_resources'] = sub_args.shared_resources
 
     # Get latest git commit hash
     git_hash = get_repo_git_commit_hash(repo_path)
     config['project']['git_commit_hash'] = git_hash
 
-
+    if sub_args.shared_resources:
+        # Update paths to shared resources directory
+        config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG'] = os.path.join(sub_args.shared_resources, "fastq_screen_db", "fastq_screen_p1.conf")
+        config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG2'] = os.path.join(sub_args.shared_resources, "fastq_screen_db", "fastq_screen_p2.conf")
+        config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB'] = os.path.join(sub_args.shared_resources, "20180907_standard_kraken2")
 
     # Save config to output directory
     print("\nGenerating config file in '{}'... ".format(os.path.join(output_path, 'config.json')), end = "")
@@ -981,6 +986,7 @@ def _configure(sub_args, filename, git_repo):
         fh.write('BUILD_HOME: "{}"\n'.format(git_repo))
         fh.write('SMALL_GENOME: "{}"\n'.format(sub_args.small_genome))
         fh.write('TMP_DIR: "{}"\n'.format(sub_args.tmp_dir))
+        fh.write('SHARED_RESOURCES: "{}"\n'.format(sub_args.shared_resources))
         fh.write('READLENGTHS:\n')
         read_lengths = ['50', '75', '100', '125', '150']
         for rl in read_lengths:
@@ -1032,28 +1038,51 @@ def build(sub_args):
     @param sub_args <parser.parse_args() object>:
         Parsed arguments for unlock sub-command
     """
-    # Get PATH to RNA-seek git repository for copying over pipeline resources
+    # Get PATH to RNA-seek git repository 
+    # for copying over pipeline resources
     git_repo = os.path.dirname(os.path.abspath(__file__))
 
     # Build Output directory
     output_path = os.path.abspath(sub_args.output)
 
-    # Configure build output directory: initialize, copy resources, generate config file
-    additional_bind_paths = configure_build(sub_args = sub_args, git_repo = git_repo, output_path = output_path)
+    # Configure build output directory,
+    # initialize, copy resources, and 
+    # generate config file
+    additional_bind_paths = configure_build(
+        sub_args = sub_args, 
+        git_repo = git_repo, 
+        output_path = output_path
+    )
+    
+    # Add any additional bindpaths  
+    if sub_args.shared_resources:
+        # Check if shared resource path
+        # needs to be added to bindlist 
+        if not sub_args.shared_resources in additional_bind_paths:
+            additional_bind_paths.append(sub_args.shared_resources)
+    
     additional_bind_paths =  ','.join(additional_bind_paths)
 
     # Dryrun pipeline
     if sub_args.dry_run:
-        dryrun_output = dryrun(outdir = output_path, config = os.path.join('config', 'build.yml'), snakefile = os.path.join('workflow', 'rules', 'build.smk'))
-        # python3 returns byte-string representation
-        print("\nDry-running RNA-seek Reference building pipeline:\n{}".format(dryrun_output.decode("utf-8")))
-        sys.exit(0)
+        dryrun_output = dryrun(
+            outdir = output_path, 
+            config = os.path.join('config', 'build.yml'), 
+            snakefile = os.path.join('workflow', 'rules', 'build.smk')
+        )
 
+        print(
+            "\nDry-running RNA-seek Reference building pipeline:\n{}".format(
+                dryrun_output.decode("utf-8")
+            )
+        )
+        sys.exit(0)
+    
     # Run RNA-seek reference building pipeline
     masterjob = orchestrate(
         mode = 'slurm', 
         outdir = output_path,
-        additional_bind_paths = [], 
+        additional_bind_paths = additional_bind_paths, 
         alt_cache = sub_args.singularity_cache,
         submission_script = 'builder', 
         masterjob = 'pl:build',
@@ -1216,6 +1245,7 @@ def parsed_arguments(name, description):
           $ {0} run [--help] \\
                               [--small-rna] [--star-2-pass-basic] \\
                               [--dry-run] [--mode {{slurm, local}}] \\
+                              [--shared-resources SHARED_RESOURCES] \\
                               [--singularity-cache SINGULARITY_CACHE] \\
                               [--sif-cache SIF_CACHE] \\
                               [--tmp-dir TMP_DIR] \\
@@ -1312,6 +1342,23 @@ def parsed_arguments(name, description):
                                 recommended running the pipeline in this mode as it 
                                 will be significantly faster. 
                                   Example: --mode slurm
+
+          --shared-resources    Local path to shared resources. The pipeline uses a set
+                                of shared reference files that can be re-used across ref-
+                                erence genomes. These currently include reference files
+                                for kraken and FQScreen. These reference files can be 
+                                downloaded with the build sub command's --shared-resources 
+                                option. These files only need to be downloaded once. If 
+                                you are running the pipeline on Biowulf, you do NOT need 
+                                to download these reference files! They already exist on 
+                                the filesystem in a location that anyone can acceess. If 
+                                you are running the pipeline on another cluster or target 
+                                system, you will need to download the shared resources 
+                                with the build sub command, and you will need to provide 
+                                this option to the run sub command every time. Please
+                                provide the same path that was provided to the build sub
+                                command's --shared-resources option.
+                                  Example: --shared-resources /data/shared/rna-seek
     
           --singularity-cache SINGULARITY_CACHE
                                 Overrides the $SINGULARITY_CACHEDIR variable. Images
@@ -1480,6 +1527,17 @@ def parsed_arguments(name, description):
         help = argparse.SUPPRESS
     )
 
+    # Path to previously downloaded shared 
+    # reference files, see build option for
+    # more information
+    subparser_run.add_argument(
+        '--shared-resources',
+        type = lambda option: permissions(parser, os.path.abspath(os.path.expanduser(option)), os.R_OK),
+        required = False,
+        default = None,
+        help = argparse.SUPPRESS
+    )
+
     # Singularity cache directory, 
     # default uses output directory
     subparser_run.add_argument(
@@ -1535,8 +1593,8 @@ def parsed_arguments(name, description):
 
         {1}{2}Synopsis:{4}
           $ {0} build [--help] \\
-                                [--dry-run] [--small-genome] \\
-                                [--singularity-cache SINGULARITY_CACHE] \\
+                                [--shared-resources SHARED_RESOURCES] [--small-genome] \\
+                                [--dry-run] [--singularity-cache SINGULARITY_CACHE] \\
                                 [--sif-cache SIF_CACHE] [--tmp-dir TMP_DIR] \\
                                 --ref-fa REF_FA \\
                                 --ref-name REF_NAME \\
@@ -1588,6 +1646,20 @@ def parsed_arguments(name, description):
                                 Example: --output /data/$USER/refs/GRCh38_41
         
         {1}{2}Build options:{4}
+          --shared-resources  Path to download shared resources. The pipeline uses a
+                              set of shared reference files that can be re-used across
+                              reference genomes. These currently include reference files
+                              for kraken and FQScreen. With that being said, these files
+                              can be downloaded once in a shared or common location. If 
+                              you are running the pipeline on Biowulf, you do NOT need 
+                              to download these reference files. They already exist in 
+                              an accessible location on the filesystem. If you're setting
+                              up the pipeline on a new cluster or target system, you will
+                              need to provide this option at least one time. The path 
+                              provided to this option can be provided to the rna-seek
+                              run sub command via the --shared-resources option.
+                                Example: --shared-resources /data/shared/rna-seek
+
           --small-genome      Builds a small genome index. For small genomes, it is
                               recommeded running STAR with --genomeSAindexNbases value
                               scaled down. This option runs the build pipeline in a 
@@ -1740,6 +1812,15 @@ def parsed_arguments(name, description):
         help = argparse.SUPPRESS
     )
     
+    # Path to download shared refs
+    subparser_build.add_argument(
+        '--shared-resources',
+        type = lambda option: os.path.abspath(os.path.expanduser(option)),
+        required = False,
+        default = None,
+        help = argparse.SUPPRESS
+    )
+
     # Small Genome build option for STAR
     subparser_build.add_argument(
         '--small-genome',
