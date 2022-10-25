@@ -2,28 +2,24 @@
     "__default__": {
         "mem": "8g",
         "gres": "lscratch:2",
-        "partition": "quick",
         "threads": "1",
-        "time": "1:00:00"
+        "time": "4:00:00"
     },
     "star_rl": {
         "mem": "48g",
         "gres": "lscratch:128",
         "threads": "32",
-        "partition": "norm",
         "time": "12:00:00"
     },
     "star_genome": {
         "mem": "48g",
         "gres": "lscratch:128",
         "threads": "32",
-        "partition": "norm",
         "time": "12:00:00"
     },
     "rsem": {
         "mem": "48g",
         "threads": "32",
-        "partition": "norm",
         "time": "12:00:00"
     },
     "qualimapinfo": {

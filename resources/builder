@@ -161,7 +161,7 @@ function submit(){
     slurm)
           # Create directory for logfiles
           mkdir -p "$3"/logfiles/slurmfiles/
-          CLUSTER_OPTS="sbatch --gres {cluster.gres} --cpus-per-task {cluster.threads} -p {cluster.partition} -t {cluster.time} --mem {cluster.mem} --job-name={params.rname}"
+          CLUSTER_OPTS="sbatch --gres {cluster.gres} --cpus-per-task {cluster.threads} -t {cluster.time} --mem {cluster.mem} --job-name={params.rname}"
           # Check if NOT running on Biowulf
           # Assumes other clusters do NOT 
           # have GRES for local node disk,
@@ -176,7 +176,7 @@ function submit(){
           # SLURM is not configured to use 
           # GRES, remove prefix single quote
           if [[ ${6#\'} != /lscratch* ]]; then
-            CLUSTER_OPTS="sbatch --cpus-per-task {cluster.threads} -p {cluster.partition} -t {cluster.time} --mem {cluster.mem} --job-name={params.rname}"
+            CLUSTER_OPTS="sbatch --cpus-per-task {cluster.threads} -t {cluster.time} --mem {cluster.mem} --job-name={params.rname}"
           fi
           # Submit the master job to the cluster
           job_id=$(sbatch --parsable -J "$2" --time=4-00:00:00 --mail-type=BEGIN,END,FAIL \
