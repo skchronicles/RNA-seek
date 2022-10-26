@@ -651,6 +651,10 @@ if references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROT
             END {{print maxlen-1}}'
         )
 
+        # Avoids inheriting $R_LIBS_SITE
+        # from local env variables
+        R_LIBS_SITE=/usr/local/lib/R/site-library
+
         STAR --runThreadN {threads} \
             --sjdbGTFfile {params.gtffile} \
             --sjdbOverhang ${{readlength}} \
@@ -907,6 +911,9 @@ rule rna_report:
         config['bin'][pfamily]['tool_versions']['RVER']
     container: config['images']['rna']
     shell: """
+    # Avoids inheriting $R_LIBS_SITE
+    # from local env variables
+    R_LIBS_SITE=/usr/local/lib/R/site-library
     # Generate RNA QC Dashboard
     {params.rwrapper} \
         -m {params.rmarkdown} \
