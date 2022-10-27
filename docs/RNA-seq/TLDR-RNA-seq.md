@@ -78,14 +78,14 @@ module load singularity snakemake
 rna-seek build  --ref-fa GRCh38.primary_assembly.genome.fa \
                 --ref-name hg38 \
                 --ref-gtf gencode.v36.primary_assembly.annotation.gtf \
-                --gtf-ver 36 --output /scratch/$USER/hg38_36 --dry-run
+                --gtf-ver 36 --output /data/$USER/hg38_36 --dry-run
 
 
 # Build Step 5.) Submit the build pipeline to cluster
 rna-seek build  --ref-fa GRCh38.primary_assembly.genome.fa \
                 --ref-name hg38 \
                 --ref-gtf gencode.v36.primary_assembly.annotation.gtf \
-                --gtf-ver 36 --output /scratch/$USER/hg38_36 
+                --gtf-ver 36 --output /data/$USER/hg38_36 
 ```
 
 An email notification will be sent out when the pipeline starts and ends. Once the build pipeline completes, you can run RNA-seek with the provided test dataset. Please see the intructions below for more information.
@@ -114,8 +114,8 @@ module load singularity snakemake
 # Test data consists of sub sampled FastQ files 
 rna-seek run \
     --input RNA-seek/.tests/*.R?.fastq.gz \
-    --output /scratch/${USER}/runner_hg38_36/  \
-    --genome /scratch/${USER}/hg38_36/hg38_36.json  \
+    --output /data/${USER}/runner_hg38_36/  \
+    --genome /data/${USER}/hg38_36/hg38_36.json  \
     --mode slurm \
     --star-2-pass-basic \
     --dry-run
@@ -132,8 +132,8 @@ Kick off the pipeline by submiting the master job to the cluster. It is essentia
 # and with the test dataset
 rna-seek run \
     --input RNA-seek/.tests/*.R?.fastq.gz \
-    --output /scratch/${USER}/runner_hg38_36/  \
-    --genome /scratch/${USER}/hg38_36/hg38_36.json  \
+    --output /data/${USER}/runner_hg38_36/  \
+    --genome /data/${USER}/hg38_36/hg38_36.json  \
     --mode slurm \
     --star-2-pass-basic \
     --dry-run

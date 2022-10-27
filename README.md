@@ -112,14 +112,14 @@ cd RNA-seek/
 sinteractive --mem=110g --cpus-per-task=12 --gres=lscratch:200
 module purge
 module load singularity snakemake
-./rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/LOCAL_RNA --genome hg38_30 --mode local
+./rna-seek run --input .tests/*.R?.fastq.gz --output /data/$USER/RNA_hg38 --genome hg38_30 --mode local
 
 # @slurm: uses slurm and singularity execution method
 # The slurm MODE will submit jobs to the cluster.
 # It is recommended running rna-seek in this mode.
 module purge
 module load singularity snakemake
-./rna-seek run --input .tests/*.R?.fastq.gz --output /scratch/$USER/LOCAL_RNA --genome hg38_30 --mode slurm
+./rna-seek run --input .tests/*.R?.fastq.gz --output /data/$USER/RNA_hg38 --genome hg38_30 --mode slurm
 ```
 
 ### 4. Contribute
