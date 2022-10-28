@@ -3,31 +3,30 @@
 ## 1. About 
 The `rna-seek` executable is composed of several inter-related sub commands. Please see `rna-seek -h` for all available options.
 
-This part of the documentation describes options and concepts for <code>rna-seek <b>run</b></code> sub command in more detail. With minimal configuration, the **`run`** sub command enables you to start running RNA-seek pipeline. 
+This part of the documentation describes options and concepts for <code>rna-seek <b>run</b></code> sub command in more detail. With minimal configuration, the **`run`** sub command enables you to start running the data processing and quality-control pipeline. 
 
 Setting up the RNA-seek pipeline is fast and easy! In its most basic form, <code>rna-seek <b>run</b></code> only has *three required inputs*.
 
 ## 2. Synopsis
 ```text
-$ ./rna-seek run [-h] --input INPUT [INPUT ...] \
-                      --output OUTPUT \
-                      --genome {hg38_30, mm10_M21} \
-                      [--mode {local, slurm}] \
-                      [--dry-run] \
-                      [--small-rna] \
-                      [--star-2-pass-basic] \
-                      [--threads THREADS] \
-                      [--singularity-cache SINGULARITY_CACHE] \
-                      [--sif-cache SIF_CACHE] 
+$ rna-seek run [--help] \
+            [--small-rna] [--star-2-pass-basic] \
+            [--dry-run] [--mode {slurm, local}] \
+            [--shared-resources SHARED_RESOURCES] \
+            [--singularity-cache SINGULARITY_CACHE] \
+            [--sif-cache SIF_CACHE] \
+            [--tmp-dir TMP_DIR] \
+            [--threads THREADS] \
+            --input INPUT [INPUT ...] \
+            --output OUTPUT \
+            --genome {hg38_30, mm10_M21}
 ```
 
 The synopsis for each command shows its parameters and their usage. Optional parameters are shown in square brackets.
 
-A user **must** provide a list of FastQ files (globbing is supported) to analyze via `--input` argument, an output directory to store results via `--output` argument and select reference genome for alignment and annotation via the `--genome` argument. 
+A user **must** provide a list of FastQ files (globbing is supported) to analyze via `--input` argument, an output directory to store results via `--output` argument and select reference genome for alignment and annotation via the `--genome` argument. If you are running the pipeline outside of Biowulf, you will need to additionally provide the the following options: `--shared-resources`, `--tmp-dir`. More information about each of these options can be found below.
 
-Use you can always use the `-h` option for information on a specific command. 
-
-
+Use you can always use the `-h` option for information on a specific sub command.  
 
 ### 2.1 Required Arguments
 
@@ -65,42 +64,17 @@ Each of the following arguments are required. Failure to provide a required argu
 >   
 > ***Example:*** `--genome hg38_30` *OR* `--genome /data/${USER}/hg38_36/hg38_36.json`  
 
-### 2.2 Options
+### 2.2 Analysis Options
 
-Each of the following arguments are optional and do not need to be provided. 
-
-  `-h, --help`            
-> **Display Help.**  
+  `--small-rna`  
+> **Run STAR using ENCODE's recomendations for small RNA.**  
 > *type: boolean*
 > 
-> Shows command's synopsis, help message, and an example command
+> This option should only be used with small RNA libraries. These are rRNA-depleted libraries that have been size selected to contain fragments shorter than 200bp. Size selection enriches for small RNA species such as miRNAs, siRNAs, or piRNAs. Also, this option should not be combined with the star 2-pass basic option. If the two options are combined, STAR will run in pass basic mode. This means that STAR will not run with ENCODE's recommendations for small RNA alignment. As so, please take caution not to combine both options together. 
 > 
-> ***Example:*** `--help`
-
----  
-  `--dry-run`            
-> **Dry run the pipeline.**  
-> *type: boolean*
-> 
-> Displays what steps in the pipeline remain or will be run. Does not execute anything!
+> Please note: This option is only supported with single-end data. 
 >
-> ***Example:*** `--dry-run`
-
----  
-  `--mode {local,slurm}`  
-> **Execution Method.**</h3>  
-> *type: string*  
-> *default: local*
-> 
-> Execution Method. Defines the mode or method of execution. Vaild mode options include: local or slurm. 
-> 
-> ***local***  
-> Local executions will run serially on compute instance. This is useful for testing, debugging, or when a users does not have access to a high performance computing environment. If this option is not provided, it will default to a local execution mode. 
-> 
-> ***slurm***    
-> The slurm execution method will submit jobs to a cluster using a singularity backend. It is recommended running RNA-seek in this mode as execution will be significantly faster in a distributed environment.
-> 
-> ***Example:*** `--mode slurm`
+> ***Example:*** `--small-rna`
 
 ---  
   `--star-2-pass-basic`  
@@ -113,26 +87,42 @@ Each of the following arguments are optional and do not need to be provided.
 > 
 > ***Example:*** `--star-2-pass-basic`
 
----  
-  `--small-rna`  
-> **Run STAR using ENCODE's recomendations for small RNA.**  
+### 2.3 Orchestration Options
+
+Each of the following arguments are optional and do not need to be provided. 
+  
+  `--dry-run`            
+> **Dry run the pipeline.**  
 > *type: boolean*
 > 
-> This option should only be used with small RNA libraries. These are rRNA-depleted libraries that have been size selected to contain fragments shorter than 200bp. Size selection enriches for small RNA species such as miRNAs, siRNAs, or piRNAs. Also, this option should not be combined with the star 2-pass basic option. If the two options are combined, STAR will run in pass basic mode. This means that STAR will not run with ENCODE's recommendations for small RNA alignment. As so, please take caution not to combine both options together. 
-> 
-> Please note: This option is only supported with single-end data. 
+> Displays what steps in the pipeline remain or will be run. Does not execute anything!
 >
-> ***Example:*** `--small-rna`
+> ***Example:*** `--dry-run`
 
 ---  
-  `--threads THREADS`   
-> **Max number of threads for each process.**  
-> *type: int*  
-> *default: 2*
+  `--mode {slurm,local}`  
+> **Execution Method.** 
+> *type: string*  
+> *default: slurm*  
 > 
-> Max number of threads for each process. This option is more applicable when running the pipeline with `--mode local`.  It is recommended setting this vaule to the maximum number of CPUs available on the host machine.
+> Execution Method. Defines the mode or method of execution. Vaild mode options include: slurm or local. 
 > 
-> ***Example:*** `--threads 12`
+> ***local***  
+> Local executions will run serially on compute instance. This is useful for testing, debugging, or when a users does not have access to a high performance computing environment. If this option is not provided, it will default to a local execution mode. 
+> 
+> ***slurm***    
+> The slurm execution method will submit jobs to a cluster using a slurm + singularity backend. This method will automatically submit the master job to the cluster. It is recommended running RNA-seek in this mode as execution will be significantly faster in a distributed environment.
+> 
+> ***Example:*** `--mode slurm`
+
+---  
+  `--shared-resources SHARED_RESOURCES`  
+> **Local path to shared resources.**  
+> *type: path*
+>
+> The pipeline uses a set of shared reference files that can be re-used across reference genomes. These currently include reference files for kraken and FQScreen. These reference files can be downloaded with the build sub command's `--shared-resources`  option. With that being said, these files only need to be downloaded once. We recommend storing this files in a shared location on the filesystem that other people can access. If you are running the pipeline on Biowulf, you do NOT need to download these reference files! They already exist on the filesystem in a location that anyone can acceess; however, if you are running the pipeline on another cluster or target system, you will need to download the shared resources with the build sub command, and you will need to provide this option every time you run the pipeline. Please provide the same path that was provided to the build sub command's --shared-resources option. Again, if you are running the pipeline on Biowulf, you do NOT need to provide this option. For more information about how to download shared resources, please reference the build sub command's `--shared-resources` option.
+> 
+> ***Example:*** `--shared-resources /data/shared/rna-seek`
 
 ---  
   `--singularity-cache SINGULARITY_CACHE`  
@@ -153,9 +143,45 @@ Each of the following arguments are optional and do not need to be provided.
 > 
 > ***Example:*** `--singularity-cache /data/$USER/SIFs`
 
+---  
+  `--tmp-dir TMP_DIR`   
+> **Path on the file system for writing temporary files.**  
+> *type: path*  
+> *default: `/lscratch/$SLURM_JOBID`*
+> 
+> This is a path on the file system for writing temporary output files. By default, the temporary directory is set to '/lscratch/$SLURM_JOBID' for backwards compatibility with the NIH's Biowulf cluster; however, if you are running the pipeline on another cluster, this option will need to be specified. Ideally, this path should point to a dedicated location on the filesystem for writing tmp files. On many systems, this location is set to somewhere in /scratch. If you need to inject a variable into this string that should NOT be expanded, please quote this options value in single quotes. Again, if you are running the pipeline on Biowulf, you do NOT need to provide this option. 
+> 
+> ***Example:*** `--tmp-dir /cluster_scratch/$USER/`
+
+---  
+  `--threads THREADS`   
+> **Max number of threads for each process.**  
+> *type: int*  
+> *default: 2*
+> 
+> Max number of threads for each process. This option is more applicable when running the pipeline with `--mode local`.  It is recommended setting this vaule to the maximum number of CPUs available on the host machine.
+> 
+> ***Example:*** `--threads 12`
+
+### 2.4 Misc Options
+
+Each of the following arguments are optional and do not need to be provided. 
+
+  `-h, --help`            
+> **Display Help.**  
+> *type: boolean*
+> 
+> Shows command's synopsis, help message, and an example command
+> 
+> ***Example:*** `--help`
 
 
 ## 3. Example
+
+### 3.1 Biowulf  
+
+On Biowulf getting started with the pipeline is fast and easy! The pipeline comes bundled with pre-built human and mouse reference genomes. In the example below, we will use the pre-built human reference genome. 
+
 ```bash 
 # Step 0.) Grab an interactive node (do not run on head node)
 srun -N 1 -n 1 --time=12:00:00 -p interactive --mem=8gb  --cpus-per-task=4 --pty bash
@@ -180,3 +206,41 @@ module load singularity snakemake
                --star-2-pass-basic
 ```
 
+### 3.2 Generic SLURM Cluster
+
+Running the pipeline outside of Biowulf is easy; however, there are a few extra steps you must first take. Before getting started, you will need to [build](../TLDR-RNA-seq/#3-building-reference-files) reference files for the pipeline. Please note when running the build sub command for the first time, you will also need to provide the `--shared-resources` option. This option will download our kraken2 database and bowtie2 indices for FastQ Screen. The path provided to this option should be provided to the `--shared-resources` option of the run sub command. We also recommend providing a path to a SIF cache. You can cache software containers locally with the [cache](./RNA-seq/cache/) sub command. 
+
+```bash 
+# Step 0.) Grab an interactive node (do not run on head node)
+srun -N 1 -n 1 --time=12:00:00 -p interactive --mem=8gb  --cpus-per-task=4 --pty bash
+# Add snakemake and singularity to $PATH,
+# This step may vary across clusters, you
+# can reach out to a sys admin if snakemake
+# and singularity are not installed.
+module purge
+module load singularity snakemake
+
+# Step 1.) Dry run pipeline with provided test data
+./rna-seek run --input .tests/*.R?.fastq.gz \
+               --output /data/$USER/RNA_hg38 \
+               --genome /data/$USER/hg38_36/hg38_36.json \
+               --mode slurm \
+               --sif-cache /data/$USER/cache \
+               --star-2-pass-basic \
+               --shared-resources /data/shared/rna-seek \
+               --tmp-dir /cluster_scratch/$USER/ \
+               --dry-run
+
+# Step 2.) Run RNA-seek pipeline
+# The slurm mode will submit jobs to the cluster.
+# It is recommended running rna-seek in this mode.
+./rna-seek run --input .tests/*.R?.fastq.gz \
+               --output /data/$USER/RNA_hg38 \
+               --genome /data/$USER/hg38_36/hg38_36.json \
+               --mode slurm \
+               --sif-cache /data/$USER/cache \
+               --star-2-pass-basic \
+               --shared-resources /data/shared/rna-seek \
+               --tmp-dir /cluster_scratch/$USER/ \
+               --dry-run
+```

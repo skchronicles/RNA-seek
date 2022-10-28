@@ -1343,7 +1343,8 @@ def parsed_arguments(name, description):
                                 will be significantly faster. 
                                   Example: --mode slurm
 
-          --shared-resources    Local path to shared resources. The pipeline uses a set
+          --shared-resources SHARED_RESOURCES
+                                Local path to shared resources. The pipeline uses a set
                                 of shared reference files that can be re-used across ref-
                                 erence genomes. These currently include reference files
                                 for kraken and FQScreen. These reference files can be 
@@ -1646,7 +1647,8 @@ def parsed_arguments(name, description):
                                 Example: --output /data/$USER/refs/GRCh38_41
         
         {1}{2}Build options:{4}
-          --shared-resources  Path to download shared resources. The pipeline uses a
+          --shared-resources SHARED_RESOURCES  
+                              Path to download shared resources. The pipeline uses a
                               set of shared reference files that can be re-used across
                               reference genomes. These currently include reference files
                               for kraken and FQScreen. With that being said, these files
