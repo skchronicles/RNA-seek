@@ -194,6 +194,7 @@ module load singularity snakemake
                --genome hg38_30 \
                --mode slurm \
                --star-2-pass-basic \
+               --sif-cache /data/OpenOmics/SIFs/ \
                --dry-run
 
 # Step 2.) Run RNA-seek pipeline
@@ -203,16 +204,17 @@ module load singularity snakemake
                --output /data/$USER/RNA_hg38 \
                --genome hg38_30 \
                --mode slurm \
+                --sif-cache /data/OpenOmics/SIFs/ \
                --star-2-pass-basic
 ```
 
 ### 3.2 Generic SLURM Cluster
 
-Running the pipeline outside of Biowulf is easy; however, there are a few extra steps you must first take. Before getting started, you will need to [build](../TLDR-RNA-seq/#3-building-reference-files) reference files for the pipeline. Please note when running the build sub command for the first time, you will also need to provide the `--shared-resources` option. This option will download our kraken2 database and bowtie2 indices for FastQ Screen. The path provided to this option should be provided to the `--shared-resources` option of the run sub command. We also recommend providing a path to a SIF cache. You can cache software containers locally with the [cache](./RNA-seq/cache/) sub command. 
+Running the pipeline outside of Biowulf is easy; however, there are a few extra steps you must first take. Before getting started, you will need to [build](../TLDR-RNA-seq/#3-building-reference-files) reference files for the pipeline. Please note when running the build sub command for the first time, you will also need to provide the `--shared-resources` option. This option will download our kraken2 database and bowtie2 indices for FastQ Screen. The path provided to this option should be provided to the `--shared-resources` option of the run sub command. Next, you will also need to provide a path to write temporary output files via the `--tmp-dir` option. We also recommend providing a path to a SIF cache. You can cache software containers locally with the [cache](./RNA-seq/cache/) sub command. 
 
 ```bash 
 # Step 0.) Grab an interactive node (do not run on head node)
-srun -N 1 -n 1 --time=12:00:00 -p interactive --mem=8gb  --cpus-per-task=4 --pty bash
+srun -N 1 -n 1 --time=2:00:00 -p interactive --mem=8gb  --cpus-per-task=4 --pty bash
 # Add snakemake and singularity to $PATH,
 # This step may vary across clusters, you
 # can reach out to a sys admin if snakemake
