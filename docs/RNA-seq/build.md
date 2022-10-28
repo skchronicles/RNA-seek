@@ -3,26 +3,26 @@
 ## 1. About 
 The `rna-seek` executable is composed of several inter-related sub commands. Please see `rna-seek -h` for all available options.
 
-This part of the documentation describes options and concepts for <code>rna-seek <b>build</b></code> sub command in more detail. With minimal configuration, the **`build`** sub command enables you to build new reference files for the RNA-seek run pipeline.    
+This part of the documentation describes options and concepts for <code>rna-seek <b>build</b></code> sub command in more detail. With minimal configuration, the **`build`** sub command enables you to build new reference files for the rna-seek run pipeline.    
 
 Setting up the RNA-seek build pipeline is fast and easy! In its most basic form, <code>rna-seek <b>build</b></code> only has *five required inputs*.
 
 ## 2. Synopsis
 ```text
-$ ./rna-seek build [-h] --ref-fa REF_FA
-                        --ref-name REF_NAME
-                        --ref-gtf REF_GTF
-                        --gtf-ver GTF_VER
-                        --output OUTPUT
-                        [--dry-run]
-                        [--small-genome]
-                        [--singularity-cache SINGULARITY_CACHE]
-                        [--sif-cache SIF_CACHE]
+$ rna-seek build [--help] \
+             [--shared-resources SHARED_RESOURCES] [--small-genome] \
+             [--dry-run] [--singularity-cache SINGULARITY_CACHE] \
+             [--sif-cache SIF_CACHE] [--tmp-dir TMP_DIR] \
+             --ref-fa REF_FA \
+             --ref-name REF_NAME \
+             --ref-gtf REF_GTF \
+             --gtf-ver GTF_VER \
+             --output OUTPUT
 ```
 
 The synopsis for each command shows its parameters and their usage. Optional parameters are shown in square brackets.
 
-A user **must** provide the genomic sequence of the reference's assembly in FASTA format via `--ref-fa` argument, an alias for the reference genome via `--ref-name` argument, a gene annotation for the reference assembly via `--ref-gtf` argument, an alias or version for the gene annotation via the ` --gtf-ver` argument, and an output directory to store the built reference files via `--output` argument.
+A user **must** provide the genomic sequence of the reference's assembly in FASTA format via `--ref-fa` argument, an alias for the reference genome via `--ref-name` argument, a gene annotation for the reference assembly via `--ref-gtf` argument, an alias or version for the gene annotation via the ` --gtf-ver` argument, and an output directory to store the built reference files via `--output` argument. If you are running the pipeline outside of Biowulf, you will need to additionally provide the the following options: `--shared-resources`, `--tmp-dir`. More information about each of these options can be found below.
 
 For [human](https://www.gencodegenes.org/human/) and [mouse](https://www.gencodegenes.org/mouse/) data, we highly recommend downloading the latest available `PRI` genome assembly and corresponding gene annotation from [GENCODE](https://www.gencodegenes.org/). These reference files contain chromosomes and scaffolds sequences. 
 
@@ -77,26 +77,17 @@ Each of the following arguments are required. Failure to provide a required argu
 > This location is where the build pipeline will create all of its output files. If the user-provided working directory has not been initialized, it will automatically be created.  
 > ***Example:*** `--output /data/$USER/refs/hg38_v36/`
 
-### 2.2 Options
+### 2.2 Build Options
 
-Each of the following arguments are optional and do not need to be provided. 
+Each of the following arguments are optional and do not need to be provided. If you are running the pipeline outside of Biowulf, the `--shared-resources` option only needs to be provided at least once. This will ensure reference files that are shared across different genomes are downloaded locally.
 
-  `-h, --help`            
-> **Display Help.**  
-> *type: boolean*
-> 
-> Shows command's synopsis, help message, and an example command
-> 
-> ***Example:*** `--help`
-
----  
-  `--dry-run`            
-> **Dry run the build pipeline.**  
-> *type: boolean*
-> 
-> Displays what steps in the build pipeline remain or will be run. Does not execute anything!
+  `--shared-resources SHARED_RESOURCES`  
+> **Local path to shared resources.**  
+> *type: path*
 >
-> ***Example:*** `--dry-run`
+> The pipeline uses a set of shared reference files that can be re-used across reference genomes. These currently include reference files for kraken and FQScreen. These reference files can be downloaded with the build sub command's `--shared-resources`  option. With that being said, these files only need to be downloaded once. We recommend storing this files in a shared location on the filesystem that other people can access. If you are running the pipeline on Biowulf, you do NOT need to download these reference files! They already exist on the filesystem in a location that anyone can acceess; however, if you are running the pipeline on another cluster or target system, you will need to download the shared resources with the build sub command, and you will need to provide this option every time you run the pipeline. Please provide the same path that was provided to the build sub command's --shared-resources option. Again, if you are running the pipeline on Biowulf, you do NOT need to provide this option. For more information about how to download shared resources, please reference the build sub command's `--shared-resources` option.
+> 
+> ***Example:*** `--shared-resources /data/shared/rna-seek`
 
 ---  
   `--small-genome`            
@@ -108,6 +99,16 @@ Each of the following arguments are optional and do not need to be provided.
 > When in doubt feel free to provide this option, as the optimal value will be found based on your input. 
 >
 > ***Example:*** `--small-genome`
+
+### 2.3 Orchestration Options
+
+  `--dry-run`            
+> **Dry run the build pipeline.**  
+> *type: boolean*
+> 
+> Displays what steps in the build pipeline remain or will be run. Does not execute anything!
+>
+> ***Example:*** `--dry-run`
 
 --- 
   `--singularity-cache SINGULARITY_CACHE`  
@@ -129,6 +130,27 @@ Each of the following arguments are optional and do not need to be provided.
 > ***Example:*** `--singularity-cache /data/$USER/SIFs`
 > 
 
+---  
+  `--tmp-dir TMP_DIR`   
+> **Path on the file system for writing temporary files.**  
+> *type: path*  
+> *default: `/lscratch/$SLURM_JOBID`*
+> 
+> This is a path on the file system for writing temporary output files. By default, the temporary directory is set to '/lscratch/$SLURM_JOBID' for backwards compatibility with the NIH's Biowulf cluster; however, if you are running the pipeline on another cluster, this option will need to be specified. Ideally, this path should point to a dedicated location on the filesystem for writing tmp files. On many systems, this location is set to somewhere in /scratch. If you need to inject a variable into this string that should NOT be expanded, please quote this options value in single quotes. Again, if you are running the pipeline on Biowulf, you do NOT need to provide this option. 
+> 
+> ***Example:*** `--tmp-dir /cluster_scratch/$USER/`
+
+### 2.4 Misc Options
+
+Each of the following arguments are optional and do not need to be provided. 
+
+  `-h, --help`            
+> **Display Help.**  
+> *type: boolean*
+> 
+> Shows command's synopsis, help message, and an example command
+> 
+> ***Example:*** `--help`
 
 ## 3. Hybrid Genomes  
 
@@ -182,24 +204,67 @@ For more information about the script and its usage, please run:
 ```
 
 ## 5. Example
+
+### 5.1 Biowulf 
+
+On Biowulf getting started with the pipeline is fast and easy! In this example, we build a mouse reference genome. 
+
 ```bash 
 # Step 0.) Grab an interactive node (do not run on head node)
-srun -N 1 -n 1 --time=12:00:00 -p interactive --mem=8gb  --cpus-per-task=4 --pty bash
+srun -N 1 -n 1 --time=2:00:00 -p interactive --mem=8gb  --cpus-per-task=4 --pty bash
 module purge
 module load singularity snakemake
 
 # Step 1.) Dry run the Build pipeline
 ./rna-seek build --ref-fa GRCm39.primary_assembly.genome.fa \
-                 --ref-name mm39 \
-                 --ref-gtf gencode.vM26.annotation.gtf \
-                 --gtf-ver M26 \
-                 --output /data/$USER/refs/mm39_M26 \
-                 --dry-run
+              --ref-name mm39 \
+              --ref-gtf gencode.vM26.annotation.gtf \
+              --gtf-ver M26 \
+              --output /data/$USER/refs/mm39_M26 \
+              --sif-cache /data/OpenOmics/SIFs/ \
+              --dry-run
 
 # Step 2.) Build new RNA-seek reference files 
 ./rna-seek build --ref-fa GRCm39.primary_assembly.genome.fa \
-                 --ref-name mm39 \
-                 --ref-gtf gencode.vM26.annotation.gtf \
-                 --gtf-ver M26 \
-                 --output /data/$USER/refs/mm39_M26
+              --ref-name mm39 \
+              --ref-gtf gencode.vM26.annotation.gtf \
+              --gtf-ver M26 \
+              --output /data/$USER/refs/mm39_M26 \
+              --sif-cache /data/OpenOmics/SIFs/ 
+```
+
+### 5.2 Generic SLURM Cluster
+
+Running the pipeline outside of Biowulf is easy; however, there are a few extra options you must provide. Please note when running the build sub command for the first time, you will also need to provide the `--shared-resources` option. This option will download our kraken2 database and bowtie2 indices for FastQ Screen. The path provided to this option should be provided to the `--shared-resources` option of the [run](./RNA-seq/cache/) sub command. Next, you will also need to provide a path to write temporary output files via the `--tmp-dir` option. We also recommend providing a path to a SIF cache. You can cache software containers locally with the [cache](./RNA-seq/cache/) sub command. 
+
+```bash 
+# Step 0.) Grab an interactive node (do not run on head node)
+srun -N 1 -n 1 --time=2:00:00 -p interactive --mem=8gb  --cpus-per-task=4 --pty bash
+# Add snakemake and singularity to $PATH,
+# This step may vary across clusters, you
+# can reach out to a sys admin if snakemake
+# and singularity are not installed.
+module purge
+module load singularity snakemake
+
+# Step 1.) Dry run the Build pipeline
+./rna-seek build --ref-fa GRCm39.primary_assembly.genome.fa \
+              --ref-name mm39 \
+              --ref-gtf gencode.vM26.annotation.gtf \
+              --gtf-ver M26 \
+              --output /data/$USER/refs/mm39_M26 \
+              --shared-resources /data/shared/rna-seek \
+              --tmp-dir /cluster_scratch/$USER/ \
+              --sif-cache /data/$USER/cache \
+              --dry-run
+
+# Step 2.) Build new RNA-seek reference files 
+./rna-seek build --ref-fa GRCm39.primary_assembly.genome.fa \
+              --ref-name mm39 \
+              --ref-gtf gencode.vM26.annotation.gtf \
+              --gtf-ver M26 \
+              --output /data/$USER/refs/mm39_M26 \
+              --shared-resources /data/shared/rna-seek \
+              --tmp-dir /cluster_scratch/$USER/ \
+              --sif-cache /data/$USER/cache 
 ```
