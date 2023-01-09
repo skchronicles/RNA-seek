@@ -85,6 +85,10 @@ def makeGTF(header, inputData):
         else:
             outExon = transcriptRow[0:8]
             outExon[2] = "exon"
+            if len(geneTranscript) == 0:
+                # Cannot find transcript ID,
+                # set to gene id
+                transcriptID = geneID
             outExon.append('gene_id "' + geneID + '"; transcript_id "' + transcriptID + '"; gene_biotype "' + geneBiotype + '";')
             outAll.append( "\t".join(outExon) )
     return(outAll)
