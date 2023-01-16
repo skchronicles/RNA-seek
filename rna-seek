@@ -549,6 +549,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
     # Add optional cli workflow steps
     config['options'] = {}
     config['options']['star_2_pass_basic'] = sub_args.star_2_pass_basic
+    config['options']['create_nidap_folder'] = sub_args.create_nidap_folder
 
     # Get latest git commit hash
     git_hash = get_repo_git_commit_hash(repo_path)
@@ -1086,6 +1087,7 @@ def parsed_arguments():
                                  [--mode {local, slurm}]
                                  [--dry-run]
                                  [--star-2-pass-basic]
+                                 [--create-nidap-folder]
                                  [--threads THREADS]
                                  [--singularity-cache SINGULARITY_CACHE]
                                  [--sif-cache SIF_CACHE]
@@ -1218,6 +1220,14 @@ def parsed_arguments():
                                 approach where the set of splice junctions detected across all samples are provided to \
                                 the second pass of STAR. This option overrides the default behavior so each sample will \
                                 be processed in a per sample two-pass basic mode.')
+    # Create NIDAP output folder 
+    subparser_run.add_argument('--create-nidap-folder',
+                                action = 'store_true',
+                                required = False,
+                                default = False,
+                                help = 'Create folder called "NIDAP" with file to-be-moved back to NIDAP \
+                                This makes it convinient to move only this folder (called NIDAP) and its content back \
+                                to NIDAP, rather than the entire pipeline output folder')
     # Number of threads for the RNA-seek pipeline's main proceess
     subparser_run.add_argument('--threads',
                                 type = int,
