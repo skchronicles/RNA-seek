@@ -239,11 +239,13 @@ rule kraken_se:
         ktImportTaxonomy - -o {output.kronahtml}
     """
 
-if config['options']['star_2_pass_basic']:
+if config['options']['star_2_pass_basic'] or config['options']['prokaryote']:
     # Run STAR with per-sample 2-pass mapping using '--twopassMode Basic' option
     # STAR will perform the 1st pass mapping, then it will automatically extract
     # splice junctions, insert them into the genome index, and, finally, re-map
-    # all reads in the 2nd mapping pass.
+    # all reads in the 2nd mapping pass. Also, if the --prokaryote flag is provided
+    # then STAR is run with a set of options optimized for genomes with no introns,
+    # i.e. --alignIntronMax 1 AND --alignIntronMin 0.
     rule star_basic:
         """
         Data processing step to align reads against reference genome using STAR in
@@ -280,8 +282,19 @@ if config['options']['star_2_pass_basic']:
             alignsjdboverhangmin=config['bin'][pfamily]['ALIGNSJDBOVERHANGMIN'],
             filtermismatchnmax=config['bin'][pfamily]['FILTERMISMATCHNMAX'],
             filtermismatchnoverlmax=config['bin'][pfamily]['FILTERMISMATCHNOVERLMAX'],
-            alignintronmin=config['bin'][pfamily]['ALIGNINTRONMIN'],
-            alignintronmax=config['bin'][pfamily]['ALIGNINTRONMAX'],
+            # Dynamically resolved options
+            # for prokaryotic genomes, these
+            # set of options are optimized for
+            # genomes that do NOT have introns,
+            # If --prokaryote option then set:
+            # --alignIntronMin 0
+            # --alignIntronMax 1
+            alignintronmin = lambda _w: "0" \
+                if config['options']['prokaryote'] \
+                else config['bin'][pfamily]['ALIGNINTRONMIN'],
+            alignintronmax = lambda _w: "1" \
+                if config['options']['prokaryote'] \
+                else config['bin'][pfamily]['ALIGNINTRONMAX'],
             alignmatesgapmax=config['bin'][pfamily]['ALIGNMATESGAPMAX'],
             adapter1=config['bin'][pfamily]['ADAPTER1'],
             adapter2=config['bin'][pfamily]['ADAPTER2'],
