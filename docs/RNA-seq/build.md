@@ -96,7 +96,7 @@ Each of the following arguments are optional and do not need to be provided. If 
 > 
 > For small genomes, it is recommeded running STAR with a scaled down `--genomeSAindexNbases` value. This option runs the build pipeline in a mode where it dynamically finds the optimal value for this option using the following formula: `min(14, log2(GenomeSize)/2 - 1)`. Generally speaking, this option is not really applicable for most mammalian reference genomes, i.e. human and mouse; however, researcher working with very small reference genomes, like S. cerevisiae ~ 12Mb, should provide this option.
 >
-> When in doubt feel free to provide this option, as the optimal value will be found based on your input. 
+> When in doubt feel free to provide this option, as the optimal value will be found based on your input. It is also worth noting that if you are working with a prokaryotic genome, like a bacterial genome, you will run to provide the `--prokaryote` option to the [run subcommand](./RNA-seq/run/).
 >
 > ***Example:*** `--small-genome`
 
@@ -185,22 +185,17 @@ In this tab-delimited example above,
 For a given gene, the combination of the `gene_id` AND `gene_name` should form a unique string. There should be no instances where two different genes share the same `gene_id` AND `gene_name`. 
 
 
-## 4. Convert NCBI GFF3 to GTF format
+## 4. Convert, patch or clean a malformed GTF file 
 
-It is worth noting that RNA-seek comes bundled with a script to convert GFF3 files downloaded from NCBI to GTF file format. This convenience script is useful as the `rna-seek build` sub command takes a GTF file as one of its inputs. 
+While building reference genomes from various sources, you may run into unexpected issues with the GTF file that was provided. The GTF file format has [evolved over the years](https://agat.readthedocs.io/en/latest/gxf.html). Each iteration of the format has its own set of features and attributes.  And while there is a basic defintion for the GTF file format, overall there is a general lack of standardization. 
 
-Please note that this script has only been tested with GFF3 files downloaded from NCBI, and _it is **not** recommended to use with GFF3 files originating from other sources like Ensembl or GENCODE_. If you are selecting an annotation from Ensembl or GENCODE, please download the GTF file option.
+Most of the issues encountered with the build pipeline can be attributed to this lack of standardization. Over the years, several tools have been [developed to convert between formats](https://github.com/NBISweden/GAAS/blob/master/annotation/knowledge/gff_to_gtf.md). [AGAT](https://agat.readthedocs.io/en/latest/index.html) is an awesome set of tools that can convert between formats and fix issues as they are encountered. 
 
-The only dependecy of the script is the python package argparse, which comes bundled with the following python2/3 distributions: `python>=2.7.18` or `python>=3.2`. If argparse is not installed, it can be downloaded with pip by running the following command:
-
-```bash
-pip install --upgrade pip
-pip install argparse
-```
+With that being said, we have provided a universal script to fix malformed GTF files. It also has the extra benefit that it can convert between GFF and GTF formats. As so, we recommened running this script if you run into any issues. This script is also recommended over `./resources/gff3togtf.py`, which will be depreciated in the near future.
 
 For more information about the script and its usage, please run:
 ```bash
-./resources/gff3togtf.py -h
+./resources/clean_gtf.py -h
 ```
 
 ## 5. Example

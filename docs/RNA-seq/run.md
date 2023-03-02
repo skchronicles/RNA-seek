@@ -10,7 +10,7 @@ Setting up the RNA-seek pipeline is fast and easy! In its most basic form, <code
 ## 2. Synopsis
 ```text
 $ rna-seek run [--help] \
-            [--small-rna] [--star-2-pass-basic] \
+            [--prokaryote] [--small-rna] [--star-2-pass-basic] \
             [--dry-run] [--mode {slurm, local}] \
             [--shared-resources SHARED_RESOURCES] \
             [--singularity-cache SINGULARITY_CACHE] \
@@ -66,6 +66,15 @@ Each of the following arguments are required. Failure to provide a required argu
 
 ### 2.2 Analysis Options
 
+  `--prokaryote`  
+> **Run with prokaryotic genome alignment options.**  
+> *type: boolean*
+> 
+> Prokaryotic genomes, like bacteria, do not contain introns. If provided, this option will use an optimized set of options for aligning against prokaryotic genomes. This option will force STAR to avoid spliced alignments, and it will also run STAR in a 2-pass basic mode. By default, the pipeline is setup for handling alignment against eukarytoic genomes, so this option should be provided if you are working with a prokaryotic genome. This option should not be combined with the small RNA option. 
+> 
+> ***Example:*** `--prokaryote`
+
+---  
   `--small-rna`  
 > **Run STAR using ENCODE's recomendations for small RNA.**  
 > *type: boolean*
