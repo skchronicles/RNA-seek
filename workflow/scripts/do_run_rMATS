@@ -191,7 +191,7 @@ module load STAR/${star_version}
 
 # Run rMATS for a given contrast 
 # starting from untrimmed FastQ files
-python \${RMATS_BIN}/rmats.py \\
+rmats.py \\
     --s1 "${PWD}/rMATS/${g1}_v_${g2}/s1.txt" \\
     --s2 "${PWD}/rMATS/${g1}_v_${g2}/s2.txt" \\
     --od "${outdir}" \\
