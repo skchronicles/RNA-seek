@@ -36,7 +36,7 @@ Example:
   $ nano contrasts.tab # create a contrasts.tab file similar to Pipeliner
   $ ./do_run_rMATS
 Version:
-  0.1.0
+  0.2.0
 EOF
 }
 
@@ -186,12 +186,12 @@ function do_run_rMATS(){
 #SBATCH --mail-type=BEGIN,END,FAIL
 
 set -euo pipefail
-module load rMATS/4.1.1 
+module load rMATS/4.1.2 
 module load STAR/${star_version}
 
 # Run rMATS for a given contrast 
 # starting from untrimmed FastQ files
-python \${RMATS_SRC}/rmats.py \\
+python \${RMATS_BIN}/rmats.py \\
     --s1 "${PWD}/rMATS/${g1}_v_${g2}/s1.txt" \\
     --s2 "${PWD}/rMATS/${g1}_v_${g2}/s2.txt" \\
     --od "${outdir}" \\
@@ -257,11 +257,10 @@ function main(){
         # $4 = Output directory
         # $5 = Job dependency (slurm job id of build index)
         do_run_rMATS "${g1}" "${g2}" "${read_length_index}" "${PWD}/rMATS/${g1}_v_${g2}/" "${build_job_id:-}"
-        
+
     done < contrasts.tab
 
 }
 
 
 main "$@"
-
