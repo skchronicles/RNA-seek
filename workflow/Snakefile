@@ -1,7 +1,7 @@
 # Python standard library
 from os.path import join
 from os import listdir
-import os, sys
+import os, sys, json
 
 # 3rd party imports from pypi
 from snakemake.workflow import workflow as wf_api
