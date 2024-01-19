@@ -21,7 +21,7 @@ import argparse  # potential python3 3rd party package, added in python/3.5
 
 # Pipeline Metadata and globals 
 __author__   = 'Skyler Kuhn'
-__version__  = 'v1.9.2'
+__version__  = 'v1.9.3'
 __email__    = 'kuhnsa@nih.gov'
 __home__     =  os.path.dirname(os.path.abspath(__file__))
 _name        = os.path.basename(sys.argv[0])
