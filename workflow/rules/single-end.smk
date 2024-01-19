@@ -341,12 +341,21 @@ if config['options']['star_2_pass_basic'] or config['options']['prokaryote']:
             --sjdbGTFfile {params.gtffile} \
             --limitSjdbInsertNsj {params.nbjuncs} \
             --quantMode TranscriptomeSAM GeneCounts \
-            --outSAMtype BAM SortedByCoordinate \
+            --outSAMtype BAM Unsorted \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
             --outTmpDir=${{tmp}}/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
+
+        # SAMtools sort (uses less memory than STAR SortedByCoordinate),
+        # also avoids ulimit related errors caused by STAR's internal sorting
+        samtools sort -@ {threads} \
+            -m 2G -T ${{tmp}}/SORTtmp_{wildcards.name} \
+            -O bam {params.prefix}.Aligned.out.bam \
+            > {output.out1}
+
+        rm {params.prefix}.Aligned.out.bam
         mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
         mv {params.prefix}.Log.final.out {workpath}/{log_dir}
         """
@@ -634,12 +643,20 @@ else:
             --sjdbGTFfile {params.gtffile} \
             --limitSjdbInsertNsj {params.nbjuncs} \
             --quantMode TranscriptomeSAM GeneCounts \
-            --outSAMtype BAM SortedByCoordinate \
+            --outSAMtype BAM Unsorted \
             --alignEndsProtrude 10 ConcordantPair \
             --peOverlapNbasesMin 10 \
             --outTmpDir=${{tmp}}/STARtmp_{wildcards.name} \
             --sjdbOverhang ${{readlength}}
 
+        # SAMtools sort (uses less memory than STAR SortedByCoordinate),
+        # also avoids ulimit related issues caused by STAR's internal sorting
+        samtools sort -@ {threads} \
+            -m 2G -T ${{tmp}}/SORTtmp_{wildcards.name} \
+            -O bam {params.prefix}.Aligned.out.bam \
+            > {output.out1}
+
+        rm {params.prefix}.Aligned.out.bam
         mv {params.prefix}.Aligned.toTranscriptome.out.bam {workpath}/{bams_dir};
         mv {params.prefix}.Log.final.out {workpath}/{log_dir}
         """
