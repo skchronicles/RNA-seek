@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-__VERSION__="1.3.0"
+__VERSION__="1.3.1"
 
 function usage() { cat << EOF
 download_dme_files: a utility for dowloading file(s) from HPC DME.
@@ -52,11 +52,18 @@ Options:
   -v, --version       [Type: Bool] Displays version information.
 
 Example:
+  # Export these important environment variables
+  $ export https_proxy=http://dtn\${I2HOSTNUM}-e0:\${SQUID_PORT};
+  $ export http_proxy=http://dtn\${HOSTNUM}-e0:\${SQUID_PORT};
+  $ export https_proxy=http://dtn\${HOSTNUM}-e0:\${SQUID_PORT};
+  $ export ftp_proxy=http://dtn\${HOSTNUM}-e0:\${SQUID_PORT};
+
+  # Download a file from an HPC DME Archive
   $ download_dme_files -f "/CCBR_Archive/ACGT/Anon/1016-1.R1.fastq.gz" \\
       -o /scratch/$USER/dme_download/ \\
-      -t ~/HPC_DME_APIs/utils/tokens/hpcdme-auth.txt \\
+      -t \$HOME/HPC_DME_APIs/utils/tokens/hpcdme-auth.txt \\
       -r ri.foundry.main.transaction.0000000b-460e-c255-bda7-ff211d105802 \\
-      -p http://dtn02-e0:3128
+      -p "http://dtn${I2HOSTNUM:-20}-e0:${SQUID_PORT:-3128}"
 
 Version:
   ${__VERSION__}
@@ -134,13 +141,15 @@ function grab(){
   # the token
   # INPUT $1 = token file or string
 
+  # Expand a tilde for home directory
   local contents
+  contents="$(echo "${1}" | sed "s@^~@${HOME}@")"
 
-  if [ ! -f "$1" ]; then
+  if [ ! -f "$contents" ]; then
     contents="${1}"
   else
     # Return contents if provided a file
-    contents=$(cat "${1}" | tr -d '\n')
+    contents="$(cat "${contents}" | tr -d '\n')"
   fi
 
   echo "${contents}"
