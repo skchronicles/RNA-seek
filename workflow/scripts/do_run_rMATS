@@ -227,7 +227,7 @@ function main(){
         key="$1"
         case $key in
           -h  | --help) usage && exit 0;;
-          -b | --skip-index) args["skip_index"]=true; shift;;
+          -s  | --skip-index) args["skip_index"]=true; shift;;
           -*  | --*) err "Error: Failed to parse unsupported argument: '${key}'."; usage && exit 1;;
           *) err "Error: Failed to parse unrecognized argument: '${key}'. Do any of your inputs have spaces?"; usage && exit 1;;
         esac
@@ -249,7 +249,12 @@ function main(){
     read_length_index=$(_get_read_length "Reports/multiqc_matrix.tsv" \
                         | awk -v wd="$PWD" \
                             '{print wd"/rMATS/STAR/2.7.6a/genes-"$1"/"}')
-    while read g1 g2; do 
+
+    # Works even if the last line does
+    # not contain a new line character,
+    # technically tsv/text files should
+    # but this is more robust.
+    while read g1 g2 || { [ -n "$g1" ] && [ -n "$g2" ]; }; do 
         # Run rMATS for each constrast
         # $1 = Group 1
         # $2 = Group 2
