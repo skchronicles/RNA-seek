@@ -8,7 +8,7 @@ import sys, gzip
 # sys.argv[1] = sample_name.R1.fastq.gz
 
 # EXAMPLE
-# $ python phred_encoding.py input.R1.fastq.gz input
+# $ python phred_encoding.py input.R1.fastq.gz
 
 # ABOUT
 # Older FastQ files may have quality scores that are encoded with Phred-64.
@@ -20,6 +20,29 @@ import sys, gzip
 # GGGAAGTTGAAAGCTTCCAGTGCTCCCTGTCAATTCTAGTCCCTCCAGTCT
 # +
 # AAAFFJJFJJJJJJFJJJJJJJJJJFJAJJJJJFJJJJJFFJJAJJJJ7JJ <- Determine if Phred-33 encoding or Phred-64
+
+# Current FastQ Format Encodings
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS.....................................................   Sanger-33
+# ..........................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX......................   Solexa-64
+# ...............................IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII......................   Illumina-64
+# .................................JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ.....................   Illumina-64
+# LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL....................................................   Illumina-33
+# NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...........................................   Nanopore-33
+# EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE......................................   ElemBio-33
+# PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP   PacBio-33
+# **************************....................................................................   Phred-33
+# ........................................................*****************.....................   Phred-64
+# !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+# |                         |    |        |              |               |                     |
+#  3                        59   64       73             88             104                   126
+# 0........................26...31.......40                                                        Sanger-33
+#                          -5....0........9.............................40                         Solexa-64
+#                                0........9.............................40                         Illumina-64
+#                                   3.....9..............................41                        Illumina-64
+# 0.2......................26...31........41                                                       Illumina-33
+# 0..................20........30........40........50                                              Nanopore-33
+# 0..................20........30........40........50...55                                         ElemBio-33
+# 0..................20........30........40........50..........................................93  PacBio-33
 
 
 def usage(message = '', exitcode = 0):
@@ -49,6 +72,8 @@ def reader(fname):
 def decoded(qscore):
     """Returns Phred ASCII encoding type of FastQ quality scores.
     Older FastQ files may use Phred 64 encoding.
+    See the Encoding section here for more information:
+    https://en.wikipedia.org/wiki/FASTQ_format
     """
     encoding = ''
     # Unique set of characters across both Phred encoding types
@@ -59,13 +84,11 @@ def decoded(qscore):
                 '2': '33', '5': '33', '4': '33', '7': '33', '6': '33', '9': '33',
                 '8': '33', ';': '33', ':': '33', '=': '33', '<': '33', '?': '33',
                 '>': '33',
-                 # Pred-64 Encoding characters
-                'K': '64', 'M': '64', 'L': '64', 'O': '64', 'N': '64', 'Q': '64',
-                'P': '64', 'S': '64', 'R': '64', 'U': '64', 'T': '64', 'W': '64',
-                'V': '64', 'Y': '64', 'X': '64', '[': '64', 'Z': '64', ']': '64',
-                '\\': '64', '_': '64', '^': '64', 'a': '64', '`': '64', 'c': '64',
-                'b': '64', 'e': '64', 'd': '64', 'g': '64', 'f': '64', 'i': '64',
-                'h': '64'
+                 # Pred-64 Encoding characters, decreased range
+                 # due to overlap in ElemBio AVITI Phred+33 scores
+                'Y': '64', 'Z': '64', '[': '64', ']': '64', '\\': '64', '_': '64', 
+                '^': '64', 'a': '64', '`': '64', 'c': '64', 'b': '64', 'e': '64', 
+                'd': '64', 'g': '64', 'f': '64', 'i': '64', 'h': '64'
                 }
 
     for char in qscore:
@@ -76,7 +99,6 @@ def decoded(qscore):
             pass
 
     return encoding
-
 
 
 if __name__ == '__main__':
