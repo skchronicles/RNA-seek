@@ -32,7 +32,7 @@
                 "FASTAWITHADAPTERSETD": "resources/TruSeq_and_nextera_adapters.consolidated.fa",
                 "FASTQ_SCREEN_CONFIG": "resources/fastq_screen.conf",
                 "FASTQ_SCREEN_CONFIG2": "resources/fastq_screen_2.conf",
-                "KRAKENBACDB": "/fdb/kraken/20180907_standard_kraken2",
+                "KRAKENBACDB": "/data/OpenOmics/references/kraken/k2_pluspf_20241228",
                 "Trimsettings": "---------------------------- TRIMMOMATIC parameters ----------------------------------------------------------",
                 "LEADINGQUALITY": 10,
                 "TRAILINGQUALITY": 10,
