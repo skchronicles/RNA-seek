@@ -652,7 +652,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
         # Update paths to shared resources directory
         config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG'] = os.path.join(sub_args.shared_resources, "fastq_screen_db", "fastq_screen_p1.conf")
         config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG2'] = os.path.join(sub_args.shared_resources, "fastq_screen_db", "fastq_screen_p2.conf")
-        config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB'] = os.path.join(sub_args.shared_resources, "20180907_standard_kraken2")
+        config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB'] = os.path.join(sub_args.shared_resources, "k2_pluspf_20241228")
 
     # Save config to output directory
     print("\nGenerating config file in '{}'... ".format(os.path.join(output_path, 'config.json')), end = "")
