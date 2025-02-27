@@ -640,16 +640,16 @@ rule kraken2_db:
         fa=REFFA,
         gtf=GTFFILE,
     output:
-        expand(join(SHARED_PATH, "20180907_standard_kraken2", "{ref}.k2d"), ref=["hash", "opts", "taxo"]),
+        expand(join(SHARED_PATH, "k2_pluspf_20241228", "{ref}.k2d"), ref=["hash", "opts", "taxo"]),
     params:
         rname='bl:kraken2_db',
-        outfh=join(SHARED_PATH, "20180907_standard_kraken2.tar"),
-        tarfile="20180907_standard_kraken2.tar",
+        outfh=join(SHARED_PATH, "k2_pluspf_20241228.tar.gz"),
+        tarfile="k2_pluspf_20241228.tar.gz",
         outdir=SHARED_PATH,
     container: config['images']['build_rnaseq']
     shell: """
     wget https://hpc.nih.gov/~OpenOmics/common/{params.tarfile} -O {params.outfh}
-    tar vxf {params.outfh} -C {params.outdir} && rm {params.outfh}
+    tar zvxf {params.outfh} -C {params.outdir} && rm {params.outfh}
     """
 
 
