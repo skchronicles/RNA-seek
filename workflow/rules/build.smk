@@ -134,7 +134,7 @@ rule all:
         provided(expand(join(SHARED_PATH, "fastq_screen_db", "fastq_screen_p{ext}.conf"), ext=["1", "2"]), SHARED_PATH),
         # Kraken2 Database,
         # conditional runs with --shared-resources option
-        provided(expand(join(SHARED_PATH, "20180907_standard_kraken2", "{ref}.k2d"), ref=["hash", "opts", "taxo"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "k2_pluspf_20241228", "{ref}.k2d"), ref=["hash", "opts", "taxo"]), SHARED_PATH),
 
 
 rule rsem:
