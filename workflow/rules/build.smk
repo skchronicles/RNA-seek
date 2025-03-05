@@ -135,6 +135,9 @@ rule all:
         # Kraken2 Database,
         # conditional runs with --shared-resources option
         provided(expand(join(SHARED_PATH, "k2_pluspf_20241228", "{ref}.k2d"), ref=["hash", "opts", "taxo"]), SHARED_PATH),
+        # Arriba reference files
+        # conditional runs with --shared-resources option
+        provided(expand(join(SHARED_PATH, "arriba", "blacklist_{ref}_v2.0.0.tsv.gz"), ref=["hg38_GRCh38", "hg19_hs37d5_GRCh37", "mm10_GRCm38"]), SHARED_PATH),
 
 
 rule rsem:
@@ -653,6 +656,36 @@ rule kraken2_db:
     """
 
 
+rule arriba_references:
+    """
+    Downloads arriba references for hg19, hg38, and mm10 from the OpenOmics public resource bundle.
+    These references include a blacklist, cytobands, and protein domains for each reference genome.
+    @Input:
+        Genomic FASTA file
+        Annotation file in GTF format
+    @Output:
+        Downloaded arriba reference files for gene-fusion calling
+    """
+    input:
+        fa=REFFA,
+        gtf=GTFFILE,
+    output:
+        expand(
+            join(SHARED_PATH, "arriba", "blacklist_{ref}_v2.0.0.tsv.gz"), 
+            ref=["hg38_GRCh38", "hg19_hs37d5_GRCh37", "mm10_GRCm38"]
+        ),
+    params:
+        rname='bl:arriba_refs',
+        outfh=join(SHARED_PATH, "arriba_references.tar.gz"),
+        tarfile="arriba_references.tar.gz",
+        outdir=SHARED_PATH,
+    container: config['images']['build_rnaseq']
+    shell: """
+    wget https://hpc.nih.gov/~OpenOmics/common/{params.tarfile} -O {params.outfh}
+    tar zvxf {params.outfh} -C {params.outdir} && rm {params.outfh}
+    """
+
+
 rule jsonmaker:
     """
     Builds reference genome reference JSON file. This is a config file for the
@@ -702,28 +735,28 @@ rule jsonmaker:
         'hs37d' in params.genome.lower() or \
         'grch37' in params.genome.lower():
             refdict["references"]["rnaseq"]["FUSIONBLACKLIST"] = \
-            "s3://nciccbr/Resources/RNA-seq/arriba/blacklist_hg19_hs37d5_GRCh37_v2.0.0.tsv.gz"
+            "/data/OpenOmics/references/common/arriba/blacklist_hg19_hs37d5_GRCh37_v2.0.0.tsv.gz"
             refdict["references"]["rnaseq"]["FUSIONCYTOBAND"] = \
-            "s3://nciccbr/Resources/RNA-seq/arriba/cytobands_hg19_hs37d5_GRCh37_v2.0.0.tsv"
+            "/data/OpenOmics/references/common/arriba/cytobands_hg19_hs37d5_GRCh37_v2.0.0.tsv"
             refdict["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = \
-            "s3://nciccbr/Resources/RNA-seq/arriba/protein_domains_hg19_hs37d5_GRCh37_v2.0.0.gff3"
+            "/data/OpenOmics/references/common/arriba/protein_domains_hg19_hs37d5_GRCh37_v2.0.0.gff3"
         elif 'hg38' in params.genome.lower() or \
         'hs38d' in params.genome.lower() or \
         'grch38' in params.genome.lower():
             refdict["references"]["rnaseq"]["FUSIONBLACKLIST"] = \
-            "s3://nciccbr/Resources/RNA-seq/arriba/blacklist_hg38_GRCh38_v2.0.0.tsv.gz"
+            "/data/OpenOmics/references/common/arriba/blacklist_hg38_GRCh38_v2.0.0.tsv.gz"
             refdict["references"]["rnaseq"]["FUSIONCYTOBAND"] = \
-            "s3://nciccbr/Resources/RNA-seq/arriba/cytobands_hg38_GRCh38_v2.0.0.tsv"
+            "/data/OpenOmics/references/common/arriba/cytobands_hg38_GRCh38_v2.0.0.tsv"
             refdict["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = \
-            "s3://nciccbr/Resources/RNA-seq/arriba/protein_domains_hg38_GRCh38_v2.0.0.gff3"
+            "/data/OpenOmics/references/common/arriba/protein_domains_hg38_GRCh38_v2.0.0.gff3"
         elif 'mm10' in params.genome.lower() or \
         'grcm38' in params.genome.lower():
             refdict["references"]["rnaseq"]["FUSIONBLACKLIST"] = \
-            "s3://nciccbr/Resources/RNA-seq/arriba/blacklist_mm10_GRCm38_v2.0.0.tsv.gz"
+            "/data/OpenOmics/references/common/arriba/blacklist_mm10_GRCm38_v2.0.0.tsv.gz"
             refdict["references"]["rnaseq"]["FUSIONCYTOBAND"] = \
-            "s3://nciccbr/Resources/RNA-seq/arriba/cytobands_mm10_GRCm38_v2.0.0.tsv"
+            "/data/OpenOmics/references/common/arriba/cytobands_mm10_GRCm38_v2.0.0.tsv"
             refdict["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = \
-            "s3://nciccbr/Resources/RNA-seq/arriba/protein_domains_mm10_GRCm38_v2.0.0.gff3"
+            "/data/OpenOmics/references/common/arriba/protein_domains_mm10_GRCm38_v2.0.0.gff3"
 
         with open(output.json, 'w') as fp:
             json.dump(refdict, fp, indent=4)

@@ -24,9 +24,9 @@
             "ANNOTATEISOFORMS": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/annotate.isoforms.txt",
             "trimmomatic.adapters": "/data/CCBR_Pipeliner/db/PipeDB/dev/adapters2.fa",
             "GENOMEFILE": "/data/CCBR_Pipeliner/db/PipeDB/Indices/mm10_M21/ref.fa",
-            "FUSIONBLACKLIST": "s3://nciccbr/Resources/RNA-seq/arriba/blacklist_mm10_GRCm38_v2.0.0.tsv.gz",
-            "FUSIONCYTOBAND": "s3://nciccbr/Resources/RNA-seq/arriba/cytobands_mm10_GRCm38_v2.0.0.tsv",
-            "FUSIONPROTDOMAIN": "s3://nciccbr/Resources/RNA-seq/arriba/protein_domains_mm10_GRCm38_v2.0.0.gff3"
+            "FUSIONBLACKLIST": "/data/OpenOmics/references/common/arriba/blacklist_mm10_GRCm38_v2.0.0.tsv.gz",
+            "FUSIONCYTOBAND": "/data/OpenOmics/references/common/arriba/cytobands_mm10_GRCm38_v2.0.0.tsv",
+            "FUSIONPROTDOMAIN": "/data/OpenOmics/references/common/arriba/protein_domains_mm10_GRCm38_v2.0.0.gff3"
         }
     }
 }

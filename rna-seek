@@ -21,9 +21,9 @@ import argparse  # potential python3 3rd party package, added in python/3.5
 
 # Pipeline Metadata and globals 
 __author__   = 'Skyler Kuhn'
-__version__  = 'v1.10.0'
+__version__  = 'v1.11.0'
 __email__    = 'kuhnsa@nih.gov'
-__home__     =  os.path.dirname(os.path.abspath(__file__))
+__home__     = os.path.dirname(os.path.abspath(__file__))
 _name        = os.path.basename(sys.argv[0])
 _description = 'a highly-reproducible RNA-seq pipeline'
 
@@ -653,6 +653,13 @@ def setup(sub_args, ifiles, repo_path, output_path):
         config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG'] = os.path.join(sub_args.shared_resources, "fastq_screen_db", "fastq_screen_p1.conf")
         config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG2'] = os.path.join(sub_args.shared_resources, "fastq_screen_db", "fastq_screen_p2.conf")
         config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB'] = os.path.join(sub_args.shared_resources, "k2_pluspf_20241228")
+        # Check if reference contains arriba references
+        # there are only references for hg19/hg38/mm10
+        if config["references"]["rnaseq"]["FUSIONBLACKLIST"]:
+            new_path = sub_args.shared_resources.rstrip('/')
+            config["references"]["rnaseq"]["FUSIONBLACKLIST"] = config["references"]["rnaseq"]["FUSIONBLACKLIST"].replace("/data/OpenOmics/references/common", new_path)
+            config["references"]["rnaseq"]["FUSIONCYTOBAND"] = config["references"]["rnaseq"]["FUSIONCYTOBAND"].replace("/data/OpenOmics/references/common", new_path)
+            config["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = config["references"]["rnaseq"]["FUSIONPROTDOMAIN"].replace("/data/OpenOmics/references/common", new_path)
 
     # Save config to output directory
     print("\nGenerating config file in '{}'... ".format(os.path.join(output_path, 'config.json')), end = "")
