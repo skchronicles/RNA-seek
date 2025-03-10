@@ -5,13 +5,13 @@ import os, sys, json
 
 # 3rd party imports from pypi
 from snakemake.workflow import workflow as wf_api
-from snakemake.utils import R
 
 # Local imports
 from scripts.common import (
     allocated,
     provided, 
-    references
+    references,
+    str_bool
 )
 
 # Global workflow variables
@@ -20,6 +20,10 @@ samples  = config['project']['groups']['rsamps'] # sample basenames
 pfamily  = config['project']['pfamily']          # rnaseq
 workpath = config['project']['workpath']         # Parent Output directory
 tmpdir   = config['options']['tmp_dir']          # Temporary directory
+# Call gene fusions with arriba
+call_gene_fusions = str_bool(                    # Default: False, must
+    config['options']['call_gene_fusions']       # also have arriba refs
+)
 
 # Read in resource information,
 # containing information about 
@@ -89,8 +93,8 @@ if paired_end:
             expand(join(workpath,bams_dir,"{name}.p2.Aligned.toTranscriptome.out.bam"),name=samples),
 
             # Arriba
-            expand(join(workpath,"fusions","{name}_fusions.tsv"),name=provided(samples, references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROTDOMAIN']))),
-            expand(join(workpath,"fusions","{name}_fusions.arriba.pdf"),name=provided(samples, references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROTDOMAIN']))),
+            expand(join(workpath,"fusions","{name}_fusions.tsv"),name=provided(samples, references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROTDOMAIN']) and call_gene_fusions)),
+            expand(join(workpath,"fusions","{name}_fusions.arriba.pdf"),name=provided(samples, references(config, pfamily, ['FUSIONBLACKLIST', 'FUSIONCYTOBAND', 'FUSIONPROTDOMAIN']) and call_gene_fusions)),
 
             # Bam to stranded bigwigs
             expand(join(workpath,bams_dir,"{name}.star_rg_added.sorted.dmark.bam"),name=samples),
@@ -191,6 +195,8 @@ elif not paired_end:
 
 # Rules common to single-end or paired-end data
 include: "rules/common.smk"
+# Post-processing rules to get job information
+include: "rules/hooks.smk"
 # Include single-end and paired-specific rules
 if paired_end:
     # rules common to paired-end data

@@ -21,7 +21,7 @@ import argparse  # potential python3 3rd party package, added in python/3.5
 
 # Pipeline Metadata and globals 
 __author__   = 'Skyler Kuhn'
-__version__  = 'v1.11.0'
+__version__  = 'v1.12.0'
 __email__    = 'kuhnsa@nih.gov'
 __home__     = os.path.dirname(os.path.abspath(__file__))
 _name        = os.path.basename(sys.argv[0])
@@ -643,6 +643,8 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config['options']['tmp_dir'] = sub_args.tmp_dir
     config['options']['shared_resources'] = sub_args.shared_resources
     config['options']['prokaryote'] = sub_args.prokaryote
+    config['options']['call_gene_fusions'] = sub_args.call_gene_fusions
+    config['options']['mode'] = sub_args.mode
 
     # Get latest git commit hash
     git_hash = get_repo_git_commit_hash(repo_path)
@@ -1293,7 +1295,8 @@ def parsed_arguments(name, description):
 
         {1}{2}Synopsis:{4}
           $ {0} run [--help] \\
-                              [--prokaryote] [--small-rna] [--star-2-pass-basic] \\
+                              [--call-gene-fusions] [--prokaryote] \\
+                              [--small-rna] [--star-2-pass-basic] \\
                               [--dry-run] [--mode {{slurm, local}}] \\
                               [--shared-resources SHARED_RESOURCES] \\
                               [--singularity-cache SINGULARITY_CACHE] \\
@@ -1347,6 +1350,15 @@ def parsed_arguments(name, description):
                                   Example: --genome hg38_30
 
         {1}{2}Analysis options:{4}
+          --call-gene-fusions   Call gene fusions. If this option is provided, an extra
+                                set of steps will run to detect gene fusions with arriba.
+                                These steps will conditionally run depending on whether
+                                are reference files for running arriba. Currently, these
+                                reference files exist for hg38, hg19, and mm10. Please
+                                note if these reference are missing, then gene fusions
+                                will not be called.
+                                  Example: --call-gene-fusions
+
           --prokaryote          Prokaryotic genome alignment. Prokaryotic genomes, like
                                 bacteria, do not contain introns. If provided, this option 
                                 will use an optimized set of options for aligning against 
@@ -1546,6 +1558,15 @@ def parsed_arguments(name, description):
     )
 
     # Analysis options
+    # Call gene fusions with arriba  
+    subparser_run.add_argument(
+        '--call-gene-fusions',
+        action = 'store_true',
+        required = False,
+        default = False,
+        help = argparse.SUPPRESS
+    )
+
     # Run STAR with prokaryotic 
     # genome alignment options
     subparser_run.add_argument(
@@ -1574,7 +1595,6 @@ def parsed_arguments(name, description):
         default = False,
         help = argparse.SUPPRESS
     )
-
 
     # Orchestration options
     # Dry-run, do not execute the workflow, 
