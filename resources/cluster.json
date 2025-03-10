@@ -32,12 +32,12 @@
 	"kraken_pe": {
 		"cpus-per-task": "24",
 		"gres": "lscratch:256",
-		"mem": "240g"
+		"mem": "110g"
 	},
 	"kraken_se": {
 		"cpus-per-task": "24",
 		"gres": "lscratch:256",
-		"mem": "240g"
+		"mem": "110g"
 	},
 	"pca": {
 		"mem": "88g",
