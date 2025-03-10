@@ -10,7 +10,8 @@ Setting up the RNA-seek pipeline is fast and easy! In its most basic form, <code
 ## 2. Synopsis
 ```text
 $ rna-seek run [--help] \
-            [--prokaryote] [--small-rna] [--star-2-pass-basic] \
+            [--call-gene-fusions] [--prokaryote] \
+            [--small-rna] [--star-2-pass-basic] \
             [--dry-run] [--mode {slurm, local}] \
             [--shared-resources SHARED_RESOURCES] \
             [--singularity-cache SINGULARITY_CACHE] \
@@ -66,6 +67,15 @@ Each of the following arguments are required. Failure to provide a required argu
 
 ### 2.2 Analysis Options
 
+  `--call-gene-fusions`  
+> **Call gene fusions.**  
+> *type: boolean*
+> 
+> A gene fusion is a genetic alteration where two different genes become joined together, forming a new hybrid gene. If this option is provided, an extra set of steps will run to detect gene fusions with arriba. These steps will conditionally run depending on whether there are reference files for running arriba. Currently, these reference files exist for `hg38`, `hg19`, and `mm10`. Please note if these reference are missing, then gene fusions will not be called. 
+> 
+> ***Example:*** `--call-gene-fusions`
+
+--- 
   `--prokaryote`  
 > **Run with prokaryotic genome alignment options.**  
 > *type: boolean*
@@ -150,7 +160,7 @@ Each of the following arguments are optional and do not need to be provided.
 >
 > Uses a local cache of SIFs on the filesystem. This SIF cache can be shared across users if permissions are set correctly. If a SIF does not exist in the SIF cache, the image will be pulled from Dockerhub and a warning message will be displayed. The `rna-seek cache` subcommand can be used to create a local SIF cache. Please see `rna-seek cache` for more information. This command is extremely useful for avoiding DockerHub pull rate limits. It also remove any potential errors that could occur due to network issues or DockerHub being temporarily unavailable. We recommend running RNA-seek with this option when ever possible.
 > 
-> ***Example:*** `--singularity-cache /data/$USER/SIFs`
+> ***Example:*** `--sif-cache /data/$USER/SIFs`
 
 ---  
   `--tmp-dir TMP_DIR`   
