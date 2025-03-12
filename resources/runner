@@ -121,6 +121,21 @@ function check(){
 }
 
 
+function require(){
+  # Requires an executable is in $PATH, as a last resort it will attempt to load
+  # the executable or dependency as a module
+  # @INPUT $@ = List of dependencies or executables to check
+
+  for exe in "${@}"; do
+    # Check if executable is in $PATH
+    command -V ${exe} &> /dev/null && continue;
+    # Try to load exe as lua module
+    module load ${exe} &> /dev/null || \
+      fatal "Failed to find or load '${exe}', not installed on target system."
+  done
+}
+
+
 function submit(){
   # Submit jobs to the defined job scheduler or executor (i.e. slurm)
   # INPUT $1 = Snakemake Mode of execution
@@ -130,19 +145,9 @@ function submit(){
   # INPUT $5 = Singularity cache directory
   # INPUT $6 = Temporary directory for output files
 
-  # SLURM inherits the environment from which the job was launched
-  # Try to purge modules all modules from environment
-  command -V module &> /dev/null && module purge
-
-  # Check if singularity in $PATH
+  # Check if singularity and snakemake are in $PATH
   # If not, try to module load singularity as a last resort
-  command -V singularity &> /dev/null || module load singularity || \
-    fatal "Fail to find or load 'singularity', not installed on target system."
-
-  # Check if snakemake in $PATH
-  # If not, try to module load snakemake as a last resort
-  command -V snakemake &> /dev/null || module load snakemake || \
-    fatal "Fail to find or load 'snakemake', not installed on target system."
+  require singularity snakemake
 
   # Snakemake executor
   executor=${1}
