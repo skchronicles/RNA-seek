@@ -102,6 +102,21 @@ function check(){
 }
 
 
+function require(){
+  # Requires an executable is in $PATH, as a last resort it will attempt to load
+  # the executable or dependency as a module
+  # @INPUT $@ = List of dependencies or executables to check
+
+  for exe in "${@}"; do
+    # Check if executable is in $PATH
+    command -V ${exe} &> /dev/null && continue;
+    # Try to load exe as lua module
+    module load ${exe} &> /dev/null || \
+      fatal "Failed to find or load '${exe}', not installed on target system."
+  done
+}
+
+
 function retry() {
   # Tries to run a cmd 5 times before failing 
   # If a command is successful, it will break out of attempt loop
@@ -138,11 +153,7 @@ function _pull(){
   # INPUT $4 = Images to pull from DockerHub
 
   # Check if singularity in $PATH
-  # If not, try to module load singularity as a last resort
-  command -V singularity &> /dev/null || { 
-    command -V module &> /dev/null && 
-    module purge && module load singularity
-  } || fatal "Fail to find or load 'singularity', not installed on target system."
+  require singularity
 
   # cache executor
   executor=${1}
