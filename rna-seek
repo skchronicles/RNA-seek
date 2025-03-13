@@ -657,7 +657,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
         config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB'] = os.path.join(sub_args.shared_resources, "k2_pluspf_20241228")
         # Check if reference contains arriba references
         # there are only references for hg19/hg38/mm10
-        if config["references"]["rnaseq"]["FUSIONBLACKLIST"]:
+        if config["references"]["rnaseq"].get("FUSIONBLACKLIST", ''):
             new_path = sub_args.shared_resources.rstrip('/')
             config["references"]["rnaseq"]["FUSIONBLACKLIST"] = config["references"]["rnaseq"]["FUSIONBLACKLIST"].replace("/data/OpenOmics/references/common", new_path)
             config["references"]["rnaseq"]["FUSIONCYTOBAND"] = config["references"]["rnaseq"]["FUSIONCYTOBAND"].replace("/data/OpenOmics/references/common", new_path)
