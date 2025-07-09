@@ -195,7 +195,40 @@ With that being said, we have provided a universal script to fix malformed GTF f
 
 For more information about the script and its usage, please run:
 ```bash
-./resources/clean_gtf.py -h
+# Steps for converting messy a GFF/GTF file
+# into a properly formatted GTF file
+
+# Step 0.) Pull the AGAT docker image and
+#  create a SIF file.
+which singularity \
+  || module load singularity 2> /dev/null \
+  || echo 'Error: singularity is not installed!'
+SINGULARITY_CACHEDIR=${PWD}/.${USER} \
+singularity pull -F \
+  docker://quay.io/biocontainers/agat:1.4.2--pl5321hdfd78af_0
+
+# Step 1.) Run AGAT todo the heavy lifting and 
+#   correct any major issues. AGAT can take a
+#   GTF or GFF file as input, but we recommend
+#   providing a GTF file to AGAT if you have
+#   access to it (especially if it comes from
+#   NCBI, i.e RefSeq or Genbank).
+singularity exec -B $PWD \
+agat_1.4.2--pl5321hdfd78af_0.sif agat_convert_sp_gff2gtf.pl \
+    --gtf_version 3 \
+    --gff input.gtf \
+    -o converted.gtf
+
+# Step 2.) Finally run this script to add any
+#    required metadata to the 9th column of
+#    the GTF file and to fix any other issues.
+#    The cleaned gtf file can be provided to
+#    the build sub command of the pipeline.
+module load python/3.10
+./resources/clean_gtf.py \
+    --gene-name-attribute gene_name \
+    --input-gtf converted.gtf \
+    --output-gtf cleaned.gtf
 ```
 
 ## 5. Example
