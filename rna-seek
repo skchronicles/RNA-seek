@@ -7,7 +7,7 @@ About:
 USAGE:
 	$ rna-seek <run|build|unlock|cache> [OPTIONS]
 Example:
-    $ rna-seek run --input .tests/*.R?.fastq.gz --output /data/$USER/RNA_hg38 --genome hg38_30 --mode slurm
+    $ rna-seek run --input .tests/*.R?.fastq.gz --output /data/$USER/RNA_hg38 --genome hg38_42 --mode slurm
 """
 
 # Python standard library
@@ -1289,6 +1289,11 @@ def parsed_arguments(name, description):
     # Here is a work around to create more useful help message for named
     # options that are required! Please note: if a required arg is added the
     # description below should be updated (i.e. update usage and add new option)
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    genomes_supported = [
+        os.path.splitext(os.path.basename(genome_json))[0] for genome_json in \
+            os.listdir(os.path.join(this_dir, 'config', 'genomes')) if genome_json.endswith('.json')
+    ]
     required_run_options = textwrap.dedent(
         """
         {1}{0} {3}run{4}: {1} Runs the data-processing and quality-control pipeline.{4}
@@ -1305,7 +1310,7 @@ def parsed_arguments(name, description):
                               [--threads THREADS] \\
                               --input INPUT [INPUT ...] \\
                               --output OUTPUT \\
-                              --genome {{hg38_30, mm10_M21}}
+                              --genome """ + ', '.join(genomes_supported) + """
 
         {1}{2}Description:{4}
           To run the pipeline with with your data, please provide a space seperated 
@@ -1331,15 +1336,15 @@ def parsed_arguments(name, description):
                                 it will be created automatically.
                                   Example: --output /data/$USER/RNA_hg38
     
-          --genome {{hg38_30,mm10_M21,custom.json}}
+          --genome {""" + ', '.join(genomes_supported) + """}
                                 Reference genome. This option defines the reference
                                 genome of the samples. RNA-seek does comes bundled with
                                 pre built reference files for human and mouse samples;
                                 however, it is worth noting that the pipeline can accept
                                 custom reference genomes created with the build sub
                                 command. Here is a list of available pre built genomes:
-                                hg38_30 or mm10_M21. hg38_30 uses the GENCODE version 30
-                                human annotation, while mm10_M21 uses GENCODE version M21
+                                hg38_42 or mm10_M25. hg38_42 uses the GENCODE version 30
+                                human annotation, while mm10_M25 uses GENCODE version M21
                                 mouse annotation. A custom reference genome created with
                                 the build sub command can also be provided. The name of
                                 this custom reference JSON file is dependent on the
@@ -1347,7 +1352,7 @@ def parsed_arguments(name, description):
                                 '--ref-name REF_NAME --gtf-ver GTF_VER', where the name
                                 of the output file uses the following naming convention:
                                 '{{REF_NAME}}_{{GTF_VER}}.json'.
-                                  Example: --genome hg38_30
+                                  Example: --genome hg38_42
 
         {1}{2}Analysis options:{4}
           --call-gene-fusions   Call gene fusions. If this option is provided, an extra
@@ -1490,7 +1495,7 @@ def parsed_arguments(name, description):
           # Step 2A.) Dry run pipeline with provided test data
           ./{0} run --input .tests/*.R?.fastq.gz \\
                          --output /data/$USER/RNA_hg38 \\
-                         --genome hg38_30 \\
+                         --genome hg38_42 \\
                          --mode slurm \\
                          --dry-run
 
@@ -1499,7 +1504,7 @@ def parsed_arguments(name, description):
           # It is recommended running rna-seek in this mode.
           ./{0} run --input .tests/*.R?.fastq.gz \\
                          --output /data/$USER/RNA_hg38 \\
-                         --genome hg38_30 \\
+                         --genome hg38_42 \\
                          --mode slurm
 
         {2}{3}Version:{4}
@@ -1544,7 +1549,7 @@ def parsed_arguments(name, description):
         '--genome',
         required = True,
         type = lambda option: str(
-            genome_options(subparser_run, option, ['hg38_30', 'mm10_M21'])
+            genome_options(subparser_run, option, genomes_supported)
         ),
         help = argparse.SUPPRESS
     )
