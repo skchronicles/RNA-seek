@@ -15,18 +15,11 @@
             "KARYOPLOTER": "/data/OpenOmics/references/rna-seek/hg38_48/build_output/karyoplot_gene_coordinates.txt",
             "RSEMREF": "/data/OpenOmics/references/rna-seek/hg38_48/build_output/rsemref/hg38",
             "RRNALIST": "/data/OpenOmics/references/rna-seek/hg38_48/build_output/hg38.rRNA_interval_list",
-            "ORGANISM": "HUMAN",
+            "ORGANISM": "hg38_48",
             "TINREF": "/data/OpenOmics/references/rna-seek/hg38_48/build_output/transcripts.protein_coding_only.bed12",
-            "FASTAWITHADAPTERSETC": "/data/OpenOmics/references/rna-seek/common/TruSeq_and_nextera_adapters_new.fa",
-            "fastqc.adapters": "/data/OpenOmics/references/rna-seek/common/fastqc.adapters",
-            "adapter.file": "/data/OpenOmics/references/rna-seek/common/TruSeq_and_nextera_adapters.ngsqc.dat",
-            "trimmomatic.adapters": "/data/OpenOmics/references/rna-seek/common/adapters2.fa",
             "FUSIONBLACKLIST": "/data/OpenOmics/references/common/arriba/blacklist_hg38_GRCh38_v2.0.0.tsv.gz",
             "FUSIONCYTOBAND": "/data/OpenOmics/references/common/arriba/cytobands_hg38_GRCh38_v2.0.0.tsv",
-            "FUSIONPROTDOMAIN": "/data/OpenOmics/references/common/arriba/protein_domains_hg38_GRCh38_v2.0.0.gff3",
-            "FASTQ_SCREEN_CONFIG": "", 
-            "STARDIR": "", 
-            "STARREF": ""
+            "FUSIONPROTDOMAIN": "/data/OpenOmics/references/common/arriba/protein_domains_hg38_GRCh38_v2.0.0.gff3"
         }
     }
 }

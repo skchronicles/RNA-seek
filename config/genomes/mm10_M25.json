@@ -15,18 +15,11 @@
             "KARYOPLOTER": "/data/OpenOmics/references/rna-seek/mm10_M25/karyoplot_gene_coordinates.txt",
             "RSEMREF": "/data/OpenOmics/references/rna-seek/mm10_M25/rsemref/mm10",
             "RRNALIST": "/data/OpenOmics/references/rna-seek/mm10_M25/mm10.rRNA_interval_list",
-            "ORGANISM": "MOUSE",
+            "ORGANISM": "mm10_M25",
             "TINREF": "/data/OpenOmics/references/rna-seek/mm10_M25/transcripts.protein_coding_only.bed12",
             "FUSIONBLACKLIST": "/data/OpenOmics/references/common/arriba/blacklist_mm10_GRCm38_v2.0.0.tsv.gz",
             "FUSIONCYTOBAND": "/data/OpenOmics/references/common/arriba/cytobands_mm10_GRCm38_v2.0.0.tsv",
-            "FUSIONPROTDOMAIN": "/data/OpenOmics/references/common/arriba/protein_domains_mm10_GRCm38_v2.0.0.gff3",
-            "FASTAWITHADAPTERSETC": "/data/OpenOmics/references/rna-seek/common/TruSeq_and_nextera_adapters_new.fa",
-            "FASTQ_SCREEN_CONFIG": "/data/OpenOmics/references/rna-seek/mm39_M37/fastq_screen.conf",
-            "adapter.file": "/data/OpenOmics/references/rna-seek/common/TruSeq_and_nextera_adapters.ngsqc.dat",
-            "fastqc.adapters": "/data/OpenOmics/references/rna-seek/common/fastqc.adapters",
-            "trimmomatic.adapters": "/data/OpenOmics/references/rna-seek/common/adapters2.fa",
-            "STARREF": "",
-            "STARDIR": ""
+            "FUSIONPROTDOMAIN": "/data/OpenOmics/references/common/arriba/protein_domains_mm10_GRCm38_v2.0.0.gff3"
         }
     }
 }

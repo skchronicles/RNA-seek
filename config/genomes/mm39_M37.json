@@ -16,17 +16,7 @@
             "RSEMREF": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/rsemref/mm39",
             "RRNALIST": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/mm39.rRNA_interval_list",
             "ORGANISM": "mm39_M37",
-            "TINREF": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/transcripts.protein_coding_only.bed12",
-            "FASTQ_SCREEN_CONFIG": "/data/OpenOmics/references/rna-seek/mm39_M37/fastq_screen.conf",
-            "FASTAWITHADAPTERSETC": "/data/OpenOmics/references/rna-seek/common/TruSeq_and_nextera_adapters_new.fa",
-            "fastqc.adapters": "/data/OpenOmics/references/rna-seek/common/fastqc.adapters",
-            "adapter.file": "/data/OpenOmics/references/rna-seek/common/TruSeq_and_nextera_adapters.ngsqc.dat",
-            "trimmomatic.adapters": "/data/OpenOmics/references/rna-seek/common/adapters2.fa",
-            "FUSIONBLACKLIST": "",
-            "FUSIONCYTOBAND": "",
-            "FUSIONPROTDOMAIN": "",
-            "STARREF": "",
-            "STARDIR": ""
+            "TINREF": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/transcripts.protein_coding_only.bed12"
         }
     }
 }
