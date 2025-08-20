@@ -23,7 +23,10 @@
             "trimmomatic.adapters": "/data/OpenOmics/references/rna-seek/common/adapters2.fa",
             "FUSIONBLACKLIST": "/data/OpenOmics/references/common/arriba/blacklist_hg38_GRCh38_v2.0.0.tsv.gz",
             "FUSIONCYTOBAND": "/data/OpenOmics/references/common/arriba/cytobands_hg38_GRCh38_v2.0.0.tsv",
-            "FUSIONPROTDOMAIN": "/data/OpenOmics/references/common/arriba/protein_domains_hg38_GRCh38_v2.0.0.gff3"
+            "FUSIONPROTDOMAIN": "/data/OpenOmics/references/common/arriba/protein_domains_hg38_GRCh38_v2.0.0.gff3",
+            "FASTQ_SCREEN_CONFIG": "", 
+            "STARDIR": "", 
+            "STARREF": ""
         }
     }
 }
