@@ -1294,12 +1294,11 @@ def parsed_arguments(name, description):
         os.path.splitext(os.path.basename(genome_json))[0] for genome_json in \
             os.listdir(os.path.join(this_dir, 'config', 'genomes')) if genome_json.endswith('.json')
     ]
-    required_run_options = textwrap.dedent(
-        """
-        {1}{0} {3}run{4}: {1} Runs the data-processing and quality-control pipeline.{4}
-
-        {1}{2}Synopsis:{4}
-          $ {0} run [--help] \\
+    
+    required_run_options = textwrap.dedent(f"""
+        {c.bold}{name} {c.italic}run{c.end}: {c.bold} Runs the data-processing and quality-control pipeline.{c.end}
+        {c.bold}{c.url}Synopsis:{c.end}
+          $ {name} run [--help] \\
                               [--call-gene-fusions] [--prokaryote] \\
                               [--small-rna] [--star-2-pass-basic] \\
                               [--dry-run] [--mode {{slurm, local}}] \\
@@ -1310,9 +1309,9 @@ def parsed_arguments(name, description):
                               [--threads THREADS] \\
                               --input INPUT [INPUT ...] \\
                               --output OUTPUT \\
-                              --genome """ + ', '.join(genomes_supported) + """
+                              --genome """ + ', '.join(genomes_supported) + f"""
 
-        {1}{2}Description:{4}
+        {c.bold}{c.url}Description:{c.end}
           To run the pipeline with with your data, please provide a space seperated 
         list of FastQs (globbing is supported), an output directory to store results, 
         and a reference genome. 
@@ -1321,7 +1320,7 @@ def parsed_arguments(name, description):
         at "https://openomics.github.io/RNA-seek/" for more information, examples, and 
         guides. 
 
-        {1}{2}Required arguments:{4}
+        {c.bold}{c.url}Required arguments:{c.end}
           --input INPUT [INPUT ...]
                                 Input FastQ file(s) to process. One or more FastQ files
                                 can be provided. The pipeline supports single-end and
@@ -1336,7 +1335,7 @@ def parsed_arguments(name, description):
                                 it will be created automatically.
                                   Example: --output /data/$USER/RNA_hg38
     
-          --genome {""" + ', '.join(genomes_supported) + """}
+          --genome {{""" + ', '.join(genomes_supported) + f"""}}
                                 Reference genome. This option defines the reference
                                 genome of the samples. RNA-seek does comes bundled with
                                 pre built reference files for human and mouse samples;
@@ -1354,7 +1353,7 @@ def parsed_arguments(name, description):
                                 '{{REF_NAME}}_{{GTF_VER}}.json'.
                                   Example: --genome hg38_42
 
-        {1}{2}Analysis options:{4}
+        {c.bold}{c.url}Analysis options:{c.end}
           --call-gene-fusions   Call gene fusions. If this option is provided, an extra
                                 set of steps will run to detect gene fusions with arriba.
                                 These steps will conditionally run depending on whether
@@ -1397,8 +1396,8 @@ def parsed_arguments(name, description):
                                 sample two-pass basic mode. This option should not be
                                 combined with the small RNA option.
                                   Example: --star-2-pass-basic
-        
-        {1}{2}Orchestration options:{4}
+
+        {c.bold}{c.url}Orchestration options:{c.end}
           --dry-run             Does not execute anything. Only displays what steps in
                                 the pipeline remain or will be run.
                                   Example: --dry-run
@@ -1451,9 +1450,9 @@ def parsed_arguments(name, description):
                                 Path where a local cache of SIFs are stored. This cache
                                 can be shared across users if permissions are properly
                                 setup. If a SIF does not exist in the SIF cache, the
-                                image will be pulled from Dockerhub. {0} cache
+                                image will be pulled from Dockerhub. {name} cache
                                 sub command can be used to create a local SIF cache. 
-                                Please see {0} cache for more information.
+                                Please see {name} cache for more information.
                                    Example: --sif-cache /data/$USER/sifs/
 
           --tmp-dir TMP_DIR     
@@ -1475,10 +1474,10 @@ def parsed_arguments(name, description):
                                 of CPUs available on the host machine, default: 2.
                                   Example: --threads: 16
         
-        {1}{2}Misc Options:{4}
+        {c.bold}{c.url}Misc Options:{c.end}
           -h, --help            Show usage information, help message, and exit.
                                   Example: --help
-        """.format(name, c.bold, c.url, c.italic, c.end)
+        """
     )
 
     # Display example usage in epilog
