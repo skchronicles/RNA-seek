@@ -1,22 +1,25 @@
 {
     "references": {
         "rnaseq": {
-            "GENOMEFILE": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/GRCm39.primary_assembly.genome.fa",
-            "GENOME": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/GRCm39.primary_assembly.genome.fa",
-            "GTFFILE": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/gencode.vM37.primary_assembly.annotation.gtf",
-            "GENOME_STARDIR": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/STAR/2.7.6a/genome",
-            "ANNOTATE": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/annotate.genes.txt",
-            "ANNOTATEISOFORMS": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/annotate.isoforms.txt",
-            "REFFLAT": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/refFlat.txt",
-            "BEDREF": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/genes.ref.bed",
-            "GENEINFO": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/geneinfo.bed",
-            "QUALIMAP_INFO": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/qualimap_info.txt",
-            "KARYOBEDS": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/karyobeds/",
-            "KARYOPLOTER": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/karyoplot_gene_coordinates.txt",
-            "RSEMREF": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/rsemref/mm39",
-            "RRNALIST": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/mm39.rRNA_interval_list",
+            "GENOMEFILE": "/data/OpenOmics/references/rna-seek/mm39_M37/GRCm39.primary_assembly.genome.fa",
+            "GENOME": "/data/OpenOmics/references/rna-seek/mm39_M37/GRCm39.primary_assembly.genome.fa",
+            "GTFFILE": "/data/OpenOmics/references/rna-seek/mm39_M37/gencode.vM37.primary_assembly.annotation.gtf",
+            "GENOME_STARDIR": "/data/OpenOmics/references/rna-seek/mm39_M37/STAR/2.7.6a/genome",
+            "ANNOTATE": "/data/OpenOmics/references/rna-seek/mm39_M37/annotate.genes.txt",
+            "ANNOTATEISOFORMS": "/data/OpenOmics/references/rna-seek/mm39_M37/annotate.isoforms.txt",
+            "REFFLAT": "/data/OpenOmics/references/rna-seek/mm39_M37/refFlat.txt",
+            "BEDREF": "/data/OpenOmics/references/rna-seek/mm39_M37/genes.ref.bed",
+            "GENEINFO": "/data/OpenOmics/references/rna-seek/mm39_M37/geneinfo.bed",
+            "QUALIMAP_INFO": "/data/OpenOmics/references/rna-seek/mm39_M37/qualimap_info.txt",
+            "KARYOBEDS": "/data/OpenOmics/references/rna-seek/mm39_M37/karyobeds/",
+            "KARYOPLOTER": "/data/OpenOmics/references/rna-seek/mm39_M37/karyoplot_gene_coordinates.txt",
+            "RSEMREF": "/data/OpenOmics/references/rna-seek/mm39_M37/rsemref/mm39",
+            "RRNALIST": "/data/OpenOmics/references/rna-seek/mm39_M37/mm39.rRNA_interval_list",
             "ORGANISM": "mm39_M37",
-            "TINREF": "/data/OpenOmics/references/rna-seek/mm39_M37/build_output/transcripts.protein_coding_only.bed12"
+            "TINREF": "/data/OpenOmics/references/rna-seek/mm39_M37/transcripts.protein_coding_only.bed12",
+            "FUSIONBLACKLIST": "/data/OpenOmics/references/common/arriba/blacklist_mm39_GRCm39_v2.5.0.tsv.gz",
+            "FUSIONCYTOBAND": "/data/OpenOmics/references/common/arriba/cytobands_mm39_GRCm39_v2.5.0.tsv",
+            "FUSIONPROTDOMAIN": "/data/OpenOmics/references/common/arriba/protein_domains_mm39_GRCm39_v2.5.0.gff3"
         }
     }
 }
