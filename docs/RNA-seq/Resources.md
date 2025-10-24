@@ -3,15 +3,18 @@
 On [Biowulf](https://hpc.nih.gov/), RNA-seek comes bundled with the following pre-built [GENCODE](https://www.gencodegenes.org/)<sup>1</sup> reference genomes:    
 
 <!---
-Bundled Biowulf Reference Genomes 
+Hidden bundled Biowulf Reference Genomes 
 **Human** `hg38_30`  
 **Mouse** `mm10_M21`  
 ---> 
 
 | **Genome**   | **Species**   | **Annotation Version**    | **Notes**                                               |
 | ------------ |-------------- | --------------------------| --------------------------------------------------------|
-| hg38_30      | Homo sapiens (human)   | [Gencode Release v30](https://www.gencodegenes.org/human/release_30.html)  | [GRCh38](https://www.gencodegenes.org/human/release_30.html), Annotation Release date: 11/2018  |
-| mm10_M21     | Mus musculus (mouse)   | [Gencode Release M21](https://www.gencodegenes.org/mouse/release_M21.html) | [GRCm38](https://www.gencodegenes.org/mouse/release_M21.html), Annotation Release date: 04/2019 |
+| hg38_48      | Homo sapiens (human, latest)   | [Gencode Release v48](https://www.gencodegenes.org/human/release_48.html)  | [GRCh38](https://www.gencodegenes.org/human/release_48.html), Annotation Release date: 08/2024  |
+| hg38_30      | Homo sapiens (human, hidden)   | [Gencode Release v30](https://www.gencodegenes.org/human/release_30.html)  | [GRCh38](https://www.gencodegenes.org/human/release_30.html), Annotation Release date: 11/2018  |
+| mm39_M37     | Mus musculus (mouse, latest)   | [Gencode Release M37](https://www.gencodegenes.org/mouse/release_M37.html) | [GRCm38](https://www.gencodegenes.org/mouse/release_M37.html), Annotation Release date: 08/2024 |
+| mm10_M25     | Mus musculus (mouse)   | [Gencode Release M25](https://www.gencodegenes.org/mouse/release_M25.html) | [GRCm38](https://www.gencodegenes.org/mouse/release_M25.html), Annotation Release date: 11/2019 |
+| mm10_M21     | Mus musculus (mouse, hidden)   | [Gencode Release M21](https://www.gencodegenes.org/mouse/release_M21.html) | [GRCm38](https://www.gencodegenes.org/mouse/release_M21.html), Annotation Release date: 04/2019 |
 
 However, building new reference genomes is easy! 
 
