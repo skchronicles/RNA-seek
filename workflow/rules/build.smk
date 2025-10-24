@@ -138,6 +138,7 @@ rule all:
         # Arriba reference files
         # conditional runs with --shared-resources option
         provided(expand(join(SHARED_PATH, "arriba", "blacklist_{ref}_v2.0.0.tsv.gz"), ref=["hg38_GRCh38", "hg19_hs37d5_GRCh37", "mm10_GRCm38"]), SHARED_PATH),
+        provided(expand(join(SHARED_PATH, "arriba", "blacklist_{ref}_v2.5.0.tsv.gz"), ref=["mm39_GRCm39"]), SHARED_PATH),
 
 
 rule rsem:
@@ -674,6 +675,10 @@ rule arriba_references:
             join(SHARED_PATH, "arriba", "blacklist_{ref}_v2.0.0.tsv.gz"), 
             ref=["hg38_GRCh38", "hg19_hs37d5_GRCh37", "mm10_GRCm38"]
         ),
+        expand(
+            join(SHARED_PATH, "arriba", "blacklist_{ref}_v2.5.0.tsv.gz"),
+            ref=["mm39_GRCm39"]
+        ),
     params:
         rname='bl:arriba_refs',
         outfh=join(SHARED_PATH, "arriba_references.tar.gz"),
@@ -757,6 +762,14 @@ rule jsonmaker:
             "/data/OpenOmics/references/common/arriba/cytobands_mm10_GRCm38_v2.0.0.tsv"
             refdict["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = \
             "/data/OpenOmics/references/common/arriba/protein_domains_mm10_GRCm38_v2.0.0.gff3"
+        elif 'mm39' in params.genome.lower() or \
+        'grcm39' in params.genome.lower():
+            refdict["references"]["rnaseq"]["FUSIONBLACKLIST"] = \
+            "/data/OpenOmics/references/common/arriba/blacklist_mm39_GRCm39_v2.5.0.tsv.gz"
+            refdict["references"]["rnaseq"]["FUSIONCYTOBAND"] = \
+            "/data/OpenOmics/references/common/arriba/cytobands_mm39_GRCm39_v2.5.0.tsv"
+            refdict["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = \
+            "/data/OpenOmics/references/common/arriba/protein_domains_mm39_GRCm39_v2.5.0.gff3"
 
         with open(output.json, 'w') as fp:
             json.dump(refdict, fp, indent=4)

@@ -1,0 +1,25 @@
+{
+    "references": {
+        "rnaseq": {
+            "GENOMEFILE": "/data/OpenOmics/references/rna-seek/hg38_48/GRCh38.primary_assembly.genome.fa",
+            "GENOME": "/data/OpenOmics/references/rna-seek/hg38_48/GRCh38.primary_assembly.genome.fa",
+            "GTFFILE": "/data/OpenOmics/references/rna-seek/hg38_48/gencode.v48.primary_assembly.annotation.gtf",
+            "GENOME_STARDIR": "/data/OpenOmics/references/rna-seek/hg38_48/STAR/2.7.6a/genome",
+            "ANNOTATE": "/data/OpenOmics/references/rna-seek/hg38_48/annotate.genes.txt",
+            "ANNOTATEISOFORMS": "/data/OpenOmics/references/rna-seek/hg38_48/annotate.isoforms.txt",
+            "REFFLAT": "/data/OpenOmics/references/rna-seek/hg38_48/refFlat.txt",
+            "BEDREF": "/data/OpenOmics/references/rna-seek/hg38_48/genes.ref.bed",
+            "GENEINFO": "/data/OpenOmics/references/rna-seek/hg38_48/geneinfo.bed",
+            "QUALIMAP_INFO": "/data/OpenOmics/references/rna-seek/hg38_48/qualimap_info.txt",
+            "KARYOBEDS": "/data/OpenOmics/references/rna-seek/hg38_48/karyobeds/",
+            "KARYOPLOTER": "/data/OpenOmics/references/rna-seek/hg38_48/karyoplot_gene_coordinates.txt",
+            "RSEMREF": "/data/OpenOmics/references/rna-seek/hg38_48/rsemref/hg38",
+            "RRNALIST": "/data/OpenOmics/references/rna-seek/hg38_48/hg38.rRNA_interval_list",
+            "ORGANISM": "hg38_48",
+            "TINREF": "/data/OpenOmics/references/rna-seek/hg38_48/transcripts.protein_coding_only.bed12",
+            "FUSIONBLACKLIST": "/data/OpenOmics/references/common/arriba/blacklist_hg38_GRCh38_v2.0.0.tsv.gz",
+            "FUSIONCYTOBAND": "/data/OpenOmics/references/common/arriba/cytobands_hg38_GRCh38_v2.0.0.tsv",
+            "FUSIONPROTDOMAIN": "/data/OpenOmics/references/common/arriba/protein_domains_hg38_GRCh38_v2.0.0.gff3"
+        }
+    }
+}

@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: docker://snakemake/snakemake:v5.24.2
-    - name: Dry-run pipeline
+    - name: Dry-run pipeline hg38_48
       run: |
         docker run -v $PWD:/opt2 snakemake/snakemake:v5.24.2 \
         python /opt2/rna-seek run --input \
@@ -22,7 +22,29 @@ jobs:
         /opt2/.tests/KO_S4.R1.fastq.gz /opt2/.tests/KO_S4.R2.fastq.gz \
         /opt2/.tests/WT_S1.R1.fastq.gz /opt2/.tests/WT_S1.R2.fastq.gz \
         --output /opt2/output \
-        --genome hg38_30 \
+        --genome hg38_48 \
+        --shared-resources /opt2/.tests/ \
+        --mode local --dry-run
+    - name: Dry-run pipeline mm39_M37
+      run: |
+        docker run -v $PWD:/opt2 snakemake/snakemake:v5.24.2 \
+        python /opt2/rna-seek run --input \
+        /opt2/.tests/KO_S3.R1.fastq.gz /opt2/.tests/KO_S3.R2.fastq.gz \
+        /opt2/.tests/KO_S4.R1.fastq.gz /opt2/.tests/KO_S4.R2.fastq.gz \
+        /opt2/.tests/WT_S1.R1.fastq.gz /opt2/.tests/WT_S1.R2.fastq.gz \
+        --output /opt2/output \
+        --genome mm39_M37 \
+        --shared-resources /opt2/.tests/ \
+        --mode local --dry-run
+    - name: Dry-run pipeline mm10_M25
+      run: |
+        docker run -v $PWD:/opt2 snakemake/snakemake:v5.24.2 \
+        python /opt2/rna-seek run --input \
+        /opt2/.tests/KO_S3.R1.fastq.gz /opt2/.tests/KO_S3.R2.fastq.gz \
+        /opt2/.tests/KO_S4.R1.fastq.gz /opt2/.tests/KO_S4.R2.fastq.gz \
+        /opt2/.tests/WT_S1.R1.fastq.gz /opt2/.tests/WT_S1.R2.fastq.gz \
+        --output /opt2/output \
+        --genome mm10_M25 \
         --shared-resources /opt2/.tests/ \
         --mode local --dry-run
     - name: Lint workflow
