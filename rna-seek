@@ -7,7 +7,7 @@ About:
 USAGE:
 	$ rna-seek <run|build|unlock|cache> [OPTIONS]
 Example:
-    $ rna-seek run --input .tests/*.R?.fastq.gz --output /data/$USER/RNA_hg38 --genome hg38_42 --mode slurm
+    $ rna-seek run --input .tests/*.R?.fastq.gz --output /data/$USER/RNA_hg38 --genome hg38_48 --mode slurm
 """
 
 # Python standard library
@@ -21,7 +21,7 @@ import argparse  # potential python3 3rd party package, added in python/3.5
 
 # Pipeline Metadata and globals 
 __author__   = 'Skyler Kuhn'
-__version__  = 'v1.12.1'
+__version__  = 'v1.13.0'
 __email__    = 'kuhnsa@nih.gov'
 __home__     = os.path.dirname(os.path.abspath(__file__))
 _name        = os.path.basename(sys.argv[0])
@@ -1290,15 +1290,25 @@ def parsed_arguments(name, description):
     # options that are required! Please note: if a required arg is added the
     # description below should be updated (i.e. update usage and add new option)
     this_dir = os.path.dirname(os.path.abspath(__file__))
-    genomes_supported = [
+    hidden_genomes = ['hg38_30', 'mm10_M21']
+    genomes_supported = sorted([
         os.path.splitext(os.path.basename(genome_json))[0] for genome_json in \
-            os.listdir(os.path.join(this_dir, 'config', 'genomes')) if genome_json.endswith('.json')
-    ]
-    
-    required_run_options = textwrap.dedent(f"""
-        {c.bold}{name} {c.italic}run{c.end}: {c.bold} Runs the data-processing and quality-control pipeline.{c.end}
-        {c.bold}{c.url}Synopsis:{c.end}
-          $ {name} run [--help] \\
+            os.listdir(os.path.join(this_dir, 'config', 'genomes')) \
+                if genome_json.endswith('.json')
+    ])
+    # Exclude hidden genomes from help section,
+    # to encourage people to use the new reference
+    # genomes for their projects. Note: Users can
+    # still use hg38_30 or mm10_M25. This is to
+    # ensure backwards compatiability. We have
+    # just hidden it from the help section.
+    genomes_supported = [g for g in genomes_supported if g not in hidden_genomes]
+
+    required_run_options = textwrap.dedent("""
+        {1}{0} {3}run{4}: {1} Runs the data-processing and quality-control pipeline.{4}
+
+        {1}{2}Synopsis:{4}
+          $ {0} run [--help] \\
                               [--call-gene-fusions] [--prokaryote] \\
                               [--small-rna] [--star-2-pass-basic] \\
                               [--dry-run] [--mode {{slurm, local}}] \\
@@ -1309,9 +1319,9 @@ def parsed_arguments(name, description):
                               [--threads THREADS] \\
                               --input INPUT [INPUT ...] \\
                               --output OUTPUT \\
-                              --genome """ + ', '.join(genomes_supported) + f"""
+                              --genome {{{5}}}
 
-        {c.bold}{c.url}Description:{c.end}
+        {1}{2}Description:{4}
           To run the pipeline with with your data, please provide a space seperated 
         list of FastQs (globbing is supported), an output directory to store results, 
         and a reference genome. 
@@ -1320,7 +1330,7 @@ def parsed_arguments(name, description):
         at "https://openomics.github.io/RNA-seek/" for more information, examples, and 
         guides. 
 
-        {c.bold}{c.url}Required arguments:{c.end}
+        {1}{2}Required arguments:{4}
           --input INPUT [INPUT ...]
                                 Input FastQ file(s) to process. One or more FastQ files
                                 can be provided. The pipeline supports single-end and
@@ -1335,25 +1345,27 @@ def parsed_arguments(name, description):
                                 it will be created automatically.
                                   Example: --output /data/$USER/RNA_hg38
     
-          --genome {{""" + ', '.join(genomes_supported) + f"""}}
+          --genome {{{5}}}
                                 Reference genome. This option defines the reference
                                 genome of the samples. RNA-seek does comes bundled with
                                 pre built reference files for human and mouse samples;
                                 however, it is worth noting that the pipeline can accept
                                 custom reference genomes created with the build sub
-                                command. Here is a list of available pre built genomes:
-                                hg38_42 or mm10_M25. hg38_42 uses the GENCODE version 30
-                                human annotation, while mm10_M25 uses GENCODE version M21
-                                mouse annotation. A custom reference genome created with
-                                the build sub command can also be provided. The name of
-                                this custom reference JSON file is dependent on the
-                                values provided to the following rna-seek build args
-                                '--ref-name REF_NAME --gtf-ver GTF_VER', where the name
-                                of the output file uses the following naming convention:
-                                '{{REF_NAME}}_{{GTF_VER}}.json'.
-                                  Example: --genome hg38_42
+                                command. Here is a list of available pre-built genomes.
+                                  • hg38_48  (Human: GRCh38.p14 + GENCODE 48 annotation)
+                                  • mm10_M25 (Mouse: GRCm38.p6 + GENCODE M25 annotation)
+                                  • mm39_M37 (Mouse: GRCm39 + GENCODE M37 annotation)
+                                It is worth noting that mm39_M37 uses the latest assembly
+                                for mouse, i.e GRCm39 aka mm39. A custom reference genome
+                                created with the build sub command can also be provided. 
+                                The name of this custom reference JSON file is dependent
+                                on the values provided to the following rna-seek build 
+                                args '--ref-name REF_NAME --gtf-ver GTF_VER', where the
+                                name of the output file uses the following naming 
+                                convention: '{{REF_NAME}}_{{GTF_VER}}.json'.
+                                  Example: --genome hg38_48
 
-        {c.bold}{c.url}Analysis options:{c.end}
+        {1}{2}Analysis options:{4}
           --call-gene-fusions   Call gene fusions. If this option is provided, an extra
                                 set of steps will run to detect gene fusions with arriba.
                                 These steps will conditionally run depending on whether
@@ -1397,7 +1409,7 @@ def parsed_arguments(name, description):
                                 combined with the small RNA option.
                                   Example: --star-2-pass-basic
 
-        {c.bold}{c.url}Orchestration options:{c.end}
+        {1}{2}Orchestration options:{4}
           --dry-run             Does not execute anything. Only displays what steps in
                                 the pipeline remain or will be run.
                                   Example: --dry-run
@@ -1450,9 +1462,9 @@ def parsed_arguments(name, description):
                                 Path where a local cache of SIFs are stored. This cache
                                 can be shared across users if permissions are properly
                                 setup. If a SIF does not exist in the SIF cache, the
-                                image will be pulled from Dockerhub. {name} cache
+                                image will be pulled from Dockerhub. {0} cache
                                 sub command can be used to create a local SIF cache. 
-                                Please see {name} cache for more information.
+                                Please see {0} cache for more information.
                                    Example: --sif-cache /data/$USER/sifs/
 
           --tmp-dir TMP_DIR     
@@ -1474,10 +1486,10 @@ def parsed_arguments(name, description):
                                 of CPUs available on the host machine, default: 2.
                                   Example: --threads: 16
         
-        {c.bold}{c.url}Misc Options:{c.end}
+        {1}{2}Misc Options:{4}
           -h, --help            Show usage information, help message, and exit.
                                   Example: --help
-        """
+        """.format(name, c.bold, c.url, c.italic, c.end, ', '.join(genomes_supported))
     )
 
     # Display example usage in epilog
@@ -1494,7 +1506,7 @@ def parsed_arguments(name, description):
           # Step 2A.) Dry run pipeline with provided test data
           ./{0} run --input .tests/*.R?.fastq.gz \\
                          --output /data/$USER/RNA_hg38 \\
-                         --genome hg38_42 \\
+                         --genome hg38_48 \\
                          --mode slurm \\
                          --dry-run
 
@@ -1503,7 +1515,7 @@ def parsed_arguments(name, description):
           # It is recommended running rna-seek in this mode.
           ./{0} run --input .tests/*.R?.fastq.gz \\
                          --output /data/$USER/RNA_hg38 \\
-                         --genome hg38_42 \\
+                         --genome hg38_48 \\
                          --mode slurm
 
         {2}{3}Version:{4}
