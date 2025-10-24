@@ -60,11 +60,14 @@ The accuracy of the downstream interpretations made from transcriptomic data are
 
 #### 2.2 Reference Genomes
 Reference files are pulled from an S3 bucket to the compute instance or local filesystem prior to execution.  
-RNA-seek comes bundled with pre-built reference files for the following genomes:
+RNA-seek comes bundled with pre-built reference files for the following GENCODE<sup>6</sup> genomes:
 | Name     | Species | Genome | Annotation |
 | -------- | ------- | ------------------ | -------- | 
-| hg38_30  | Homo sapiens (human) | [GRCh38](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_28/GRCh38.primary_assembly.genome.fa.gz) | [Gencode<sup>6</sup> Release 30](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_30/gencode.v30.annotation.gtf.gz) |
-| mm10_M21 | Mus musculus (mouse) | [GRCm38](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M18/GRCm38.primary_assembly.genome.fa.gz) | [Gencode Release M21](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M21/gencode.vM21.annotation.gtf.gz) |
+| hg38_48  | Homo sapiens (human, latest) | [GRCh38](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_48/GRCh38.primary_assembly.genome.fa.gz)  | [Gencode Release 48](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_48/gencode.v48.primary_assembly.annotation.gtf.gz) |
+| hg38_30  | Homo sapiens (human, hidden) | [GRCh38](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_28/GRCh38.primary_assembly.genome.fa.gz)   | [Gencode Release 30](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_30/gencode.v30.annotation.gtf.gz) |
+| mm39_M37 | Mus musculus (mouse, latest) | [GRCm39](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M37/GRCm39.primary_assembly.genome.fa.gz) | [Gencode Release M37](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M37/gencode.vM37.primary_assembly.annotation.gtf.gz) |
+| mm10_M25 | Mus musculus (mouse, last)   | [GRCm38](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/GRCm38.primary_assembly.genome.fa.gz) | [Gencode Release M25](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M25/gencode.vM25.primary_assembly.annotation.gtf.gz) |
+| mm10_M21 | Mus musculus (mouse, hidden) | [GRCm38](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M18/GRCm38.primary_assembly.genome.fa.gz)  | [Gencode Release M21](http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M21/gencode.vM21.annotation.gtf.gz) |
 
 > **Warning:** This section contains FTP links for downloading each reference file.  Open the link in a new tab to start a download. 
 
