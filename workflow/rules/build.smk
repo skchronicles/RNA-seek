@@ -675,6 +675,10 @@ rule arriba_references:
             join(SHARED_PATH, "arriba", "blacklist_{ref}_v2.0.0.tsv.gz"), 
             ref=["hg38_GRCh38", "hg19_hs37d5_GRCh37", "mm10_GRCm38"]
         ),
+        expand(
+            join(SHARED_PATH, "arriba", "blacklist_{ref}_v2.5.0.tsv.gz"),
+            ref=["mm39_GRCm39"]
+        ),
     params:
         rname='bl:arriba_refs',
         outfh=join(SHARED_PATH, "arriba_references.tar.gz"),
