@@ -1,0 +1,708 @@
+---
+title: "Differential Gene Expression Analysis"
+subtitle: "limma report"
+author: "Skyler Kuhn"
+date: "`r Sys.Date()`"
+params:
+    raw: "DEG_ALL/RSEM_genes_expected_counts.tsv"
+    group: "groups.tsv"
+    contrasts: "contrasts.tsv"
+    prefix: "comparison_prefix"
+    wdir: "results"
+output: 
+    html_document:
+        code_download: true
+        code_folding: hide
+        toc: true
+        toc_depth: 4
+        toc_float: true
+---
+
+```{r setup, include=FALSE}
+
+# Set the working directory
+wd <- params$wdir
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = wd)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+### About
+
+This report contains the results of differential gene expression (DGE) analysis using the R bioconductor package [limma](https://bioconductor.org/packages/release/bioc/html/limma.html). 
+
+This report includes data pre-processing steps to filter out lowly expressed genes, estimate scaling factors for normalization, and transform the raw counts into log2 counts per million (log2CPM) values using the `voom` method to account for mean-variance relationship in RNA-seq data. After data normalization, exploratory principal component analysis (PCA) was performed to examine inter-sample clustering and detect potential outliers.
+
+Differential gene expression analysis was performed using the limma functions `lmFit`, `contrasts.fit`, and `eBayes`. The differential expression results are presented in interactive tables and volcano plots for each comparison of interest.
+
+### Sample Sheet  
+
+```{r init-global, results='asis'}
+# Bioconductor package imports
+# Install via:
+#   BiocManager::install('packageName'))
+suppressMessages(library("limma"))
+suppressMessages(library("edgeR"))
+
+# CRAN package imports
+# Install via:
+#   install.packages('packageName')
+suppressMessages(library("plotly"))
+suppressMessages(library("ggplot2"))
+suppressMessages(library("DT"))
+suppressMessages(library("knitr"))
+suppressMessages(library("RColorBrewer"))
+suppressMessages(library("tidyverse"))
+suppressMessages(library("rcompanion"))
+suppressMessages(library("dplyr"))
+suppressMessages(library("stringr"))
+suppressMessages(library("corrplot"))
+
+# Get prefix for output files
+prefix <- params$prefix
+
+# Reading in raw counts matrix
+raw <- read.table(
+    file = params$raw,
+    sep = "\t",
+    header = TRUE,
+    row.names = 1,
+    quote = ""
+)
+
+# Reading in sample sheet,
+# contains sample to group
+# information
+groupinfo <- read.table(
+    file = params$group,
+    sep = "\t",
+    header = TRUE,
+    stringsAsFactors = TRUE
+)
+rownames(groupinfo) = make.names(groupinfo$Sample)
+
+# Reading in contrasts file,
+# contains comparisons of interest
+contrastinfo <- read.table(
+    file = params$contrasts,
+    sep = "\t",
+    header = FALSE,
+    stringsAsFactors = TRUE
+)
+
+# Reorder the columns of the counts
+# matrix to match the order of the
+# Sample column of groupinfo TSV,
+# Samples with names that do not
+# match are dropped
+grp_idx <- match(make.names(colnames(raw)), row.names(groupinfo), nomatch = 0)
+groupinfo <- groupinfo[grp_idx,]
+
+# Set working/output directory
+# after reading in input files,
+# ensure relative paths are read
+# in correctly before changing
+# the working directory. If the
+# working/output directory does
+# not exist, it will be created
+if (!dir.exists(wd) ) {
+  dir.create(wd)
+  set.wd(wd)
+}
+
+# Note the use of the results='asis' chunk
+# option above. This is required to ensure 
+# that the raw table output isn’t processed
+# further by knitr.
+# Create interactive datatable with metadata
+DT::datatable(
+    groupinfo,
+    extensions = c(
+      "Buttons",       # add download buttons
+      "Scroller",      # for scrolling instead of pagination
+      "FixedColumns",  # freeze columns in datatable
+      "SearchBuilder"  # create complex search queries
+    ),
+    rownames = FALSE,  # keep rownames
+    style = "auto",
+    width = "100%",
+    options = list(
+      dom = "QBlrtip", # specify content (search box, etc)
+      deferRender = TRUE,
+      scrollX = TRUE,
+      scrollY = 400,
+      scroller = TRUE,
+      fixedColumns = list(leftColumns = 1), # freeze left columns
+      buttons = list(
+        list(
+            extend = "csv",             # download as .csv
+            filename = "groups_file"    # output file
+        ),
+        list(
+            extend = "excel",           # download as .xlsx
+            filename = "groups_file"    # output file
+        )
+      )
+    ),
+)
+```
+
+The sample sheet above links each sample to its associated metadata. It includes a **Group** column representing the experimental groups of interest— such as time points, treatments, conditions, genotypes status, or disease states. The **Group** information is used to construct the design matrix for linear modeling in [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html), enabling comparisons between groups to identify differentially expressed genes.
+
+### Pre-processing
+
+**Filtering**
+
+Before finding differentially expressed genes, it is recommeded to filter out lowly expressed genes. 
+
+Here is a quote from the author of `limma`:
+
+> From a biological point of view, genes that not expressed at a biologically meaningful level in any condition are not of interest and are therefore best ignored. From a statistical point of view, removing low count genes allows the mean-variance relationship in the data to be estimated with greater reliability and also reduces the number of statistical tests that need to be carried out in downstream analyses looking at differential expression.
+
+**Normalization**
+
+It is *not appropriate* to perform differential expression analysis on raw counts. Raw counts are biased by the library size/sequencing depth of a given sample. More simply, this means that higher depth samples will have higher gene counts. As so, we must normalize the data to take into consideration the sequencing depth. The raw counts will be transformed into `log2(CPM + pseudocount)` via `limma::voom()` function. `voom()` adds small psueduo-count of 0.5 to prevent taking the log of zero.
+
+Normalisation is also required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation by the method of trimmed mean of M-values (TMM) is performed using the calcNormFactors function in `edgeR`. The normalization factors calculated here are used as a scaling factor for the library sizes.
+
+For RNA-sequncing data, it has been shown that the variance is not independent of the mean. Meaning, there is a mean-variance relationship in the count data. As so, it is also important to account for heteroscedascity in the count data. Raw counts show increasing variance with increasing count size, while log-counts typically show a decreasing mean-variance trend. Methods that model counts using a Negative Binomial distribution assume a quadratic mean-variance relationship. In `limma`, linear modelling is carried out on the log2CPM values which are assumed to be normally distributed. `limma::voom()` estimates the mean-variance trend for log-counts, then assigns a weight to each observation based on its predicted variance. The weights are then used in the linear modeling process to adjust for heteroscedasticity.
+
+```{r pre-processing, out.width="100%"}
+# Create DGEList object with edgeR
+group <- as.factor(groupinfo$Group)
+deg <- edgeR::DGEList(counts = raw, group = group)
+
+# Calculate log2CPM for exploratory plots,
+# when is set to TRUE, the cpm() function
+# adds an offset to the CPM values before
+# converting to the log2-scale.
+raw.cpm <- edgeR::cpm(raw, log = TRUE)
+
+# Filter lowly expressed genes
+# Gene must have 10 reads in >= 70% samples.
+# The actual filtering uses CPM values rather
+# than counts in order to avoid biases to
+# samples with large library sizes.
+keep_genes <- edgeR::filterByExpr(deg, group = group)
+# Recaluate new lib.sizes after filtering
+deg <- deg[keep_genes, , keep.lib.sizes = FALSE]
+
+# Used to create plots before/after
+# filtering for lowly expressed genes
+filtered.cpm <- edgeR::cpm(deg, log = TRUE)
+
+# edgeR TMM normalization, just calculates
+# norm scaling factors for use downstream.
+# These factors are automatically stored in
+# the resulting DEGList object.
+deg <- edgeR::calcNormFactors(deg, method = "TMM")
+
+# Creating using Group information,
+# Adding `0+` will create a model
+# without an intercept term, for
+# groups that are factors this is 
+# the recommended method as interpreting
+# which group become the intercept can
+# confusing (especially in more complex
+# designs). When `0+` is not provided
+# the first group becomes the intercept,
+# as called a mean-reference model.
+# Again when working with groups that
+# are factors (categorical), it does
+# not matter; however, for continuous
+# group variables, it does matter.
+design <- model.matrix(~0 + group)
+
+colnames(design) <- gsub("group", "", colnames(design))
+
+# limma voom() transforms the counts
+# into log2CPM, where “per million reads”
+# is defined based on the normalization
+# factors we calculated earlier with edgeR.
+# A linear model is fitted to the log2CPM
+# for each gene, and the residuals are
+# calculated. A smoothed curve is fitted
+# to the sqrt(residual standard deviation)
+# by average expression, seen red line in
+# voomplot. The smoothed curve is used to
+# obtain weights for each gene and sample
+# that are passed into limma along with
+# the log2CPMs.
+v <- limma::voom(deg, design, plot = TRUE)
+
+# lmFit fits a linear model using weighted
+# least squares for each gene, and now
+# comparisons between groups (log2FC) can
+# be obtained as contrasts of these fitted
+# linear models.
+fit <- limma::lmFit(v, design)
+
+# Write the voom object, normalized
+# counts to an output file for any
+# later data visualization requests
+write.table(
+  data.frame("ensid_gene" = rownames(v$E), v$E),
+  file = paste("limma_voom_log2CPM_TMM_scaled_counts.tsv"),
+  row.names = F,
+  sep = "\t",
+  quote = F
+)
+```
+
+The smoothed curve (red line, seen above) is used to obtain weights for each gene and sample that are passed into limma along with the log2CPMs. Typically, the voom-plot shows a decreasing trend between the means and variances resulting from a combination of technical variation in the sequencing experiment and biological variation amongst the replicate samples from different groups. Experiments with high biological variation usually result in flatter trends, where variance values plateau at high expression values. Experiments with low biological variation tend to result in sharp decreasing trends.
+
+Moreover, the voom-plot provides a visual check on the level of filtering performed upstream. If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts. If this is observed, one should return to the earlier filtering step and increase the expression threshold applied to the dataset.
+
+### PCA plots {.tabset}
+
+#### After Normalization {.tabset}
+
+##### Experimental Groups
+
+PCA colored by the following groups of interest: `r unique(sort(group))`. These represent the main variables of interest for the experiment.
+
+```{r 3d-expression-pca-groups-after, out.width='100%', out.height='100%'}
+# Order genes by MAD, limma voom
+# returns an Elist object where
+# v$E corresponds to a numeric 
+# matrix of normalized expression
+# values, scaled log2CPM. Scaling
+# is calculated by edgeR's TMM
+# calcNormFactors function.
+pca_data <- v
+pca_data$E <- pca_data$E[order(apply(pca_data$E, 1, mad), decreasing = T), ]
+
+# Remove zero variance rows prior to PC
+pca_data$E <- pca_data$E[apply(pca_data$E, 1, var) != 0, ]
+
+# Principal component analysis
+# of normalized expression matrix,
+# first three PCs for the 3D plotly
+# scatter plot can be accessed via
+# the following: pca$x[,1:3]
+pca <- prcomp(
+  t(as.matrix(pca_data$E)), scale. = T
+)
+
+# Merge both dataframes on rowname
+metadata <- transform(
+    merge(groupinfo,
+          as.data.frame(pca$x[, 1:3]),
+          by = 'row.names',
+          all = TRUE
+    ),
+    row.names = Row.names,
+    Row.names = NULL
+)
+
+# Calculating the amount of variance
+# explained by the first three PCs
+pc1 <- round(pca$sdev[1]^2 / sum(pca$sdev^2)*100, 2)
+pc2 <- round(pca$sdev[2]^2 / sum(pca$sdev^2)*100, 2)
+pc3 <- round(pca$sdev[3]^2 / sum(pca$sdev^2)*100, 2)
+cgroups <- as.factor(metadata$Group)
+cgroups <- addNA(cgroups)
+cpalette <- brewer.pal(nlevels(cgroups), "Paired")
+p <- plot_ly(
+    metadata,
+    x = ~PC1,
+    y = ~PC2,
+    z = ~PC3,
+    color = cgroups,
+    colors = cpalette,
+    hoverinfo = "text",
+    marker = list(size  = 8),
+    text = ~paste(
+      "</br> <b>Sample:</b> ", Sample,
+      "</br> Group: ", Group
+    )
+) %>% add_markers() %>%
+layout(scene = list(
+    xaxis = list(title = paste0("PC1 (",pc1,"%)")),
+    yaxis = list(title = paste0("PC2 (",pc2,"%)")),
+    zaxis = list(title = paste0("PC3 (",pc3,"%)")))
+) %>% config(toImageButtonOptions = list(format = 'svg')) # png, svg, jpeg, webp
+
+# Important: disable onclick() events
+# fixes unexpected behavior with 
+# multiple crosstalk plots
+plotly::highlight(p, on = NULL)
+```
+
+The interactive 3D PCA plot above visualizes the clustering of samples based on the first three principal components (PCs) of the normalized gene expression data. Each point represents a sample, colored according to its experimental group. The axes indicate the percentage of variance explained by each PC, providing insights into the major sources of variation in the dataset.
+
+### Differential gene expression analysis
+
+In this experiment, it is of interest to see which genes are differentially expressed between different experimental groups of interest.
+
+To find differentially expressed genes, comparisons between different groups of intereset are defined as contrasts. Linear modelling is performed using the Bioconductor R package [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html) with the `limma::lmFit()`, `limma::contrasts.fit()`, and `limma::eBayes()` functions. These functions fit a separate model to the expression values for each gene. Next, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability. This step shrinks standard errors that are much larger or smaller than those from other genes towards the average standard error. The false-discovery rate (FDR) was used to adjust the p-values for multiple testing.
+
+#### Comparisons of interest
+
+Here is a table containing the differential expression comparisons to perform. Each row represents a comparison between two experimental groups.
+
+```{r comparisons-table, results='asis'}
+contrast_df <- contrastinfo
+colnames(contrast_df) <- c("Experimental Group", "Baseline Group")
+DT::datatable(
+    contrast_df,
+    extensions = c(
+      "Buttons",       # add download buttons
+      "Scroller",      # for scrolling instead of pagination
+      "FixedColumns",  # freeze columns in datatable
+      "SearchBuilder"  # create complex search queries
+    ),
+    rownames = FALSE,  # keep rownames
+    style = "auto",
+    width = "100%",
+    options = list(
+      dom = "QBlrtip", # specify content (search box, etc)
+      deferRender = TRUE,
+      scrollX = TRUE,
+      scrollY = 250,
+      scroller = TRUE,
+      fixedColumns = list(leftColumns = 1), # freeze left columns
+      buttons = list(
+        list(
+            extend = "csv",               # download as .csv
+            filename = "contrasts_file"   # output file
+        ),
+        list(
+            extend = "excel",             # download as .xlsx
+            filename = "contrasts_file"   # output file
+        )
+      )
+    ),
+)
+```
+
+
+```{r template_chunks, echo=FALSE}
+deg_template <- '##### **{{grp1}} vs. {{grp2}}**
+
+This section contains the results of the differential gene expression analysis between the `{{grp1}}` and `{{grp2}}` groups.
+
+\`\`\`{r compare-{{grp1}}-{{grp2}}, out.width="100%"} 
+# Creating a contrast matrix
+contrast <- limma::makeContrasts(
+  {{grp1}} - {{grp2}},
+  levels = colnames(design)
+)
+
+# Replace any instance of (A + B + C)/n with avg(A + B + C),
+# we cannot create files with a / in the name
+ofh_grp1 <- gsub("\\\\(([^()]+)\\\\)\\\\s*/\\\\s*\\\\d+", "avg(\\\\1)", "{{grp1}}")
+ofh_grp2 <- gsub("\\\\(([^()]+)\\\\)\\\\s*/\\\\s*\\\\d+", "avg(\\\\1)", "{{grp2}}")
+
+# Fits linear models using a
+# contrast to each gene
+voom.fit <- limma::contrasts.fit(fit, contrasts = contrast)
+ebayes.fit <- limma::eBayes(voom.fit)
+# Get the results of the
+# differential expression
+# analysis for a genes
+results.table <- limma::topTable(
+  ebayes.fit, 
+  adjust.method = "fdr",
+  sort.by = "B",
+  n = Inf
+)
+
+# Calculating a generic
+# fold-change from the
+# lof2FC, new scale goes 
+# from: -inf...-1 TO 1...+inf
+results.table$FC <- ifelse(
+  results.table$logFC<0, 
+  -1/(2^results.table$logFC),
+  2^results.table$logFC
+)
+
+# Calculating a pre-ranked 
+# score for GSEA
+results.table$prerank_score = -1 * (
+  log10(results.table$P.Value) * sign(results.table$logFC)
+)
+
+# Reorder the topTable results
+results.table <- dplyr::select(
+  results.table,
+  "FC",
+  "logFC",
+  "AveExpr",
+  "t",
+  "B",
+  "prerank_score",
+  "P.Value",
+  "adj.P.Val"
+)
+
+# Sort the results by P.Value
+results.table <- results.table[
+  order(results.table$P.Value, decreasing = FALSE), 
+]
+
+# Filter table to find significant
+# differentially expressed genes:
+# abs(FC)>=1.5 and fdr<=0.1
+fc.threshold <- 1.5
+fdr.threshold <- 0.1
+sig.table <- results.table[
+  which(
+    abs(results.table$FC) >= fc.threshold & results.table$adj.P.Val <= fdr.threshold
+  ),
+]
+
+# Get the number of up-regulated
+# significant genes 
+up.regulated <- nrow(
+  sig.table[
+    which(
+      sig.table$FC >= fc.threshold
+    ),
+  ]
+)
+# Get the number of down-regulated
+# significant genes 
+down.regulated <- nrow(
+  sig.table[
+    which(
+      sig.table$FC <= -fc.threshold
+    ),
+  ]
+)
+
+# Note the use of the results="asis" chunk
+# option above. This is required to ensure 
+# that the raw table output isnt processed
+# further by knitr.
+# Create interactive datatable with metadata
+DT::datatable(
+    sig.table,
+    extensions = c(
+      "Buttons",       # add download buttons
+      "Scroller",      # for scrolling instead of pagination
+      "FixedColumns",  # freeze columns in datatable
+      "SearchBuilder"  # create complex search queries
+    ),
+    rownames = TRUE,  # keep rownames
+    style = "auto",
+    width = "100%",
+    options = list(
+      dom = "QBlrtip", # specify content (search box, etc)
+      deferRender = TRUE,
+      scrollX = TRUE,
+      scrollY = 600,
+      scroller = TRUE,
+      fixedColumns = list(leftColumns = 1), # freeze left columns
+      buttons = list(
+        list(
+            # download as .csv
+            extend = "csv",
+            # output filename
+            filename = paste(
+              "limma_voom_deg_",
+              paste(ofh_grp1, ofh_grp2, sep = "-"),
+              sep = ""
+          )
+        ),
+        list(
+            # download as .xlsx
+            extend = "excel",
+            # Output filename
+            filename = paste(
+              "limma_voom_deg_",
+              paste(ofh_grp1, ofh_grp2, sep = "-"),
+              sep = ""
+          )
+        )
+      )
+    ),
+)
+
+# Write results of differential
+# expression analysis to a file
+write.table(
+  data.frame("ensid_gene" = rownames(results.table), results.table),
+  file = paste(
+    "limma_voom_deg_",
+    paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"),
+    sep = ""
+  ),
+  row.names = F,
+  sep = "\\t",
+  quote = F
+)
+
+# Write coefficents of limmas linear model
+# to an output file, the FC is calculated
+# from these value which conceptually 
+# represents the mean expression of each 
+# level in a factor.
+write.table(
+  data.frame("ensid_gene" = rownames(coef(fit)), coef(fit)),
+  file = paste(
+    "limma_voom_linear_model_coefficients_",
+    paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"),
+    sep = ""
+  ),
+  row.names = F,
+  sep = "\\t",
+  quote = F
+)
+\`\`\`
+
+The table above contains the result of differential expression analysis using the R package `limma`. The table has been filtered to identify significant differentially expressed genes meeting the following thresholds: FDR adjusted p-value <= \`r fdr.threshold\` AND abs(FC) >= \`r fc.threshold\`. 
+
+In total there are \`r up.regulated + down.regulated\` genes meeting those filtering criteria, of which \`r up.regulated\` genes were found to be up-regulated and \`r down.regulated\` genes were found to be down-regulated. 
+
+**Please note:** the full, unfiltered differential gene expression results can be found in the following TSV file: \`r paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = "")\`.
+
+##### **{{grp1}} vs. {{grp2}} Volcano Plot**
+
+This section contains a VolcanoPlot created with the [R package, EnhancedVolcano ](https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html). The plot visualizes the top 10 up- and down-regulated genes based on the following adjusted p-value and fold-change thresholds: FDR adjusted p-value <= \`r fdr.threshold\` AND abs(FC) >= \`r fc.threshold\`. 
+
+\`\`\`{r {{grp1}}-{{grp2}}-volcano, out.width="100%"}
+# Get top 10 up- and down-regulated
+# genes for the volcano plot 
+top.up.regulated.genes <- gsub(
+  ".*\\\\|",
+  "",
+  head(
+    rownames(
+      sig.table[
+        which(
+          sig.table$FC >= fc.threshold
+        ),
+      ]
+    ),
+    n = 10
+  )
+)
+
+top.down.regulated.genes <- gsub(
+  ".*\\\\|",
+  "",
+  head(
+    rownames(
+      sig.table[
+        which(
+          sig.table$FC <= -fc.threshold
+        ),
+      ]
+    ),
+    n = 10
+  )
+)
+
+# Create a volcano plot to visualize
+# the top differential expressed genes
+EnhancedVolcano::EnhancedVolcano(
+  results.table,
+  title = "",
+  subtitle = bquote(italic("{{grp1}} vs. {{grp2}}")),
+  caption = paste0("total = ", nrow(results.table), " genes"),
+  lab = gsub(".*\\\\|", "", rownames(results.table)),
+  selectLab = c(top.up.regulated.genes, top.down.regulated.genes),
+  x = "logFC",
+  y = "adj.P.Val",
+  ylim = c(0, max(-log10(results.table$adj.P.Val), na.rm = TRUE) + 0.1),
+  ylab = bquote(~-Log[10] ~ italic("adj. P-value")),
+  legendLabels = c(
+    "Not significant",
+    expression(Log[2] ~ FC),
+    "adj P",
+    expression(adj ~ P ~ and ~ log[2] ~ FC)
+  ),
+  pCutoff = fdr.threshold,
+  FCcutoff = log2(fc.threshold),
+  labSize = 2.8,
+  drawConnectors = T,
+  widthConnectors = 0.55,
+  min.segment.length = 2.0,
+  colAlpha = 1,
+  legendPosition = "right",
+  legendLabSize = 12,
+  legendIconSize = 4.0
+)
+
+# Save the volcano plot as a jpeg
+ggplot2::ggsave(
+  filename = paste(
+    "limma_voom_volcano_plot_",
+    paste(ofh_grp1, ofh_grp2, sep = "-"),
+    ".jpeg",
+    sep = ""
+  ),
+  width = 12,
+  height = 10,
+  dpi = 300
+)
+
+# Save the as a pdf
+ggplot2::ggsave(
+  filename = paste(
+    "limma_voom_volcano_plot_",
+    paste(ofh_grp1, ofh_grp2, sep = "-"),
+    ".pdf",
+    sep = ""
+  ),
+  width = 12,
+  height = 10
+)
+\`\`\`
+\n\n'
+```
+
+#### Differential expression results {.tabset}
+
+These are the differential gene expression results for each of the comparisons listed above. For each comparison, there is a tab containing the filtered differential gene expression results, and a tab containing the volcano plot to visualize the top differentially expressed genes. Please note: the tables below contain only the significant differentially expressed genes based on the following thresholds: **FDR adjusted p-value** <= 0.1 and **abs(FC)** >= 1.5. The full, unfiltered differential gene expression results can be found in each comparisons output TSV file.
+
+```{r run-deg-comparisons, results='asis'}
+# Ensure character columns, by coverting
+# any factors to characters
+contrastinfo[] <- lapply(contrastinfo, as.character)
+# Creates a list of comparisons
+# with the following structure:
+# list(
+#   c("KO_A",  "WT_A"),
+#   c("KO_B",  "WT_B"),
+#   c("(KO_A-WT_A)",  "(KO_B-WT_B)"),
+#   c("(KO_A+KO_B)/2",  "(WT_A+WT_B)/2"),
+#   ...
+# )
+comparisons <- lapply(seq_len(nrow(contrastinfo)), function(i) {
+  unname(as.character(contrastinfo[i, ]))
+})
+
+# Loop over each comparison and
+# perform differential expression
+# analysis using limma
+for (cmp in comparisons) {
+    grp1 <- cmp[1]
+    grp2 <- cmp[2]
+    # knitr expands the template and
+    # renders the chunk into the Rmd
+    # report, the deg_template peforms
+    # DGE analysis and creates a volcano
+    # plot for each comparison
+    deg_chunk <- knitr::knit_expand(text = deg_template)
+    rendered_chunk <- knitr::knit(text = deg_chunk, quiet = TRUE)
+    # NOTE: result="asis" is needed to properly 
+    # render the rendered chunk object
+    cat(rendered_chunk)
+}
+```
+
+### Session Information
+
+<details>
+  <summary>View Details</summary>
+`r suppressMessages(library(pander)); pander(sessionInfo(), compact = F)`
+</details>
+
+
+<!-- This will remove any unwanted white space -->
+<!-- at the bottom of the rendered HTML file. -->
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
+<br>
