@@ -259,9 +259,9 @@ Moreover, the voom-plot provides a visual check on the level of filtering perfor
 
 ##### Experimental Groups
 
-PCA colored by the following groups of interest: `r unique(sort(group))`. These represent the main variables of interest for the experiment.
+PCA of the normalized expression data colored by the following different variables of interest: `r unique(sort(setdiff(names(groupinfo), "Sample")))`. To change the coloring of the PCA plot, use the drop down menu below.
 
-```{r 3d-expression-pca-groups-after, out.width='100%', out.height='100%'}
+```{r 3d-expression-pca-groups-after, out.width='75vh', out.height='50vh', fig.align='center'}
 # Order genes by MAD, limma voom
 # returns an Elist object where
 # v$E corresponds to a numeric 
@@ -300,36 +300,133 @@ metadata <- transform(
 pc1 <- round(pca$sdev[1]^2 / sum(pca$sdev^2)*100, 2)
 pc2 <- round(pca$sdev[2]^2 / sum(pca$sdev^2)*100, 2)
 pc3 <- round(pca$sdev[3]^2 / sum(pca$sdev^2)*100, 2)
-cgroups <- as.factor(metadata$Group)
-cgroups <- addNA(cgroups)
-cpalette <- brewer.pal(nlevels(cgroups), "Paired")
-p <- plot_ly(
-    metadata,
-    x = ~PC1,
-    y = ~PC2,
-    z = ~PC3,
-    color = cgroups,
-    colors = cpalette,
-    hoverinfo = "text",
-    marker = list(size  = 8),
-    text = ~paste(
-      "</br> <b>Sample:</b> ", Sample,
-      "</br> Group: ", Group
-    )
-) %>% add_markers() %>%
-layout(scene = list(
-    xaxis = list(title = paste0("PC1 (",pc1,"%)")),
-    yaxis = list(title = paste0("PC2 (",pc2,"%)")),
-    zaxis = list(title = paste0("PC3 (",pc3,"%)")))
-) %>% config(toImageButtonOptions = list(format = 'svg')) # png, svg, jpeg, webp
 
-# Important: disable onclick() events
-# fixes unexpected behavior with 
-# multiple crosstalk plots
+# Selects which columns should be 
+# included dropdown to change the
+# coloring of PCA plot, ignores
+# "Sample" column
+color_vars <- setdiff(names(groupinfo), "Sample")
+for (v in color_vars) metadata[[v]] <- addNA(factor(metadata[[v]]))
+
+# Generates color palettes for
+# the different levels of each
+# factor variable
+make_palette <- function(n) {
+  base <- brewer.pal(12, "Paired")
+  colorRampPalette(base)(n)
+}
+
+# At a high-level, this creates one trace
+# per level for each color variable (i.e
+# Group, Batch, Sex, etc). Then, it creates
+# dropdown menu to toggle visibility of the
+# traces based on which variable is selected
+# by the user.
+fig <- plot_ly()
+trace_var_index <- character(0)
+# Build one trace per level 
+# for each color variable
+for (v in color_vars) {
+  # Get the levels for the variable
+  # and create its color palette
+  lvls <- levels(metadata[[v]])
+  pal  <- make_palette(length(lvls))
+  for (i in seq_along(lvls)) {
+    # Get the level and subset
+    # the metadata
+    lvl  <- lvls[i]
+    dsub <- metadata[metadata[[v]] %in% lvl, , drop = FALSE]
+    # Creating on hover text dynamically
+    # to include additional metadata for
+    # each sample, excluding default columns
+    # (i.e PC1, PC2, PC3, Sample) and the
+    # selected variable v to avoid duplicates
+    base_other_cols <- setdiff(names(metadata), c("PC1","PC2","PC3","Sample","Group"))
+    other_cols_v <- setdiff(base_other_cols, v)
+    # Builds an HTML string for each
+    # row in dsub with the extra metadata
+    extras <- if (length(other_cols_v)) {
+      apply(dsub[, other_cols_v, drop = FALSE], 1, function(r) {
+        paste(paste0("<br><b>", names(r), ":</b> ", r), collapse = "")
+      })
+    } else rep("", nrow(dsub))
+    # Only add the selected variable line 
+    # when it's not Group (to avoid the duplicate)
+    v_line <- if (v != "Group") paste0("<br><b>", v, ":</b> ", dsub[[v]]) else ""
+    # Full hover text for this sample
+    hover_text <- paste0(
+      "<b>Sample:</b> ", dsub$Sample,
+      "<br><b>Group:</b> ", dsub$Group,
+      v_line,
+      extras
+    )
+    # Add a trace for this level
+    fig <- fig %>%
+      add_markers(
+        data = dsub,
+        x = ~PC1, y = ~PC2, z = ~PC3,
+        name = paste0(lvl),
+        # only the first variable starts visible
+        visible = if (v == color_vars[1]) TRUE else FALSE,
+        showlegend = TRUE,
+        marker = list(size = 8, color = pal[i]),
+        hoverinfo = "text",
+        text = hover_text
+      )
+    # Remember which variable this trace 
+    # belongs to for the visibility masks
+    trace_var_index <- c(trace_var_index, v)
+  }
+}
+
+# Dropdown buttons toggle visibility masks
+# and update the plot titles
+buttons <- lapply(color_vars, function(v) {
+  vis_mask <- trace_var_index == v
+  list(
+    method = "update",
+    label  = v,
+    args   = list(
+      list(visible = as.list(vis_mask)),
+      list(
+        title  = paste("PCA colored by", v),
+        legend = list(title = list(text = v)),
+        scene  = list(
+          xaxis = list(title = paste0("PC1 (", pc1, "%)")),
+          yaxis = list(title = paste0("PC2 (", pc2, "%)")),
+          zaxis = list(title = paste0("PC3 (", pc3, "%)"))
+        )
+      )
+    )
+  )
+})
+
+# Creates the final plotly object
+# with the layout and dropdown menu
+p <- fig %>%
+  layout(
+    title  = paste("PCA colored by", color_vars[1]),
+    scene  = list(
+      xaxis = list(title = paste0("PC1 (", pc1, "%)")),
+      yaxis = list(title = paste0("PC2 (", pc2, "%)")),
+      zaxis = list(title = paste0("PC3 (", pc3, "%)"))
+    ),
+    legend = list(title = list(text = color_vars[1])),
+    updatemenus = list(list(
+      type = "dropdown",
+      x = 0, y = 1.15, xanchor = "left", yanchor = "top",
+      buttons = buttons,
+      bgcolor = "white",
+      bordercolor = "lightgray"
+    ))
+  ) %>%
+  config(toImageButtonOptions = list(format = "svg"))
+
+# Disable onclick behavior
 plotly::highlight(p, on = NULL)
 ```
 
-The interactive 3D PCA plot above visualizes the clustering of samples based on the first three principal components (PCs) of the normalized gene expression data. Each point represents a sample, colored according to its experimental group. The axes indicate the percentage of variance explained by each PC, providing insights into the major sources of variation in the dataset.
+The interactive 3D PCA plot above visualizes the clustering of samples based on the first three principal components (PCs) of the normalized gene expression data. Each point represents a sample, colored by the variable selected in the drop down. The axes indicate the percentage of variance explained by each PC, providing insights into the major sources of variation in the dataset.
 
 ### Differential gene expression analysis
 
@@ -339,11 +436,11 @@ To find differentially expressed genes, comparisons between different groups of 
 
 #### Comparisons of interest
 
-Here is a table containing the differential expression comparisons to perform. Each row represents a comparison between two experimental groups.
+Here is a table containing the differential expression comparisons to perform. Each row represents a comparison between two experimental groups. The control group represents the baseline group of the comparison.
 
 ```{r comparisons-table, results='asis'}
 contrast_df <- contrastinfo
-colnames(contrast_df) <- c("Experimental Group", "Baseline Group")
+colnames(contrast_df) <- c("Case", "Control")
 DT::datatable(
     contrast_df,
     extensions = c(
@@ -364,6 +461,10 @@ DT::datatable(
       fixedColumns = list(leftColumns = 1), # freeze left columns
       buttons = list(
         list(
+          extend = "copyHtml5",
+          title = NULL
+        ),
+        list(
             extend = "csv",               # download as .csv
             filename = "contrasts_file"   # output file
         ),
@@ -380,7 +481,9 @@ DT::datatable(
 ```{r template_chunks, echo=FALSE}
 deg_template <- '##### **{{grp1}} vs. {{grp2}}**
 
-This section contains the results of the differential gene expression analysis between the `{{grp1}}` and `{{grp2}}` groups.
+This section contains the results of the differential gene expression analysis between the `{{grp1}}` and `{{grp2}}` groups using the [R package limma](https://bioconductor.org/packages/release/bioc/html/limma.html). 
+
+If a gene has a positive fold-change (FC) value, it indicates that the gene is up-regulated (i.e its expression is higher) in the `{{grp1}}` group compared to the `{{grp2}}` group. Conversely, a negative FC value indicates that the gene is down-regulated (i.e its expression is lower) in the `{{grp1}}` group compared to the `{{grp2}}` group.
 
 \`\`\`{r compare-{{grp1}}-{{grp2}}, out.width="100%"} 
 # Creating a contrast matrix
@@ -497,6 +600,16 @@ DT::datatable(
       fixedColumns = list(leftColumns = 1), # freeze left columns
       buttons = list(
         list(
+          extend = "copyHtml5",
+          text = "Copy genes symbols",
+          # Hides header to adds by default
+          title = NULL,
+          # Index of the rownames column
+          exportOptions = list(
+            columns = 0
+          )
+        ),
+        list(
             # download as .csv
             extend = "csv",
             # output filename
@@ -552,11 +665,13 @@ write.table(
 )
 \`\`\`
 
-The table above contains the result of differential expression analysis using the R package `limma`. The table has been filtered to identify significant differentially expressed genes meeting the following thresholds: FDR adjusted p-value <= \`r fdr.threshold\` AND abs(FC) >= \`r fc.threshold\`. 
+**Please note:**
+
+The table has been filtered to identify significant differentially expressed genes meeting the following thresholds: FDR adjusted p-value <= \`r fdr.threshold\` AND abs(FC) >= \`r fc.threshold\`. 
 
 In total there are \`r up.regulated + down.regulated\` genes meeting those filtering criteria, of which \`r up.regulated\` genes were found to be up-regulated and \`r down.regulated\` genes were found to be down-regulated. 
 
-**Please note:** the full, unfiltered differential gene expression results can be found in the following TSV file: \`r paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = "")\`.
+The full, unfiltered differential gene expression results can be found in the following TSV file: \`r paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = "")\`.
 
 ##### **{{grp1}} vs. {{grp2}} Volcano Plot**
 
