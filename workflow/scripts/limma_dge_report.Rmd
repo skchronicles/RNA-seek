@@ -151,21 +151,21 @@ The sample sheet above links each sample to its associated metadata. It includes
 
 ### Pre-processing
 
-**Filtering**
+#### Filtering
 
-Before finding differentially expressed genes, it is recommeded to filter out lowly expressed genes. 
+Before identifying differentially expressed genes, it is important to remove lowly expressed genes. 
 
-Here is a quote from the author of `limma`:
+As the author of `limma` notes:
 
-> From a biological point of view, genes that not expressed at a biologically meaningful level in any condition are not of interest and are therefore best ignored. From a statistical point of view, removing low count genes allows the mean-variance relationship in the data to be estimated with greater reliability and also reduces the number of statistical tests that need to be carried out in downstream analyses looking at differential expression.
+> Genes not expressed at biologically meaningful levels in any condition are uninformative and should be excluded. Statistically, filtering out low-count genes improves estimation of the mean–variance relationship and reduces the number of tests performed during differential expression analysis.
 
-**Normalization**
+#### Normalization
 
-It is *not appropriate* to perform differential expression analysis on raw counts. Raw counts are biased by the library size/sequencing depth of a given sample. More simply, this means that higher depth samples will have higher gene counts. As so, we must normalize the data to take into consideration the sequencing depth. The raw counts will be transformed into `log2(CPM + pseudocount)` via `limma::voom()` function. `voom()` adds small psueduo-count of 0.5 to prevent taking the log of zero.
+Differential expression analysis **should not** be performed on raw counts. Raw counts are biased by library size (i.e sequencing depth): samples with greater sequencing depth yield higher counts. To correct for this, counts are normalized to account for sequencing depth and transformed to `log2(CPM + pseudocount)` using `limma::voom()`. The `voom()` function adds a small pseudocount (0.5) to avoid taking the log of zero.
 
-Normalisation is also required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation by the method of trimmed mean of M-values (TMM) is performed using the calcNormFactors function in `edgeR`. The normalization factors calculated here are used as a scaling factor for the library sizes.
+Normalization also ensures comparable expression distributions across samples. The trimmed mean of M-values (TMM) method, implemented in `edgeR::calcNormFactors()`, calculates scaling factors applied to library sizes. This step is essential to remove systematic biases that can arise from differences in sequencing depth or RNA composition between samples. Without proper normalization, any observed differences in expression may reflect technical artifacts rather than true biological variation.
 
-For RNA-sequncing data, it has been shown that the variance is not independent of the mean. Meaning, there is a mean-variance relationship in the count data. As so, it is also important to account for heteroscedascity in the count data. Raw counts show increasing variance with increasing count size, while log-counts typically show a decreasing mean-variance trend. Methods that model counts using a Negative Binomial distribution assume a quadratic mean-variance relationship. In `limma`, linear modelling is carried out on the log2CPM values which are assumed to be normally distributed. `limma::voom()` estimates the mean-variance trend for log-counts, then assigns a weight to each observation based on its predicted variance. The weights are then used in the linear modeling process to adjust for heteroscedasticity.
+RNA-sequencing counts exhibit a mean–variance relationship: variance increases with mean count. Modeling this heteroscedasticity is essential. While methods using the Negative Binomial distribution assume a quadratic mean–variance relationship, limma models log2CPM values as approximately normally distributed. `limma::voom()` estimates the mean–variance trend in log-counts, assigns precision weights based on predicted variance, and incorporates these weights in linear modeling to adjust for heteroscedasticity. Accurately modeling this relationship increases statistical power and reduces false discoveries, ensuring that identified differentially expressed genes reflect true biological differences rather than variation caused by count magnitude or technical noise.
 
 ```{r pre-processing, out.width="100%"}
 # Create DGEList object with edgeR
@@ -249,9 +249,9 @@ write.table(
 )
 ```
 
-The smoothed curve (red line, seen above) is used to obtain weights for each gene and sample that are passed into limma along with the log2CPMs. Typically, the voom-plot shows a decreasing trend between the means and variances resulting from a combination of technical variation in the sequencing experiment and biological variation amongst the replicate samples from different groups. Experiments with high biological variation usually result in flatter trends, where variance values plateau at high expression values. Experiments with low biological variation tend to result in sharp decreasing trends.
+The red line in the voom plot above represents the estimated mean–variance trend used to calculate precision weights for each gene and sample in limma. The plot typically shows a decreasing relationship between mean expression and variance. Flatter curves indicate greater biological variation, while steeper declines suggest more consistent expression across replicates. 
 
-Moreover, the voom-plot provides a visual check on the level of filtering performed upstream. If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts. If this is observed, one should return to the earlier filtering step and increase the expression threshold applied to the dataset.
+Moreover, the voom-plot provides a visual check on the level of filtering performed upstream. If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts. If this is observed, additional filtering step should be performed proir to running voom.
 
 ### PCA plots {.tabset}
 
@@ -259,7 +259,7 @@ Moreover, the voom-plot provides a visual check on the level of filtering perfor
 
 ##### Experimental Groups
 
-PCA of the normalized expression data colored by the following different variables of interest: `r unique(sort(setdiff(names(groupinfo), "Sample")))`. To change the coloring of the PCA plot, use the drop down menu below.
+PCA of the normalized expression data colored by the following different variables of interest: `r unique(sort(setdiff(names(groupinfo), "Sample")))`. To change the coloring of the PCA plot, please use the drop down menu below.
 
 ```{r 3d-expression-pca-groups-after, out.width='75vh', out.height='50vh', fig.align='center'}
 # Order genes by MAD, limma voom
@@ -430,15 +430,20 @@ The interactive 3D PCA plot above visualizes the clustering of samples based on 
 
 ### Differential gene expression analysis
 
-In this experiment, it is of interest to see which genes are differentially expressed between different experimental groups of interest.
+This experiment aims to identify genes that are differentially expressed between experimental groups of interest.
 
-To find differentially expressed genes, comparisons between different groups of intereset are defined as contrasts. Linear modelling is performed using the Bioconductor R package [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html) with the `limma::lmFit()`, `limma::contrasts.fit()`, and `limma::eBayes()` functions. These functions fit a separate model to the expression values for each gene. Next, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability. This step shrinks standard errors that are much larger or smaller than those from other genes towards the average standard error. The false-discovery rate (FDR) was used to adjust the p-values for multiple testing.
+Group comparisons are defined as contrasts, and differential expression is assessed using the R package [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html). The functions `limma::lmFit()`, `limma::contrasts.fit()`, and `limma::eBayes()` fit linear models to each gene and apply empirical Bayes moderation to improve the variance estimates by borrowing information across all genes. This step is important because it stabilizes the variance estimates (especially when sample sizes are small) leading to more reliable detection of truly differentially expressed genes. P-values are then adjusted for multiple testing using the false discovery rate (FDR) method.
 
 #### Comparisons of interest
 
 Here is a table containing the differential expression comparisons to perform. Each row represents a comparison between two experimental groups. The control group represents the baseline group of the comparison.
 
 ```{r comparisons-table, results='asis'}
+# Fold-change and FDR thresholds
+# for filtering significant genes
+fc.threshold <- 1.5
+fdr.threshold <- 0.1
+
 contrast_df <- contrastinfo
 colnames(contrast_df) <- c("Case", "Control")
 DT::datatable(
@@ -487,7 +492,7 @@ deg_template <- '##### **{{grp1}} vs. {{grp2}}** {.tabset}
 
 This section contains the results of the differential gene expression analysis between the `{{grp1}}` and `{{grp2}}` groups using the [R package limma](https://bioconductor.org/packages/release/bioc/html/limma.html). 
 
-If a gene has a positive fold-change (FC) value, it indicates that the gene is up-regulated (i.e its expression is higher) in the `{{grp1}}` group compared to the `{{grp2}}` group. Conversely, a negative FC value indicates that the gene is down-regulated (i.e its expression is lower) in the `{{grp1}}` group compared to the `{{grp2}}` group.
+If a gene has a positive fold-change (FC) value, it indicates that the gene is <span style="color:green">**up-regulated** (i.e its expression is higher)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group. Conversely, a negative FC value indicates that the gene is <span style="color:red">**down-regulated** (i.e its expression is lower)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group.
 
 \`\`\`{r compare-{{grp1}}-{{grp2}}, out.width="100%"} 
 # Creating a contrast matrix
@@ -550,10 +555,7 @@ results.table <- results.table[
 ]
 
 # Filter table to find significant
-# differentially expressed genes:
-# abs(FC)>=1.5 and fdr<=0.1
-fc.threshold <- 1.5
-fdr.threshold <- 0.1
+# differentially expressed genes
 sig.table <- results.table[
   which(
     abs(results.table$FC) >= fc.threshold & results.table$adj.P.Val <= fdr.threshold
@@ -669,19 +671,19 @@ write.table(
 )
 \`\`\`
 
-_**Please note**_
-
-The table has been filtered to identify significant differentially expressed genes meeting the following thresholds: FDR adjusted p-value <= \`r fdr.threshold\` AND abs(FC) >= \`r fc.threshold\`. 
-
-In total there are \`r up.regulated + down.regulated\` genes meeting those filtering criteria, of which \`r up.regulated\` genes were found to be up-regulated and \`r down.regulated\` genes were found to be down-regulated. 
-
-The full, unfiltered differential gene expression results can be found in the following TSV file: \`r paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = "")\`.
+> **Summary of the results**
+>  
+> The table has been filtered to identify significant differentially expressed genes meeting the following thresholds: **FDR adjusted p-value ≤ \`r fdr.threshold\`** AND **abs(FC) ≥ \`r fc.threshold\`**. In total there are **\`r up.regulated + down.regulated\` genes** meeting those filtering criteria, of which <span style="color:green"> **\`r up.regulated\` genes** were found to be up-regulated</span> and <span style="color:red"> **\`r down.regulated\`** genes were found to be down-regulated</span>. 
+> 
+> The full, unfiltered differential gene expression results can be found in the following TSV file: \`r paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = "")\`.
+ 
+**Please note:** The table above can be filtered and sorted interactively to explore the results. To filter the table, please use the *Add Condition* button. It can be used to create complex queries to filter the table. To sort the table, click on the column headers. The *Copy gene symbols* button can be used to copy the gene symbols of the currently displayed genes. The *CSV* and *Excel* buttons can be used to download the full table in the respective formats.
 
 ###### Volcano Plot
 
 **{{grp1}}** _**vs.**_ **{{grp2}}**
 
-This section contains a VolcanoPlot created with the [R package, EnhancedVolcano ](https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html). The plot visualizes the top 10 up- and down-regulated genes based on the following adjusted p-value and fold-change thresholds: FDR adjusted p-value <= \`r fdr.threshold\` AND abs(FC) >= \`r fc.threshold\`. 
+This section contains a VolcanoPlot created with the [R package, EnhancedVolcano ](https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html). The plot visualizes the top 10 up- and down-regulated genes based on the following adjusted p-value and fold-change thresholds: **FDR adjusted p-value ≤ \`r fdr.threshold\`** AND **abs(FC) ≥ \`r fc.threshold\`**. 
 
 \`\`\`{r {{grp1}}-{{grp2}}-volcano, out.width="100%"}
 # Get top 10 up- and down-regulated
@@ -777,7 +779,9 @@ ggplot2::ggsave(
 
 #### Differential expression results {.tabset}
 
-These are the differential gene expression results for each of the comparisons listed above. For each comparison, there is a tab containing the filtered differential gene expression results, and a tab containing the volcano plot to visualize the top differentially expressed genes. Please note: the tables below contain only the significant differentially expressed genes based on the following thresholds: **FDR adjusted p-value** <= 0.1 and **abs(FC)** >= 1.5. The full, unfiltered differential gene expression results can be found in each comparisons output TSV file.
+The following sections present the differential gene expression results for each comparison. Each comparison includes two tabs: one with filtered results (i.e. Results) and another tab showing a volcano plot highlighting the top differentially expressed genes (i.e. Volcano Plot). 
+
+Only significant genes are shown, defined by an **FDR-adjusted p-value ≤ `r fdr.threshold`** and **abs(fold change) ≥ `r fc.threshold`**. The complete, unfiltered results for each comparison are also available as a TSV file.
 
 ```{r run-deg-comparisons, results='asis'}
 # Ensure character columns, by coverting
