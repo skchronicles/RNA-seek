@@ -479,7 +479,11 @@ DT::datatable(
 
 
 ```{r template_chunks, echo=FALSE}
-deg_template <- '##### **{{grp1}} vs. {{grp2}}**
+deg_template <- '##### **{{grp1}} vs. {{grp2}}** {.tabset}
+
+###### Results 
+
+**{{grp1}}** _**vs.**_ **{{grp2}}**
 
 This section contains the results of the differential gene expression analysis between the `{{grp1}}` and `{{grp2}}` groups using the [R package limma](https://bioconductor.org/packages/release/bioc/html/limma.html). 
 
@@ -665,7 +669,7 @@ write.table(
 )
 \`\`\`
 
-**Please note:**
+_**Please note**_
 
 The table has been filtered to identify significant differentially expressed genes meeting the following thresholds: FDR adjusted p-value <= \`r fdr.threshold\` AND abs(FC) >= \`r fc.threshold\`. 
 
@@ -673,7 +677,9 @@ In total there are \`r up.regulated + down.regulated\` genes meeting those filte
 
 The full, unfiltered differential gene expression results can be found in the following TSV file: \`r paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = "")\`.
 
-##### **{{grp1}} vs. {{grp2}} Volcano Plot**
+###### Volcano Plot
+
+**{{grp1}}** _**vs.**_ **{{grp2}}**
 
 This section contains a VolcanoPlot created with the [R package, EnhancedVolcano ](https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html). The plot visualizes the top 10 up- and down-regulated genes based on the following adjusted p-value and fold-change thresholds: FDR adjusted p-value <= \`r fdr.threshold\` AND abs(FC) >= \`r fc.threshold\`. 
 
