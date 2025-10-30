@@ -167,6 +167,8 @@ Normalization also ensures comparable expression distributions across samples. T
 
 RNA-sequencing counts exhibit a mean–variance relationship: variance increases with mean count. Modeling this heteroscedasticity is essential. While methods using the Negative Binomial distribution assume a quadratic mean–variance relationship, limma models log2CPM values as approximately normally distributed. `limma::voom()` estimates the mean–variance trend in log-counts, assigns precision weights based on predicted variance, and incorporates these weights in linear modeling to adjust for heteroscedasticity. Accurately modeling this relationship increases statistical power and reduces false discoveries, ensuring that identified differentially expressed genes reflect true biological differences rather than variation caused by count magnitude or technical noise.
 
+<details>
+  <summary>*View Mean–Variance Plot*</summary>
 ```{r pre-processing, out.width="100%"}
 # Create DGEList object with edgeR
 group <- as.factor(groupinfo$Group)
@@ -252,6 +254,7 @@ write.table(
 The red line in the voom plot above represents the estimated mean–variance trend used to calculate precision weights for each gene and sample in limma. The plot typically shows a decreasing relationship between mean expression and variance. Flatter curves indicate greater biological variation, while steeper declines suggest more consistent expression across replicates. 
 
 Moreover, the voom-plot provides a visual check on the level of filtering performed upstream. If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts. If this is observed, additional filtering step should be performed proir to running voom.
+</details>
 
 ### PCA plots {.tabset}
 
@@ -494,6 +497,11 @@ This section contains the results of the differential gene expression analysis b
 
 If a gene has a positive fold-change (FC) value, it indicates that the gene is <span style="color:green">**up-regulated** (i.e its expression is higher)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group. Conversely, a negative FC value indicates that the gene is <span style="color:red">**down-regulated** (i.e its expression is lower)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group.
 
+<details>
+  <summary>*About filtering, sorting, exporting the table*</summary>
+    The table below can be filtered and sorted interactively to explore the results. To filter the table, please use the *Add Condition* button. It can be used to create complex queries to filter the table. To sort the table, click on the column headers. The *Copy gene symbols* button can be used to copy the gene symbols of the currently displayed genes. The *CSV* and *Excel* buttons can be used to download the full table in the respective formats.
+</details>
+
 \`\`\`{r compare-{{grp1}}-{{grp2}}, out.width="100%"} 
 # Creating a contrast matrix
 contrast <- limma::makeContrasts(
@@ -677,8 +685,6 @@ write.table(
 > 
 > The full, unfiltered differential gene expression results can be found in the following TSV file: \`r paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = "")\`.
  
-**Please note:** The table above can be filtered and sorted interactively to explore the results. To filter the table, please use the *Add Condition* button. It can be used to create complex queries to filter the table. To sort the table, click on the column headers. The *Copy gene symbols* button can be used to copy the gene symbols of the currently displayed genes. The *CSV* and *Excel* buttons can be used to download the full table in the respective formats.
-
 ###### Volcano Plot
 
 **{{grp1}}** _**vs.**_ **{{grp2}}**
