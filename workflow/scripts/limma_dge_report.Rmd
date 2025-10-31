@@ -132,7 +132,12 @@ if (!is.null(params$covariates)) {
 
 # Check if covariates are in
 # sample sheet, if provided
+run_corrected_pca <- FALSE
 if (!is.null(params$covariates)) {
+  # Dynamically creates a tab
+  # with normalized, covariate
+  # corrected counts
+  run_corrected_pca <- TRUE
   user_covars <- unlist(strsplit(params$covariates, split = ","))
   missing_covars <- setdiff(user_covars, colnames(groupinfo))
   if (length(missing_covars) > 0) {
@@ -303,20 +308,20 @@ if (is.null(params$covariates)) {
 # obtain weights for each gene and sample
 # that are passed into limma along with
 # the log2CPMs.
-v <- limma::voom(deg, design, plot = TRUE)
+voom_object <- limma::voom(deg, design, plot = TRUE)
 
 # lmFit fits a linear model using weighted
 # least squares for each gene, and now
 # comparisons between groups (log2FC) can
 # be obtained as contrasts of these fitted
 # linear models.
-fit <- limma::lmFit(v, design)
+fit <- limma::lmFit(voom_object, design)
 
 # Write the voom object, normalized
 # counts to an output file for any
 # later data visualization requests
 write.table(
-  data.frame("ensid_gene" = rownames(v$E), v$E),
+  data.frame("ensid_gene" = rownames(voom_object$E), voom_object$E),
   file = paste("limma_voom_log2CPM_TMM_scaled_counts.tsv"),
   row.names = F,
   sep = "\t",
@@ -331,13 +336,11 @@ Moreover, the voom-plot provides a visual check on the level of filtering perfor
 
 ### PCA plots {.tabset}
 
-#### After Normalization {.tabset}
-
-##### Experimental Groups
+#### After Normalization
 
 PCA of the normalized expression data colored by the following different variables of interest: `r unique(sort(setdiff(names(groupinfo), "Sample")))`. To change the coloring of the PCA plot, please use the drop down menu below.
 
-```{r 3d-expression-pca-groups-after, out.width='75vh', out.height='50vh', fig.align='center'}
+```{r 3d-expression-pca-after-normalization, out.width='75vh', out.height='50vh', fig.align='center'}
 # Order genes by MAD, limma voom
 # returns an Elist object where
 # v$E corresponds to a numeric 
@@ -345,7 +348,7 @@ PCA of the normalized expression data colored by the following different variabl
 # values, scaled log2CPM. Scaling
 # is calculated by edgeR's TMM
 # calcNormFactors function.
-pca_data <- v
+pca_data <- voom_object
 pca_data$E <- pca_data$E[order(apply(pca_data$E, 1, mad), decreasing = T), ]
 
 # Remove zero variance rows prior to PC
@@ -503,6 +506,207 @@ plotly::highlight(p, on = NULL)
 ```
 
 The interactive 3D PCA plot above visualizes the clustering of samples based on the first three principal components (PCs) of the normalized gene expression data. Each point represents a sample, colored by the variable selected in the drop down. The axes indicate the percentage of variance explained by each PC, providing insights into the major sources of variation in the dataset.
+
+`r if (run_corrected_pca) { 
+  sprintf("#### After Covariate Correction\n\nPCA of the normalized, covariate-corrected expression data colored by the same variables of interest. These counts have been corrected for any unwanted effects due to the following covariates: %s. To change the coloring of the PCA plot, please use the drop down menu below.", params$covariates)
+}`
+
+```{r 3d-expression-pca-after-batch-correction, eval=run_corrected_pca, out.width='75vh', out.height='50vh', fig.align='center'}
+# Using limma's removeBatchEffect
+# function to visulize the effect
+# after correcting/adjusting the
+# additive effect of the covariates.
+# These counts should ONLY be used
+# for data visulization purposes
+# and then should not be used to 
+# make any statistical inferences
+# OR downstream for differential
+# gene expression analysis.
+cv <- trimws(unlist(strsplit(params$covariates, split = ",")))
+covariates <- groupinfo[ , intersect(names(groupinfo), cv), drop = FALSE]
+# Create model matrix for covariates,
+# pass this to removeBatchEffect. This
+# allows for adjustment of multiple
+# covariates at once. It basically
+# one hot encodes the covariates.
+covariates <- model.matrix(~ . - 1, data = covariates)
+timestamp("Using one hot encoding of covariates for batch correction:\n", as.data.frame(covariates))
+pca_data <- removeBatchEffect(voom_object, group=as.factor(groupinfo$Group), covariates=covariates)
+
+# Order genes by MAD, limma voom
+# returns an Elist object where
+# v$E corresponds to a numeric 
+# matrix of normalized expression
+# values, scaled log2CPM. Scaling
+# is calculated by edgeR's TMM
+# calcNormFactors function.
+pca_data <- pca_data[order(apply(pca_data, 1, mad), decreasing = T), ]
+
+# Write the batch corrected counts
+# to an output file for any later
+# data visualization requests
+write.table(
+  data.frame("ensid_gene" = rownames(pca_data), pca_data),
+  file = paste("limma_voom_removeBatchEffect_corrected_counts.tsv"),
+  row.names = F,
+  sep = "\t",
+  quote = F
+)
+
+# Remove zero variance rows prior to PC
+pca_data <- pca_data[apply(pca_data, 1, var) != 0, ]
+
+# Principal component analysis
+# of normalized expression matrix,
+# first three PCs for the 3D plotly
+# scatter plot can be accessed via
+# the following: pca$x[,1:3]
+pca <- prcomp(
+  t(as.matrix(pca_data)), scale. = T
+)
+
+# Merge both dataframes on rowname
+metadata <- transform(
+    merge(groupinfo,
+          as.data.frame(pca$x[, 1:3]),
+          by = 'row.names',
+          all = TRUE
+    ),
+    row.names = Row.names,
+    Row.names = NULL
+)
+
+# Calculating the amount of variance
+# explained by the first three PCs
+pc1 <- round(pca$sdev[1]^2 / sum(pca$sdev^2)*100, 2)
+pc2 <- round(pca$sdev[2]^2 / sum(pca$sdev^2)*100, 2)
+pc3 <- round(pca$sdev[3]^2 / sum(pca$sdev^2)*100, 2)
+
+# Selects which columns should be 
+# included dropdown to change the
+# coloring of PCA plot, ignores
+# "Sample" column
+color_vars <- setdiff(names(groupinfo), "Sample")
+for (v in color_vars) metadata[[v]] <- addNA(factor(metadata[[v]]))
+
+# Generates color palettes for
+# the different levels of each
+# factor variable
+make_palette <- function(n) {
+  base <- brewer.pal(12, "Paired")
+  colorRampPalette(base)(n)
+}
+
+# At a high-level, this creates one trace
+# per level for each color variable (i.e
+# Group, Batch, Sex, etc). Then, it creates
+# dropdown menu to toggle visibility of the
+# traces based on which variable is selected
+# by the user.
+fig <- plot_ly()
+trace_var_index <- character(0)
+# Build one trace per level 
+# for each color variable
+for (v in color_vars) {
+  # Get the levels for the variable
+  # and create its color palette
+  lvls <- levels(metadata[[v]])
+  pal  <- make_palette(length(lvls))
+  for (i in seq_along(lvls)) {
+    # Get the level and subset
+    # the metadata
+    lvl  <- lvls[i]
+    dsub <- metadata[metadata[[v]] %in% lvl, , drop = FALSE]
+    # Creating on hover text dynamically
+    # to include additional metadata for
+    # each sample, excluding default columns
+    # (i.e PC1, PC2, PC3, Sample) and the
+    # selected variable v to avoid duplicates
+    base_other_cols <- setdiff(names(metadata), c("PC1","PC2","PC3","Sample","Group"))
+    other_cols_v <- setdiff(base_other_cols, v)
+    # Builds an HTML string for each
+    # row in dsub with the extra metadata
+    extras <- if (length(other_cols_v)) {
+      apply(dsub[, other_cols_v, drop = FALSE], 1, function(r) {
+        paste(paste0("<br><b>", names(r), ":</b> ", r), collapse = "")
+      })
+    } else rep("", nrow(dsub))
+    # Only add the selected variable line 
+    # when it's not Group (to avoid the duplicate)
+    v_line <- if (v != "Group") paste0("<br><b>", v, ":</b> ", dsub[[v]]) else ""
+    # Full hover text for this sample
+    hover_text <- paste0(
+      "<b>Sample:</b> ", dsub$Sample,
+      "<br><b>Group:</b> ", dsub$Group,
+      v_line,
+      extras
+    )
+    # Add a trace for this level
+    fig <- fig %>%
+      add_markers(
+        data = dsub,
+        x = ~PC1, y = ~PC2, z = ~PC3,
+        name = paste0(lvl),
+        # only the first variable starts visible
+        visible = if (v == color_vars[1]) TRUE else FALSE,
+        showlegend = TRUE,
+        marker = list(size = 8, color = pal[i]),
+        hoverinfo = "text",
+        text = hover_text
+      )
+    # Remember which variable this trace 
+    # belongs to for the visibility masks
+    trace_var_index <- c(trace_var_index, v)
+  }
+}
+
+# Dropdown buttons toggle visibility masks
+# and update the plot titles
+buttons <- lapply(color_vars, function(v) {
+  vis_mask <- trace_var_index == v
+  list(
+    method = "update",
+    label  = v,
+    args   = list(
+      list(visible = as.list(vis_mask)),
+      list(
+        title  = paste("PCA colored by", v),
+        legend = list(title = list(text = v)),
+        scene  = list(
+          xaxis = list(title = paste0("PC1 (", pc1, "%)")),
+          yaxis = list(title = paste0("PC2 (", pc2, "%)")),
+          zaxis = list(title = paste0("PC3 (", pc3, "%)"))
+        )
+      )
+    )
+  )
+})
+
+# Creates the final plotly object
+# with the layout and dropdown menu
+p <- fig %>%
+  layout(
+    title  = paste("PCA colored by", color_vars[1]),
+    scene  = list(
+      xaxis = list(title = paste0("PC1 (", pc1, "%)")),
+      yaxis = list(title = paste0("PC2 (", pc2, "%)")),
+      zaxis = list(title = paste0("PC3 (", pc3, "%)"))
+    ),
+    legend = list(title = list(text = color_vars[1])),
+    updatemenus = list(list(
+      type = "dropdown",
+      x = 0, y = 1.15, xanchor = "left", yanchor = "top",
+      buttons = buttons,
+      bgcolor = "white",
+      bordercolor = "lightgray"
+    ))
+  ) %>%
+  config(toImageButtonOptions = list(format = "svg"))
+
+# Disable onclick behavior
+plotly::highlight(p, on = NULL)
+```
+
 
 ### Differential gene expression analysis
 
