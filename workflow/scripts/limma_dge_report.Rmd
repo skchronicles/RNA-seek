@@ -7,6 +7,8 @@ params:
     raw: "DEG_ALL/RSEM_genes_expected_counts.tsv"
     group: "groups.tsv"
     contrasts: "contrasts.tsv"
+    # Covariates example: "Batch,Sex,Site" or "Batch"
+    covariates: NULL
     prefix: "comparison_prefix"
     wdir: "results"
 output: 
@@ -27,6 +29,23 @@ wd <- params$wdir
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = wd)
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+# Misc helper functions
+err <- function(...){cat(sprintf(...), sep='\n', file=stderr())}
+fatal <- function(...) {err(...); quit(status = 1)}
+timestamp <- function(..., sep = " ") {
+  ts <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  args <- list(...)
+  # convert each argument to a printable string
+  txt <- vapply(args, function(x) {
+    if (is.data.frame(x) || is.matrix(x) || is.list(x)) {
+      paste(capture.output(print(x)), collapse = "\n")
+    } else {
+      paste(as.character(x), collapse = sep)
+    }
+  }, character(1))
+  cat(sprintf("\n[%s] %s\n", ts, paste(txt, collapse = sep)), sep = "", file = stderr())
+}
 ```
 
 ### About
@@ -100,6 +119,28 @@ contrastinfo <- read.table(
 # match are dropped
 grp_idx <- match(make.names(colnames(raw)), row.names(groupinfo), nomatch = 0)
 groupinfo <- groupinfo[grp_idx,]
+
+# Check for other NULL-like data
+# types for covariates, like an
+# empty string or NA, and set it
+# to NULL for consistency
+if (!is.null(params$covariates)) {
+  if (params$covariates == "" || is.na(params$covariates)) {
+    params$covariates <- NULL
+  }
+}
+
+# Check if covariates are in
+# sample sheet, if provided
+if (!is.null(params$covariates)) {
+  user_covars <- unlist(strsplit(params$covariates, split = ","))
+  missing_covars <- setdiff(user_covars, colnames(groupinfo))
+  if (length(missing_covars) > 0) {
+    # Some covariates are missing,
+    # did not pass sanity check
+    stop(paste("Fatal error: The following covariates are missing from the sample sheet:", paste(missing_covars, collapse = ", ")))
+  }
+}
 
 # Set working/output directory
 # after reading in input files,
@@ -216,9 +257,38 @@ deg <- edgeR::calcNormFactors(deg, method = "TMM")
 # are factors (categorical), it does
 # not matter; however, for continuous
 # group variables, it does matter.
-design <- model.matrix(~0 + group)
-
-colnames(design) <- gsub("group", "", colnames(design))
+if (is.null(params$covariates)) {
+  # No covariates were provided, only
+  # use Group information
+  timestamp("No covariates were provided.")
+  formula <- as.formula("~0 + Group")
+  timestamp("Using design formula:\n", deparse(formula))
+  # Create design matrix and remove
+  # "Group" prefix from column names
+  design <- model.matrix(formula, data = groupinfo)
+  colnames(design) <- gsub("Group", "", colnames(design))
+  timestamp("Using design matrix:\n", as.data.frame(design))
+} else {
+  # Covariates were provided, add them
+  # to design formula, Group should be
+  # the first term in the formula
+  timestamp("Covariates were provided.")
+  # Building formula, i.e.
+  # ~0 + Group + Cov1 + Cov2 + CovN
+  covariate_terms <- gsub(",", " + ", params$covariates)
+  formula <- paste("~0 + Group + ", covariate_terms)
+  formula <- as.formula(formula)
+  timestamp("Using design formula:\n", deparse(formula))
+  # Create design matrix and remove
+  # "Group" and the covariate term
+  # prefixes from the column names
+  design <- model.matrix(formula, data = groupinfo)
+  colnames(design) <- gsub("Group", "", colnames(design))
+  for (cov in unlist(strsplit(params$covariates, split = ","))) {
+    colnames(design) <- gsub(cov, "", colnames(design))
+  }
+  timestamp("Using design matrix:\n", as.data.frame(design))
+}
 
 # limma voom() transforms the counts
 # into log2CPM, where “per million reads”
