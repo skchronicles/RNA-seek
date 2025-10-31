@@ -1,7 +1,7 @@
 ---
-title: "Differential Gene Expression Analysis"
-subtitle: "limma report"
-author: "Skyler Kuhn"
+title: "Limma Report"
+subtitle: "Differential Gene Expression Analysis"
+author: "[OpenOmics/RNA-seek](https://github.com/OpenOmics/RNA-seek)"
 date: "`r Sys.Date()`"
 params:
     raw: "DEG_ALL/RSEM_genes_expected_counts.tsv"
@@ -11,11 +11,13 @@ params:
     wdir: "results"
 output: 
     html_document:
+        self_contained: true
         code_download: true
         code_folding: hide
         toc: true
         toc_depth: 4
         toc_float: true
+        number_sections: true
 ---
 
 ```{r setup, include=FALSE}
@@ -57,6 +59,7 @@ suppressMessages(library("rcompanion"))
 suppressMessages(library("dplyr"))
 suppressMessages(library("stringr"))
 suppressMessages(library("corrplot"))
+suppressMessages(library("EnhancedVolcano"))
 
 # Get prefix for output files
 prefix <- params$prefix
@@ -495,12 +498,10 @@ deg_template <- '##### **{{grp1}} vs. {{grp2}}** {.tabset}
 
 This section contains the results of the differential gene expression analysis between the `{{grp1}}` and `{{grp2}}` groups using the [R package limma](https://bioconductor.org/packages/release/bioc/html/limma.html). 
 
-If a gene has a positive fold-change (FC) value, it indicates that the gene is <span style="color:green">**up-regulated** (i.e its expression is higher)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group. Conversely, a negative FC value indicates that the gene is <span style="color:red">**down-regulated** (i.e its expression is lower)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group.
-
 <details>
-  <summary>*About filtering, sorting, exporting the table*</summary>
-    The table below can be filtered and sorted interactively to explore the results. To filter the table, please use the *Add Condition* button. It can be used to create complex queries to filter the table. To sort the table, click on the column headers. The *Copy gene symbols* button can be used to copy the gene symbols of the currently displayed genes. The *CSV* and *Excel* buttons can be used to download the full table in the respective formats.
-</details>
+  <summary>*Interpreting the fold-change*</summary>
+    If a gene has a positive fold-change (FC) value, it indicates that the gene is <span style="color:green">**up-regulated** (i.e its expression is higher)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group. Conversely, a negative FC value indicates that the gene is <span style="color:red">**down-regulated** (i.e its expression is lower)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group.
+</details> 
 
 \`\`\`{r compare-{{grp1}}-{{grp2}}, out.width="100%"} 
 # Creating a contrast matrix
@@ -678,6 +679,12 @@ write.table(
   quote = F
 )
 \`\`\`
+
+<details>
+  <summary>*About filtering, sorting, exporting the table*</summary>
+    The table below can be filtered and sorted interactively to explore the results. To filter the table, please use the *Add Condition* button. It can be used to create complex queries to filter the table. To sort the table, click on the column headers. The *Copy gene symbols* button can be used to copy the gene symbols of the currently displayed genes. The *CSV* and *Excel* buttons can be used to download the full table in the respective formats.
+</details>
+<br>
 
 > **Summary of the results**
 >  
