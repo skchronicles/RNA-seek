@@ -64,6 +64,9 @@ Differential gene expression analysis was performed using the limma functions `l
 #   BiocManager::install('packageName'))
 suppressMessages(library("limma"))
 suppressMessages(library("edgeR"))
+suppressMessages(library("Glimma"))
+suppressMessages(library("EnhancedVolcano"))
+
 
 # CRAN package imports
 # Install via:
@@ -78,7 +81,7 @@ suppressMessages(library("rcompanion"))
 suppressMessages(library("dplyr"))
 suppressMessages(library("stringr"))
 suppressMessages(library("corrplot"))
-suppressMessages(library("EnhancedVolcano"))
+suppressMessages(library("htmlwidgets"))
 
 # Get prefix for output files
 prefix <- params$prefix
@@ -334,9 +337,13 @@ The red line in the voom plot above represents the estimated mean–variance tre
 Moreover, the voom-plot provides a visual check on the level of filtering performed upstream. If filtering of lowly-expressed genes is insufficient, a drop in variance levels can be observed at the low end of the expression scale due to very small counts. If this is observed, additional filtering step should be performed proir to running voom.
 </details>
 
-### PCA plots {.tabset}
+### Exploratory plots
 
-#### After Normalization
+This section contains exploratory plots to visualize the normalized expression data and examine inter-sample clustering. Principal component analysis (PCA) and multidimensional scaling (MDS) were performed on the normalized expression values to reduce the dimensionality of the data and identify major sources of variation. This helps to detect patterns, clusters, or outliers in the dataset, which can provide insights into the relationships between samples.
+
+#### After Normalization {.tabset}
+
+##### 3D PCA plots
 
 PCA of the normalized expression data colored by the following different variables of interest: `r unique(sort(setdiff(names(groupinfo), "Sample")))`. To change the coloring of the PCA plot, please use the drop down menu below.
 
@@ -348,6 +355,7 @@ PCA of the normalized expression data colored by the following different variabl
 # values, scaled log2CPM. Scaling
 # is calculated by edgeR's TMM
 # calcNormFactors function.
+norm_data <- voom_object  # Need unfiltered object later with Glimma
 pca_data <- voom_object
 pca_data$E <- pca_data$E[order(apply(pca_data$E, 1, mad), decreasing = T), ]
 
@@ -507,8 +515,24 @@ plotly::highlight(p, on = NULL)
 
 The interactive 3D PCA plot above visualizes the clustering of samples based on the first three principal components (PCs) of the normalized gene expression data. Each point represents a sample, colored by the variable selected in the drop down. The axes indicate the percentage of variance explained by each PC, providing insights into the major sources of variation in the dataset.
 
+##### 2D MDS plots
+
+```{r 3d-expression-mds-after-normalization, fig.align='center'}
+timestamp("Generating Glimma MDS plot using normalized data. Preview of data (10 rows):\n", head(as.data.frame(norm_data$E), 10))
+Glimma::glimmaMDS(
+  as.matrix(norm_data$E),
+  groups = groupinfo,
+  labels = groupinfo$Sample,
+  width = 1100,
+  top = nrow(norm_data$E),
+)
+```
+
+The MDS plot above visualizes the similarity between samples based on their normalized expression profiles. Each point represents a sample, and the distances between points reflect the overall differences in expression patterns. Samples that cluster closely together have similar expression profiles, while those that are farther apart exhibit greater differences. This plot helps to identify potential outliers and assess the consistency of replicates within experimental groups.
+
+
 `r if (run_corrected_pca) { 
-  sprintf("#### After Covariate Correction\n\nPCA of the normalized, covariate-corrected expression data colored by the same variables of interest. These counts have been corrected for any unwanted effects due to the following covariates: %s. To change the coloring of the PCA plot, please use the drop down menu below.", params$covariates)
+  sprintf("#### After Covariate Correction {.tabset}\n##### 3D PCA plots\nPCA of the normalized, covariate-corrected expression data colored by the same variables of interest. These counts have been corrected for any unwanted effects due to the following covariates: %s. To change the coloring of the PCA plot, please use the drop down menu below.", params$covariates)
 }`
 
 ```{r 3d-expression-pca-after-batch-correction, eval=run_corrected_pca, out.width='75vh', out.height='50vh', fig.align='center'}
@@ -531,7 +555,8 @@ covariates <- groupinfo[ , intersect(names(groupinfo), cv), drop = FALSE]
 # one hot encodes the covariates.
 covariates <- model.matrix(~ . - 1, data = covariates)
 timestamp("Using one hot encoding of covariates for batch correction:\n", as.data.frame(covariates))
-pca_data <- removeBatchEffect(voom_object, group=as.factor(groupinfo$Group), covariates=covariates)
+norm_data <- removeBatchEffect(voom_object, group=as.factor(groupinfo$Group), covariates=covariates)
+pca_data <- norm_data  # Need unfiltered object later with Glimma
 
 # Order genes by MAD, limma voom
 # returns an Elist object where
@@ -707,6 +732,24 @@ p <- fig %>%
 plotly::highlight(p, on = NULL)
 ```
 
+`r if (run_corrected_pca) {
+  sprintf("##### 2D MDS plots\n")
+}`
+
+```{r 3d-expression-mds-after-batch-correction, fig.align='center'}
+timestamp("Generating Glimma MDS plot using batch-corrected normalized data. Preview of data (10 rows):\n", head(as.data.frame(norm_data), 10))
+Glimma::glimmaMDS(
+  as.matrix(norm_data),
+  groups = groupinfo,
+  labels = groupinfo$Sample,
+  width = 1100,
+  top = nrow(norm_data),
+)
+```
+
+`r if (run_corrected_pca) {
+  sprintf("The MDS plot above visualizes the similarity between samples based on their covariate-corrected normalized expression profiles. Each point represents a sample, and the distances between points reflect the overall differences in expression patterns. Samples that cluster closely together have similar expression profiles, while those that are farther apart exhibit greater differences. This plot helps to identify how well adjusting for the specified covariates has mitigated unwanted variation and improved the clustering of samples according to their biological groups of interest.\n")
+}`
 
 ### Differential gene expression analysis
 
@@ -779,6 +822,7 @@ This section contains the results of the differential gene expression analysis b
 
 \`\`\`{r compare-{{grp1}}-{{grp2}}, out.width="100%"} 
 # Creating a contrast matrix
+timestamp("Running differential expression comparison: {{grp1}} vs. {{grp2}}")
 contrast <- limma::makeContrasts(
   {{grp1}} - {{grp2}},
   levels = colnames(design)
@@ -1060,9 +1104,47 @@ ggplot2::ggsave(
   width = 12,
   height = 10
 )
+
+# Create an interactive Volcano plot
+# with the R package Glimma, the object
+# passed to the counts parameter must
+# contains all the tested genes. If it
+# does not, the it messes up the mappings
+# between the DGE results and the counts
+# and the plot will be incorrect, meaning
+# it could display information for a
+# different gene.
+interactive_volcano_plot <- Glimma::glimmaVolcano(
+  ebayes.fit,
+  counts = norm_data,
+  groups = groupinfo$Group,
+  coef = 1,
+  transform.counts = "none",
+  status = limma::decideTests(
+    ebayes.fit,
+    adjust.method = "BH",
+    p.value = fdr.threshold,
+    lfc = log2(fc.threshold)
+  )
+)
+# Save the volcano plot widget to
+# a seperate HTML file
+htmlwidgets::saveWidget(
+  interactive_volcano_plot,
+  file = paste(
+    "glimma_interactive_volcano_plot_",
+    paste(ofh_grp1, ofh_grp2, sep = "-"),
+    ".html",
+    sep = ""
+  ),
+  selfcontained = TRUE
+)
 \`\`\`
 \n\n'
 ```
+
+
+
 
 #### Differential expression results {.tabset}
 
