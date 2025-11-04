@@ -50,7 +50,7 @@ timestamp <- function(..., sep = " ") {
 
 ### About
 
-This report contains the results of differential gene expression (DGE) analysis using the R bioconductor package [limma](https://bioconductor.org/packages/release/bioc/html/limma.html). 
+This report contains the results of differential gene expression (DGE) analysis using the [R package limma](https://bioconductor.org/packages/release/bioc/html/limma.html).
 
 This report includes data pre-processing steps to filter out lowly expressed genes, estimate scaling factors for normalization, and transform the raw counts into log2 counts per million (log2CPM) values using the `voom` method to account for mean-variance relationship in RNA-seq data. After data normalization, exploratory principal component analysis (PCA) was performed to examine inter-sample clustering and detect potential outliers.
 
@@ -179,10 +179,10 @@ DT::datatable(
     style = "auto",
     width = "100%",
     options = list(
-      dom = "QBlrtip", # specify content (search box, etc)
+      dom = "QBflrtip", # specify content (search box, etc)
       deferRender = TRUE,
       scrollX = TRUE,
-      scrollY = 400,
+      scrollY = min(400, 40 * nrow(groupinfo)), # max height 400px
       scroller = TRUE,
       fixedColumns = list(leftColumns = 1), # freeze left columns
       buttons = list(
@@ -199,7 +199,7 @@ DT::datatable(
 )
 ```
 
-The sample sheet above links each sample to its associated metadata. It includes a **Group** column representing the experimental groups of interest— such as time points, treatments, conditions, genotypes status, or disease states. The **Group** information is used to construct the design matrix for linear modeling in [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html), enabling comparisons between groups to identify differentially expressed genes.
+The sample sheet above links each sample to its associated metadata. It includes a **Group** column representing the experimental groups of interest— such as time points, treatments, conditions, genotypes status, or disease states. The **Group** information is used to construct the design matrix for linear modeling in limma, enabling comparisons between groups to identify differentially expressed genes.
 
 ### Pre-processing
 
@@ -207,7 +207,7 @@ The sample sheet above links each sample to its associated metadata. It includes
 
 Before identifying differentially expressed genes, it is important to remove lowly expressed genes. 
 
-As the author of `limma` notes:
+As the author of limma notes:
 
 > Genes not expressed at biologically meaningful levels in any condition are uninformative and should be excluded. Statistically, filtering out low-count genes improves estimation of the mean–variance relationship and reduces the number of tests performed during differential expression analysis.
 
@@ -755,7 +755,7 @@ Glimma::glimmaMDS(
 
 This experiment aims to identify genes that are differentially expressed between experimental groups of interest.
 
-Group comparisons are defined as contrasts, and differential expression is assessed using the R package [`limma`](https://bioconductor.org/packages/release/bioc/html/limma.html). The functions `limma::lmFit()`, `limma::contrasts.fit()`, and `limma::eBayes()` fit linear models to each gene and apply empirical Bayes moderation to improve the variance estimates by borrowing information across all genes. This step is important because it stabilizes the variance estimates (especially when sample sizes are small) leading to more reliable detection of truly differentially expressed genes. P-values are then adjusted for multiple testing using the false discovery rate (FDR) method.
+Group comparisons are defined as contrasts, and differential expression is assessed using the [R package limma](https://bioconductor.org/packages/release/bioc/html/limma.html). The functions `limma::lmFit()`, `limma::contrasts.fit()`, and `limma::eBayes()` fit linear models to each gene and apply empirical Bayes moderation to improve the variance estimates by borrowing information across all genes. This step is important because it stabilizes the variance estimates (especially when sample sizes are small) leading to more reliable detection of truly differentially expressed genes. P-values are then adjusted for multiple testing using the false discovery rate (FDR) method.
 
 #### Comparisons of interest
 
@@ -784,7 +784,7 @@ DT::datatable(
       dom = "QBlrtip", # specify content (search box, etc)
       deferRender = TRUE,
       scrollX = TRUE,
-      scrollY = 250,
+      scrollY = min(400, 40 * nrow(contrast_df)),
       scroller = TRUE,
       fixedColumns = list(leftColumns = 1), # freeze left columns
       buttons = list(
@@ -807,17 +807,17 @@ DT::datatable(
 
 
 ```{r template_chunks, echo=FALSE}
-deg_template <- '##### **{{grp1}} vs. {{grp2}}** {.tabset}
+deg_template <- '##### **{{grp1}}<br><i><u>vs.</u></i> {{grp2}}** {.tabset}
 
 ###### Results 
 
-**{{grp1}}** _**vs.**_ **{{grp2}}**
+**{{grp1}}** <u>_**vs.**_</u> **{{grp2}}**
 
 This section contains the results of the differential gene expression analysis between the `{{grp1}}` and `{{grp2}}` groups using the [R package limma](https://bioconductor.org/packages/release/bioc/html/limma.html). 
 
 <details>
   <summary>*Interpreting the fold-change*</summary>
-    If a gene has a positive fold-change (FC) value, it indicates that the gene is <span style="color:green">**up-regulated** (i.e its expression is higher)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group. Conversely, a negative FC value indicates that the gene is <span style="color:red">**down-regulated** (i.e its expression is lower)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group.
+    If a gene has a positive fold-change (FC) value, it indicates that the gene is <span style="color:darkgreen">**up-regulated** (i.e its expression is higher)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group. Conversely, a negative FC value indicates that the gene is <span style="color:darkred">**down-regulated** (i.e its expression is lower)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group.
 </details> 
 
 \`\`\`{r compare-{{grp1}}-{{grp2}}, out.width="100%"} 
@@ -914,18 +914,18 @@ down.regulated <- nrow(
 # further by knitr.
 # Create interactive datatable with metadata
 DT::datatable(
-    sig.table,
+    data.frame("ensid_gene" = rownames(sig.table), sig.table),
     extensions = c(
       "Buttons",       # add download buttons
       "Scroller",      # for scrolling instead of pagination
       "FixedColumns",  # freeze columns in datatable
       "SearchBuilder"  # create complex search queries
     ),
-    rownames = TRUE,  # keep rownames
+    rownames = FALSE,  # keep rownames?
     style = "auto",
     width = "100%",
     options = list(
-      dom = "QBlrtip", # specify content (search box, etc)
+      dom = "QBflrtip", # specify content (search box, etc)
       deferRender = TRUE,
       scrollX = TRUE,
       scrollY = 600,
@@ -1006,13 +1006,13 @@ write.table(
 
 > **Summary of the results**
 >  
-> The table has been filtered to identify significant differentially expressed genes meeting the following thresholds: **FDR adjusted p-value ≤ \`r fdr.threshold\`** AND **abs(FC) ≥ \`r fc.threshold\`**. In total there are **\`r up.regulated + down.regulated\` genes** meeting those filtering criteria, of which <span style="color:green"> **\`r up.regulated\` genes** were found to be up-regulated</span> and <span style="color:red"> **\`r down.regulated\`** genes were found to be down-regulated</span>. 
+> The table has been filtered to highlight significant differentially expressed genes that meet the following thresholds: **FDR-adjusted p-value ≤ \`r fdr.threshold\`** and **|fold-change| ≥ \`r fc.threshold\`**. In total, **\`r up.regulated + down.regulated\` gene(s)** meet these filtering criteria, of which <span style="color:darkgreen"> **\`r up.regulated\` gene(s)**</span> are up-regulated and <span style="color:darkred"> **\`r down.regulated\` gene(s)**</span> are down-regulated genes. 
 > 
-> The full, unfiltered differential gene expression results can be found in the following TSV file: \`r paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = "")\`.
+> The complete, unfiltered differential gene expression results are available in the file: \`r paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = "")\`.
  
 ###### Volcano Plot
 
-**{{grp1}}** _**vs.**_ **{{grp2}}**
+**{{grp1}}** <u>_**vs.**_</u> **{{grp2}}**
 
 This section contains a VolcanoPlot created with the [R package, EnhancedVolcano ](https://bioconductor.org/packages/devel/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html). The plot visualizes the top 10 up- and down-regulated genes based on the following adjusted p-value and fold-change thresholds: **FDR adjusted p-value ≤ \`r fdr.threshold\`** AND **abs(FC) ≥ \`r fc.threshold\`**. 
 
