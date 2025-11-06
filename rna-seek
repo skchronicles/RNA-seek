@@ -660,8 +660,8 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config['options']['prokaryote'] = sub_args.prokaryote
     config['options']['call_gene_fusions'] = sub_args.call_gene_fusions
     config['options']['mode'] = sub_args.mode
-    config['options']['groups'] = os.path.abspath(os.path.realpath(os.path.expanduser(sub_args.groups)))
-    config['options']['contrasts'] = os.path.abspath(os.path.realpath(os.path.expanduser(sub_args.contrasts)))
+    config['options']['groups'] = sub_args.groups
+    config['options']['contrasts'] = sub_args.contrasts
     config['options']['covariates'] = sub_args.covariates
 
     # Add groups.tsv and contrast.tsv file
@@ -2060,7 +2060,7 @@ def parsed_arguments(name, description):
     subparser_run.add_argument(
         "--groups",
         # Check if the file exists and if it is readable
-        type=lambda file: permissions(parser, file, os.R_OK),
+        type=lambda file: permissions(parser, os.path.abspath(os.path.expanduser(file)), os.R_OK),
         required=False,
         default=None,
         help=argparse.SUPPRESS,
@@ -2071,7 +2071,7 @@ def parsed_arguments(name, description):
     subparser_run.add_argument(
         "--contrasts",
         # Check if the file exists and if it is readable
-        type=lambda file: permissions(parser, file, os.R_OK),
+        type=lambda file: permissions(parser, os.path.abspath(os.path.expanduser(file)), os.R_OK),
         required=False,
         default=None,
         help=argparse.SUPPRESS,
