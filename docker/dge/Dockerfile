@@ -8,21 +8,28 @@ FROM rocker/r-ver:4.4.3
 # Dependencies of differential gene expression analysis:
 # R>=4.4.0           apt-get, installs: 4.3.3
 #  CRAN
+#    • BiocManager      installed via CRAN
+#    • DT               installed via CRAN
+#    • RColorBrewer     installed via CRAN
+#    • argparse         installed via CRAN
+#    • corrplot         installed via CRAN
+#    • devtools         installed via CRAN
+#    • dplyr            installed via CRAN
+#    • ggplot2          installed via CRAN
+#    • ggpubr           installed via CRAN
+#    • htmlwidgets      installed via CRAN
+#    • knitr            installed via CRAN
 #    • pander           installed via CRAN
 #    • plotly           installed via CRAN
-#    • ggplot2          installed via CRAN
-#    • DT               installed via CRAN
-#    • knitr            installed via CRAN
-#    • RColorBrewer     installed via CRAN
-#    • tidyverse        installed via CRAN
-#    • dplyr            installed via CRAN
 #    • rmarkdown        installed via CRAN
 #    • stringr          installed via CRAN
-#    • corrplot         installed via CRAN
+#    • tidyverse        installed via CRAN
 #  Biconductor
 #    • edgeR            installed via Bioconductor
 #    • limma            installed via Bioconductor
 #    • EnhancedVolcano  installed via Bioconductor
+#    • Glimma           installed via Bioconductor
+# 
 LABEL maintainer=kuhnsa@nih.gov
 
 ############### INIT ################
@@ -51,6 +58,7 @@ RUN apt-get update \
         build-essential \
         bzip2 \
         ca-certificates \
+        cmake \
         curl \
         gawk \
         git \
@@ -108,7 +116,10 @@ RUN Rscript -e "use_ncpus <- max(parallel::detectCores()-2, 2); \
                 'RColorBrewer', \
                 'rmarkdown', \
                 'stringr', \
-                'tidyverse' \
+                'tidyverse', \
+                'htmlwidgets', \
+                'argparse', \
+                'ggpubr' \
         ); \
         install.packages(cran_packages, repos = 'https://cloud.r-project.org/', Ncpus = use_ncpus)" 
 
@@ -120,6 +131,24 @@ RUN Rscript -e "use_ncpus <- max(parallel::detectCores()-2, 2); \
                 'limma' \
         ); \
         BiocManager::install(bioc_packages, Ncpus = use_ncpus)"
+
+# Install latest version of Glimma using
+# devtools, latest version has some important
+# bugfixes related to css layouts of buttons
+RUN Rscript -e "use_ncpus <- max(parallel::detectCores()-2, 2); \
+        bioc_packages = c( \
+                'XVector', \
+                'SparseArray', \
+                'S4Arrays', \
+                'IRanges', \
+                'GenomeInfoDb', \
+                'DelayedArray', \
+                'GenomicRanges', \
+                'SummarizedExperiment', \
+                'DESeq2' \
+        ); \
+        BiocManager::install(bioc_packages, Ncpus = use_ncpus)"\
+        && Rscript -e "devtools::install_github('hasaru-k/GlimmaV2', dependencies = FALSE, upgrade = 'never')"
 
 # Install GNU which, increases compatability
 # with which distros included with Debian/Rocky
