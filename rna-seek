@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
 """RNA-seek: an highly reproducible and portable RNA-seq pipeline
@@ -659,6 +659,9 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config['options']['prokaryote'] = sub_args.prokaryote
     config['options']['call_gene_fusions'] = sub_args.call_gene_fusions
     config['options']['mode'] = sub_args.mode
+    config['options']['groups'] = sub_args.groups
+    config['options']['contrasts'] = sub_args.contrasts
+    config['options']['covariates'] = sub_args.covariates
 
     # Get latest git commit hash
     git_hash = get_repo_git_commit_hash(repo_path)
@@ -694,6 +697,7 @@ def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Sna
     @return dryrun_output <str>:
         Byte string representation of dryrun command
     """
+    c = Colors()
     try:
         dryrun_output = subprocess.check_output([
             'snakemake', '-npr',
@@ -707,7 +711,7 @@ def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Sna
     except subprocess.CalledProcessError as e:
         # Singularity is NOT in $PATH
         # Tell user to load both main dependencies to avoid the OSError below
-        print('Are singularity and snakemake in your PATH? Please check before proceeding again!')
+        err('{0}{1}Are singularity and snakemake in your PATH? Please check before proceeding again!{2}'.format(c.bg_red, c.white, c.end))
         sys.exit("{}\n{}".format(e, e.output.decode("utf-8")))
     except OSError as e:
         # Catch: OSError: [Errno 2] No such file or directory
@@ -1245,7 +1249,11 @@ def run(sub_args):
     fqscreen_cfg2=config['bin']['rnaseq']['tool_parameters']['FASTQ_SCREEN_CONFIG2']
     fq_screen_paths = get_fastq_screen_paths([os.path.join(sub_args.output,fqscreen_cfg1), os.path.join(sub_args.output,fqscreen_cfg2)])
     kraken_db_path = [config['bin']['rnaseq']['tool_parameters']['KRAKENBACDB']]
-    genome_bind_paths = resolve_additional_bind_paths(list(config['references']['rnaseq'].values()) + fq_screen_paths + kraken_db_path)
+    groups_path =  [sub_args.groups] if sub_args.groups else []
+    contrasts_path = [sub_args.contrasts] if sub_args.contrasts else []
+    genome_bind_paths = resolve_additional_bind_paths(
+        list(config['references']['rnaseq'].values()) + fq_screen_paths + kraken_db_path + groups_path + contrasts_path
+    )
     all_bind_paths = "{},{}".format(",".join(genome_bind_paths), rawdata_bind_paths)
 
     # Run pipeline
@@ -1647,6 +1655,8 @@ def parsed_arguments(name, description):
 
         {1}{2}Synopsis:{4}
           $ {0} run [--help] \\
+                              [--groups GROUPS] [--contrasts CONTRASTS] \\
+                              [--covariates COVARIATE [COVARIATE ...]] \\
                               [--call-gene-fusions] [--prokaryote] \\
                               [--small-rna] [--star-2-pass-basic] \\
                               [--dry-run] [--mode {{slurm, local}}] \\
@@ -1662,7 +1672,7 @@ def parsed_arguments(name, description):
         {1}{2}Description:{4}
           To run the pipeline with with your data, please provide a space seperated 
         list of FastQs (globbing is supported), an output directory to store results, 
-        and a reference genome. 
+        and a reference genome.
 
           Optional arguments are shown in square brackets above. Please visit our docs
         at "https://openomics.github.io/RNA-seek/" for more information, examples, and 
@@ -1704,6 +1714,89 @@ def parsed_arguments(name, description):
                                   Example: --genome hg38_48
 
         {1}{2}Analysis options:{4}
+          --groups GROUPS
+                                Groups file. Path to a sample sheet in TSV format with
+                                important information for differential expression. This
+                                file is used to map the sample names to groups and other
+                                metadata such as covariates (optional). At a minimum,
+                                this file contains two columns containing the basename
+                                of the sample along with its group label. Additional
+                                columns can be optionally added to define covariates.
+                                Here is a more detailed description of the sample sheet:
+                                  • Sample: This is the basename and prefix of a sample's
+                                    R1 FastQ file, e.g /path/WT_S4.R1.fastq.gz becomes
+                                    WT_S4 in this file. This is a required column.
+                                  • Group: This is the group label for a given sample.
+                                    A group can represent anything from an experimental
+                                    condition, a treatment, timepoint, or disease state,
+                                    etc. Group names must start with a letter and should
+                                    then only be composed of alphanumeric characters
+                                    (Aa-Za,0-9), periods (.), or underscores (_).
+                                    Hyphens (-) are not allowed in group names!
+                                    This is a required column.
+                                  • Additional Columns (optional): Any additional columns
+                                    to define covariates. The column names here must be
+                                    unique and follow the same naming rules as group names.
+                                    These additional column names can then be provided to
+                                    the --covariates option. If an additional column is
+                                    provided and its is not supplied to the --covariates
+                                    option, then it will only be used for exploratory
+                                    plots. Please see that option for more information.
+                                  Contents of example groups file:
+                                    Sample	Group	Batch
+                                    WT_S1	LPS_WT	B1
+                                    WT_S2	LPS_WT	B2
+                                    WT_S3	LPS_WT	B1
+                                    WT_S4	LPS_WT	B2
+                                    WT_S5	Veh_WT	B1
+                                    WT_S6	Veh_WT	B2
+                                    WT_S7	Veh_WT	B1
+                                    WT_S8	Veh_WT	B2
+                                    KO_S9	LPS_KO	B1
+                                    KO_S10	LPS_KO	B2
+                                    KO_S11	LPS_KO	B1
+                                    KO_S12	LPS_KO	B2
+                                    KO_S13	Veh_KO	B1
+                                    KO_S14	Veh_KO	B2
+                                    KO_S15	Veh_KO	B1
+                                    KO_S16	Veh_KO	B2
+                                  Example: --groups .tests/groups.tsv
+          --contrasts CONTRASTS
+                                Contrasts file. This tab-delimited file is used to setup
+                                comparisons within different groups of samples. Please
+                                see the --groups option above for more information about
+                                how to define groups for a set of samples. In its most
+                                basic form, this file consists of two columns containing
+                                the names of two group to compare. The names defined in
+                                this file must also exist in the groups file. The second
+                                column represents the baseline group. Complex comparisons
+                                can be made. The last line in the example contrasts file
+                                below contains a difference of differences (diff-diff)
+                                comparison. For diff-diff comparisons, please wrap each
+                                diff in parentheses. To perform differential expression
+                                analysis, a groups and contrast file must be provided.
+                                  Contents of example contrasts file:
+                                    LPS_KO	Veh_KO
+                                    LPS_WT	Veh_WT
+                                    LPS_KO	LPS_WT
+                                    Veh_KO	Veh_WT
+                                    (LPS_KO-Veh_KO)	(LPS_WT-Veh_WT)
+                                  Example: --contrasts .tests/contrasts.tsv
+          --covariates COVARIATE [COVARIATE ...]
+                                Covariates for differential expression analysis. This
+                                option allows the user to define and adjust for any
+                                covariates that may be present. Covariates are known
+                                biological (i.e sex, disease stage, high-/low-BMI) or
+                                technical sources (i.e. batch, high-/low-RIN) of
+                                variation that can confound the results of differential
+                                expression analysis. Please provide a space seperated
+                                list of covariates to this option. Covariates must
+                                match the header names of any 'Additional Columns' in
+                                the groups file. Covariate values should be encoded
+                                as categorical variables. Numerical covariates are
+                                currently not supported.
+                                  Example: --covariates Batch
+                                in the groups file as additional columns after the Sample
           --call-gene-fusions   Call gene fusions. If this option is provided, an extra
                                 set of steps will run to detect gene fusions with arriba.
                                 These steps will conditionally run depending on whether
@@ -1846,6 +1939,8 @@ def parsed_arguments(name, description):
                          --output /data/$USER/RNA_hg38 \\
                          --genome hg38_48 \\
                          --mode slurm \\
+                         --groups .tests/groups.tsv \\
+                         --contrasts .tests/contrasts.tsv \\
                          --dry-run
 
           # Step 2B.) Run RNA-seek pipeline
@@ -1854,6 +1949,8 @@ def parsed_arguments(name, description):
           ./{0} run --input .tests/*.R?.fastq.gz \\
                          --output /data/$USER/RNA_hg38 \\
                          --genome hg38_48 \\
+                         --groups .tests/groups.tsv \\
+                         --contrasts .tests/contrasts.tsv \\
                          --mode slurm
 
         {2}{3}Version:{4}
@@ -1912,6 +2009,41 @@ def parsed_arguments(name, description):
     )
 
     # Analysis options
+    # Groups TSV file to map
+    # each sample to a group
+    # and other metdata like
+    # covariates
+    subparser_run.add_argument(
+        "--groups",
+        # Check if the file exists and if it is readable
+        type=lambda file: permissions(parser, file, os.R_OK),
+        required=False,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+
+    # Contrasts file to find
+    # differential splicing
+    subparser_run.add_argument(
+        "--contrasts",
+        # Check if the file exists and if it is readable
+        type=lambda file: permissions(parser, file, os.R_OK),
+        required=False,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+
+    # Covariates for differential
+    # expression analysis
+    subparser_run.add_argument(
+        '--covariates',
+        type = str,
+        required = False,
+        nargs = '+',
+        default = [],
+        help = argparse.SUPPRESS
+    )
+
     # Call gene fusions with arriba  
     subparser_run.add_argument(
         '--call-gene-fusions',
