@@ -223,6 +223,20 @@ def _cp_r_safe_(source, target, resources = []):
             copytree(os.path.join(source, resource), destination)
 
 
+def clean(s, remove=['"', "'"]):
+    """Cleans a string to remove any defined leading or trailing characters.
+    @param s <str>:
+        String to clean.
+    @param remove list[<str>]:
+        List of characters to remove from beginning or end of string 's'.
+    @return s <str>:
+        Cleaned string
+    """
+    for c in remove:
+        s = s.strip(c)
+    return s
+
+
 def rename(filename):
     """Dynamically renames FastQ file to have one of the following extensions: *.R1.fastq.gz, *.R2.fastq.gz
     To automatically rename the fastq files, a few assumptions are made. If the extension of the
@@ -867,6 +881,330 @@ def resolve_additional_bind_paths(search_paths):
         common_paths.append(os.path.dirname(os.path.commonprefix(paths)))
 
     return list(set(common_paths))
+
+
+def check_file(file, ncols, delim='\t'):
+    """Checks if a file is empty and has the expected number of columns.
+    @param file <str>:
+        Path to file to check file.
+    @param ncols <int>:
+        Number of expected columns, i.e. 2
+    @param delim <str>:
+        Delimiter of file, i.e. a tab
+    @return header list[<str>]:
+        Header of file represented as a list
+    """
+    # Check to see if the file is empty
+    c = Colors()
+    with open(file, 'r') as fh:
+        try:
+            header = [clean(col.strip()) for col in next(fh).strip().split(delim)]
+        except StopIteration:
+            err('{0}{1}Error: --groups "{2}" file is empty!{3}'.format(c.bg_red, c.white, file, c.end))
+            fatal('{0}{1}Please add Sample and Group information to the file and try again.{2}'.format(c.bg_red, c.white, c.end))
+    # Check for expected number of columns
+    # on each line, report all problematic
+    # lines and then exit 1 if any errors
+    errors = False
+    with open(file, 'r') as fh:
+        linenumber = 0
+        for line in fh:
+            linenumber += 1
+            linelist = [l.strip() for l in line.split(delim) if l.strip()]
+            if len(linelist) == 0:
+                # Skip over lines with the expected
+                # number of columns and empty line
+                continue
+            if len(linelist) < ncols:
+                # Line is missing a column or it is not
+                # tab delimited
+                errors = True
+                err('{0}{1}Error: --groups "{2}" file does not contain the expected number of columns at line {3}! {4}'.format(
+                    c.bg_red, c.white, file, linenumber, c.end
+                ))
+                err('{0}{1}  └── Bad line contents: "{2}" {3}'.format(c.bg_red, c.white, line.rstrip(), c.end))
+    if errors:
+        fatal('{0}{1}Fatal: Please correct these lines and check your file is tab-delimited! {3}'.format(
+            c.bg_red, c.white, c.end
+        ))
+    return header
+
+
+def index(file, delim='\t', required = ['Sample', 'Group']):
+    """Returns the index of expected columns in provided file. The groups
+    file is expected to have the following required columns.
+    @Required columns:
+        - Sample, Group
+    @param file <str>:
+        Path to groups TSV file.
+    @return tuple(indices <dict[int/None]>, hasHeader <boolean>):
+        [0] Dictionary containing information the index of each required/optional column
+        [1] Boolean to indicate whether file has a header
+    """
+    c = Colors()
+    indices = {}
+    has_header = True
+    # Check to see if the file is empty,
+    # and it has the expected number of
+    # columns, i.e 2
+    header = check_file(file = file, ncols = len(required), delim = delim)
+    # Parse the header to get the index of
+    # required fields: i.e Sample, Group
+    # columns for parsing later
+    error = False
+    for col in required:
+        try: indices[col] = header.index(col)
+        except ValueError:
+            error = True
+            # Missing column names or header in groups file
+            # This can also occur if the file is not actually
+            # a tab delimited file.
+            # TODO: Add a check to see if the file is actually
+            # a tab delimited file, i.e. a TSV file.
+            has_header = False
+            err('{0}{1}Error: groups file is missing the following required column name: {2}{3}'.format(
+                c.bg_red, c.white, col, c.end
+            ))
+    # Check for errors and properly
+    # formatted groups file
+    if error or (indices.get('Sample',-1)!=0 or indices.get('Group',-1)!=1):
+        # Exit with non-zero exit code
+        fatal(textwrap.dedent(
+            """
+            # Fatal: Detected improperly formatted groups file!
+            # Here example of a groups file where:
+            #  • 1st column = Sample (required): Base name of a
+            #                 sample's BAM file without ".bam"
+            #                 file extension.
+            #  • 2nd column = Group (required): A sample's group
+            #                 information, any group listed here
+            #                 must match information provided in
+            #                 the contrasts file.
+            #  • Nth column = Extra Covariates (optional): Any
+            #                 additional columns after the 1st &
+            #                 2nd column are used to control for
+            #                 confounders or covariates during
+            #                 differential splicing analysis.
+            #                 Note: Numeric values will be
+            #                 treated as continuous variables so
+            #                 please ensure any categorical values
+            #                 start with a letter to ensure they
+            #                 are modelled correctly!
+            # Please ensure your file is tab delimited,
+            # check your columns names for the first and
+            # second columns, i.e 1st=Sample, 2nd=Group.
+            # Please see example below:
+            Sample	Group	Sex
+            Sample_1	G1	F
+            Sample_2	G1	M
+            Sample_3	G1	F
+            Sample_4	G2	M
+            Sample_5	G2	F
+            Sample_6	G2	M
+            Sample_7	G3	F
+            Sample_8	G3	M
+            Sample_9	G3	F
+            Sample_10	G3	M
+            """
+        ))
+    return indices, has_header
+
+
+def groups(file, delim='\t'):
+    """Reads and parses a sample sheet, groups.tsv, into a dictionary.
+    This file acts as a sample sheet to gather sample metadata and define
+    relationship betweeen groups of samples. This tab delimited file
+    contains two columns. One column for the basename of the sample and
+    lastly, one column for the name of the sample's group. This group
+    information is used downstream in the pipeline for differential
+    expression rules. Comparisons between groups can be made with a
+    constrast.tsv file. This function returns a tuple containing a
+    dictionary containing group to sample list.
+    @param file <str>:
+        Path to groups TSV file.
+    @return groups <dict[str]>:
+        Dictionary containing group to samples, where each key is group
+        and its value is a list of samples belonging to that group
+    @Example: group.tsv
+        Sample        Group
+        Sample_1	G1
+        Sample_2	G1
+        Sample_3	G1
+        Sample_4	G2
+        Sample_5	G2
+        Sample_6	G2
+        Sample_7	G3
+        Sample_8	G3
+        Sample_9	G3
+        Sample_0	G3
+    # Example data structure that is return given the file above
+    >> groups
+    {
+        'G1': ['Sample_1', 'Sample_2', 'Sample_3'],
+        'G2': ['Sample_4', 'Sample_5', 'Sample_6'],
+        'G3': ['Sample_7', 'Sample_8', 'Sample_9', 'Sample_0']
+    }
+    """
+    # Get index of each required and
+    # optional column and determine if
+    # the file has a header
+    indices, header = index(file)
+    s_index = indices['Sample']
+    g_index = indices['Group']
+    # Parse sample and group
+    # information
+    groups = {}
+    invalid_group = False
+    with open(file, 'r') as fh:
+        if header:
+            # Skip over header
+            tmp = next(fh)
+        for line in fh:
+            linelist = [clean(l.strip()) for l in line.split(delim)]
+            # Parse Sample information
+            try:
+                sample_name = linelist[s_index]
+                if not sample_name: continue  # skip over empty string
+            except IndexError:
+                continue  # No sample information, skip over line
+            # Parse Group Information
+            try:
+                group = linelist[g_index]
+                if not group: continue # skip over empty string
+            except IndexError:
+                continue  # No group information, skip over line
+            # Check valid group names, names
+            # should start with a letter and
+            # can this contain the following
+            # characters:
+            # letters, numbers, underscores, periods
+            if not re.match("^[A-Za-z][A-Za-z0-9_.]*$", group):
+                invalid_group = True
+                c = Colors()
+                err('{0}{1}Error: Invalid group name "{2}" for sample "{3}"!{4}'.format(
+                    c.bg_red, c.white, group, sample_name, c.end
+                ))
+                err('{0}{1}  └── Names must start with a letter and can only contain letters, numbers, underscores (_), and periods (.){2}'.format(
+                    c.bg_red, c.white, c.end
+                ))
+            # Add sample to its group
+            if group not in groups:
+                groups[group] = []
+            if sample_name not in groups[group]:
+                groups[group].append(sample_name)
+    if invalid_group:
+        fatal('{0}{1}Fatal: Please update the group names in "{2}" and try again!{3}'.format(
+            c.bg_red, c.white, file, c.end
+        ))
+    return groups
+
+
+def extract_group_tokens(expr):
+    """Extracts group names from an expression. Expressions can be relatively
+    complex, i.e "(G2-G2)", "(G3+G4)/2", "((G2-G2)-((G3+G4)/2))", or simple
+    like "G2". This function uses a regular expression to tokenize the expression
+    and extract group names while ignoring other operators and function names.
+    @param expr <str>:
+        Group expression string, i.e "(G2-G2)", "(G3+G4)/2", "G2"
+    @return out <list[str]>:
+        List of group names in expression
+    """
+    # Tokenize expression
+    _TOKEN_RE = re.compile(r"""
+        (?P<NUMBER>  (?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)? ) |
+        (?P<ID>      [A-Za-z][A-Za-z0-9._]* )                   |
+        (?P<OP>      \*\*|//|[+\-*/^:] )                        |
+        (?P<LPAREN>  \() |
+        (?P<RPAREN>  \) ) |
+        (?P<WS>      \s+ ) |
+        (?P<MISMATCH> . )
+    """, re.VERBOSE)
+    # Find all ID tokens that are not
+    # operators or function names
+    toks = list(_TOKEN_RE.finditer(expr))
+    out, seen = [], set()
+    for i, t in enumerate(toks):
+        if t.lastgroup != "ID":
+            continue
+        # exclude function names: next non-WS token is '('
+        j = i + 1
+        while j < len(toks) and toks[j].lastgroup == "WS":
+            j += 1
+        if j < len(toks) and toks[j].lastgroup == "LPAREN":
+            continue
+        name = t.group()
+        if name not in seen:
+            seen.add(name)
+            out.append(name)
+    return out
+
+
+def contrasts(file, groups, delim='\t'):
+    """Reads and parses the group comparison file, contrasts.tsv, into a 
+    dictionary. This file acts as a config file to setup contrasts between
+    two groups, where groups of samples are defined in the groups.tsv file.
+    This information is used in differential analysis, like differential binding
+    analysis, differential gene expression analysis, etc.
+    @Example: contrasts.tsv
+        G2  G1
+        G4  G3
+        G5  G1
+    >> contrasts = contrasts('contrasts.tsv', groups = ['G1', 'G2', 'G3'])
+    >> contrasts
+    [
+        ["G2",  "G1"],
+        ["G3",  "G1"],
+        ["G3",  "G2"]
+    ]
+    @param file <str>:
+        Path to contrasts TSV file.
+    @param groups list[<str>]:
+        List of groups defined in the groups file, enforces groups exist.
+    @return comparisons <list[list[str, str]]>:
+        Nested list contain comparsions of interest.
+    """
+    c = Colors()
+    errors = []
+    comparsions = []
+    line_number = 0
+    with open(file) as fh:
+        for line in fh:
+            line_number += 1
+            linelist = [clean(l.strip()) for l in line.split(delim)]
+            try:
+                g1 = linelist[0]  # Case group
+                g2 = linelist[1]  # Control group
+                if not g1 or not g2: continue # skip over empty lines
+            except IndexError:
+                # Missing a group, need two groups to tango
+                # This can happen if the file is NOT a TSV file,
+                # and it is seperated by white spaces, :(  
+                err(
+                '{0}{1}Warning: {2} is missing at least one group on line {3}: {4}{5}'.format(
+                    c.bg_yellow, c.black, file, line_number, line.strip(), c.end
+                ))
+                err('{0}{1}  └── Skipping over line, check if line is tab seperated... {2}'.format(
+                    c.bg_yellow, c.black, c.end
+                ))
+                continue
+            # Check to see if groups where defined already,
+            # avoids user errors and spelling errors
+            for g in [*extract_group_tokens(g1), *extract_group_tokens(g2)]:
+                if g not in groups:
+                    # Collect all error and report them at end
+                    errors.append(g)
+            # Add comparsion to list of comparisons
+            if [g1, g2] not in comparsions:
+                comparsions.append([g1, g2])
+    if errors:
+        # One of the groups is not defined in groups
+        err('{0}{1}Error: the following group(s) in "{2}" are not defined in groups file! {3}'.format(
+            c.bg_red, c.white, file, c.end
+        ))
+        fatal('{0}{1}  └── {2} {3}'.format(
+            c.bg_red, c.white, ','.join(errors), c.end
+        ))
+    return comparsions
 
 
 def run(sub_args):
