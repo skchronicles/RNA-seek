@@ -162,10 +162,10 @@ def permissions(parser, filename, *args, **kwargs):
         If file exists and user can read from file
     """
     if not exists(filename):
-        parser.error("File '{}' does not exists! Failed to provide vaild input.".format(filename))
+        parser.error("File '{0}' does not exists! Failed to provide vaild input.".format(filename))
 
     if not os.access(filename, *args, **kwargs):
-        parser.error("File '{}' exists, but cannot read file due to permissions!".format(filename))
+        parser.error("File '{0}' exists, but cannot read file due to permissions!".format(filename))
 
     return filename
 
@@ -181,27 +181,27 @@ def check_cache(parser, cache, *args, **kwargs):
     @return cache <str>:
         If singularity cache dir is valid
     """
+    c = Colors()
     if not exists(cache):
         # Cache directory does not exist on filesystem
         os.makedirs(cache)
     elif os.path.isfile(cache):
         # Cache directory exists as file, raise error
-        parser.error("""\n\t\x1b[6;37;41mFatal: Failed to provided a valid singularity cache!\x1b[0m
+        parser.error("""\n{1}{2}Fatal: Failed to provided a valid singularity cache!{3}\n
         The provided --singularity-cache already exists on the filesystem as a file.
-        Please run {} again with a different --singularity-cache location.
-        """.format(sys.argv[0]))
+        Please run {0} again with a different --singularity-cache location.
+        """.format(sys.argv[0], c.bg_red, c.white, c.end))
     elif os.path.isdir(cache):
         # Provide cache exists as directory
         # Check that the user owns the child cache directory
         # May revert to os.getuid() if user id is not sufficent
         if exists(os.path.join(cache, 'cache')) and os.stat(os.path.join(cache, 'cache')).st_uid != os.getuid():
                 # User does NOT own the cache directory, raise error
-                parser.error("""\n\t\x1b[6;37;41mFatal: Failed to provided a valid singularity cache!\x1b[0m
+                parser.error("""\n{1}{2}Fatal: Failed to provided a valid singularity cache!{3}\n
                 The provided --singularity-cache already exists on the filesystem with a different owner.
                 Singularity strictly enforces that the cache directory is not shared across users.
-                Please run {} again with a different --singularity-cache location.
-                """.format(sys.argv[0]))
-
+                Please run {0} again with a different --singularity-cache location.
+                """.format(sys.argv[0], c.bg_red, c.white, c.end))
     return cache
 
 
@@ -276,14 +276,14 @@ def rename(filename):
             # Come back to this later, I am not sure if this is necessary
             # That string maybe static (i.e. always the same)
             # https://support.illumina.com/help/BaseSpace_OLH_009008/Content/Source/Informatics/BS/NamingConvention_FASTQ-files-swBS.htm#
-            try: new_ext = "_{}{}".format(matched.group('lane'), new_ext)
+            try: new_ext = "_{0}{1}".format(matched.group('lane'), new_ext)
             except IndexError: pass # Does not contain the named group lane
 
             filename = re.sub(regex, new_ext, filename)
             break # only rename once
 
     if not converted:
-        raise NameError("""\n\tFatal: Failed to rename provided input '{}'!
+        raise NameError("""\n\tFatal: Failed to rename provided input '{0}'!
         Cannot determine the extension of the user provided input file.
         Please rename the file list above before trying again.
         Here is example of acceptable input file extensions:
@@ -292,7 +292,7 @@ def rename(filename):
           sampleName_1.fastq.gz       sampleName_2.fastq.gz
         Please also check that your input files are gzipped?
         If they are not, please gzip them before proceeding again.
-        """.format(filename, sys.argv[0])
+        """.format(filename)
         )
 
     return filename
@@ -349,7 +349,7 @@ def initialize(sub_args, repo_path, output_path):
         # Provided Path for pipeline output directory exists as file
         raise OSError("""\n\tFatal: Failed to create provided pipeline output directory!
         User provided --output PATH already exists on the filesystem as a file.
-        Please run {} again with a different --output PATH.
+        Please run {0} again with a different --output PATH.
         """.format(sys.argv[0])
         )
 
@@ -437,14 +437,14 @@ def get_nends(ifiles):
         if missing_mates:
             # Missing an R1 or R2 for a provided input sample
             raise NameError("""\n\tFatal: Detected pair-end data but user failed to provide
-               both mates (R1 and R2) for the following samples:\n\t\t{}\n
+               both mates (R1 and R2) for the following samples:\n\t\t{0}\n
             Please check that the basename for each sample is consistent across mates.
             Here is an example of a consistent basename across mates:
               consistent_basename.R1.fastq.gz
               consistent_basename.R2.fastq.gz
 
             Please do not run the pipeline with a mixture of single-end and paired-end
-            samples. This feature is currently not supported within {}, and it is
+            samples. This feature is currently not supported within {1}, and it is
             not recommended either. If this is a priority for your project, please run
             paired-end samples and single-end samples separately (in two separate output directories).
             If you feel like this functionality should exist, feel free to open an issue on Github.
@@ -572,11 +572,11 @@ def image_cache(sub_args, config):
     # Check if local sif exists 
     for image, uri in data['images'].items():
         if sub_args.sif_cache:
-            sif = os.path.join(sub_args.sif_cache, '{}.sif'.format(os.path.basename(uri).replace(':', '_')))
+            sif = os.path.join(sub_args.sif_cache, '{0}.sif'.format(os.path.basename(uri).replace(':', '_')))
             if not exists(sif):
                 # If local sif does not exist on in cache, print warning 
                 # and default to pulling from URI in config/containers/images.json
-                print('Warning: Local image "{}" does not exist in singularity cache'.format(sif), file=sys.stderr)
+                print('Warning: Local image "{0}" does not exist in singularity cache'.format(sif), file=sys.stderr)
             else:
                 # Change pointer to image from Registry URI to local SIF
                 data['images'][image] = sif
@@ -725,7 +725,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
             config["references"]["rnaseq"]["FUSIONPROTDOMAIN"] = config["references"]["rnaseq"]["FUSIONPROTDOMAIN"].replace("/data/OpenOmics/references/common", new_path)
 
     # Save config to output directory
-    print("\nGenerating config file in '{}'... ".format(os.path.join(output_path, 'config.json')), end = "")
+    print("\nGenerating config file in '{0}'... ".format(os.path.join(output_path, 'config.json')), end = "")
     # print(json.dumps(config, indent = 4, sort_keys=True))
     with open(os.path.join(output_path, 'config.json'), 'w') as fh:
         json.dump(config, fh, indent = 4, sort_keys = True)
@@ -749,21 +749,21 @@ def dryrun(outdir, config='config.json', snakefile=os.path.join('workflow', 'Sna
             '--use-singularity',
             '--rerun-incomplete',
             '--cores', '4',
-            '--configfile={}'.format(config)
+            '--configfile={0}'.format(config)
         ], cwd = outdir,
         stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        # Singularity is NOT in $PATH
-        # Tell user to load both main dependencies to avoid the OSError below
-        err('{0}{1}Are singularity and snakemake in your PATH? Please check before proceeding again!{2}'.format(c.bg_red, c.white, c.end))
-        sys.exit("{}\n{}".format(e, e.output.decode("utf-8")))
+        # Dry run error, tell user to check out the
+        # traceback for why it occured
+        err('\n{0}{1}Error: Dry run failed! Are you using supported version of snakemake (i.e ≤7.32.4)?{2}\nPlease check the traceback below for more information!'.format(c.bg_red, c.white, c.end))
+        sys.exit("{0}\n{1}".format(e, e.output.decode("utf-8")))
     except OSError as e:
         # Catch: OSError: [Errno 2] No such file or directory
         #  Occurs when command returns a non-zero exit-code
         if e.errno == 2 and not exe_in_path('snakemake'):
             # Failure caused because snakemake is NOT in $PATH
-            print('\x1b[6;37;41m\nError: Are snakemake AND singularity in your $PATH?\nPlease check before proceeding again!\x1b[0m', file=sys.stderr)
-            sys.exit("{}".format(e))
+            err('\n{0}{1}Error: Are snakemake AND singularity in your $PATH?{2}\nPlease check before proceeding again!'.format(c.bg_red, c.white, c.end))
+            fatal("{0}".format(e))
         else:
             # Failure caused by unknown cause, raise error
             raise e
@@ -832,8 +832,8 @@ def orchestrate(
     if additional_bind_paths:
         # Add Bind PATHs for outdir and tmp dir
         if bindpaths:
-            bindpaths = ",{}".format(bindpaths)
-        bindpaths = "{}{}".format(additional_bind_paths,bindpaths)
+            bindpaths = ",{0}".format(bindpaths)
+        bindpaths = "{0}{1}".format(additional_bind_paths,bindpaths)
 
     if not exists(os.path.join(outdir, 'logfiles')):
         # Create directory for logfiles
@@ -855,7 +855,7 @@ def orchestrate(
         masterjob = subprocess.Popen([
                 'snakemake', '-pr',
                 '--use-singularity',
-                '--singularity-args', "'-B {}'".format(bindpaths),
+                '--singularity-args', "'-B {0}'".format(bindpaths),
                 '--cores', str(threads),
                 '--configfile=config.json'
             ], cwd = outdir, env=my_env)
@@ -1280,7 +1280,7 @@ def run(sub_args):
     # Optional Step: Dry-run pipeline
     if sub_args.dry_run:
         dryrun_output = dryrun(outdir = sub_args.output) # python3 returns byte-string representation
-        print("\nDry-running RNA-seek pipeline:\n{}".format(dryrun_output.decode("utf-8")))
+        print("\nDry-running RNA-seek pipeline:\n{0}".format(dryrun_output.decode("utf-8")))
         sys.exit(0)
 
 
@@ -1298,7 +1298,7 @@ def run(sub_args):
     genome_bind_paths = resolve_additional_bind_paths(
         list(config['references']['rnaseq'].values()) + fq_screen_paths + kraken_db_path + groups_path + contrasts_path
     )
-    all_bind_paths = "{},{}".format(",".join(genome_bind_paths), rawdata_bind_paths)
+    all_bind_paths = "{0},{1}".format(",".join(genome_bind_paths), rawdata_bind_paths)
 
     # Run pipeline
     masterjob = orchestrate(
@@ -1319,9 +1319,9 @@ def run(sub_args):
     # pipeline that ran in local mode
     if sub_args.mode == 'local':
         if int(masterjob.returncode) == 0:
-            print('{} pipeline has successfully completed'.format(_name))
+            print('{0} pipeline has successfully completed'.format(_name))
         else:
-            fatal('{} pipeline failed. Please see standard output for more information.')
+            fatal('{0} pipeline failed. Please see standard output for more information.'.format(_name))
     elif sub_args.mode == 'slurm':
         jobid = open(os.path.join(sub_args.output, 'logfiles', 'mjobid.log')).read().strip()
         if int(masterjob.returncode) == 0:
@@ -1354,7 +1354,7 @@ def unlock(sub_args):
         stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         # Unlocking process returned a non-zero exit code
-        sys.exit("{}\n{}".format(e, e.output))
+        sys.exit("{0}\n{1}".format(e, e.output))
 
     print("Successfully unlocked the pipeline's working directory!")
 
@@ -1406,32 +1406,32 @@ def _configure(sub_args, filename, git_repo):
         Path to rna-seek github repository installation
     """
     # Save config to output directory
-    print("\nGenerating config file in '{}'... ".format(filename), end = "")
+    print("\nGenerating config file in '{0}'... ".format(filename), end = "")
     # Resolves if an image needs to be pulled from an OCI registry or
     # a local SIF generated from the rna-seek cache subcommand exists
     sif_config = image_cache(sub_args, {})
     # Creates config file /path/to/output/config/build.yml
     with open(filename, 'w') as fh:
-        fh.write('GENOME: "{}"\n'.format(sub_args.ref_name))
-        fh.write('REFFA: "{}"\n'.format(os.path.join(sub_args.output, os.path.basename(sub_args.ref_fa))))
-        fh.write('GTFFILE: "{}"\n'.format(os.path.join(sub_args.output, os.path.basename(sub_args.ref_gtf))))
-        fh.write('GTFVER: "{}"\n'.format(sub_args.gtf_ver))
-        fh.write('OUTDIR: "{}"\n'.format(sub_args.output))
-        fh.write('SCRIPTSDIR: "{}/workflow/scripts/builder"\n'.format(sub_args.output))
-        fh.write('BUILD_HOME: "{}"\n'.format(git_repo))
-        fh.write('SMALL_GENOME: "{}"\n'.format(sub_args.small_genome))
-        fh.write('TMP_DIR: "{}"\n'.format(sub_args.tmp_dir))
-        fh.write('SHARED_RESOURCES: "{}"\n'.format(sub_args.shared_resources))
+        fh.write('GENOME: "{0}"\n'.format(sub_args.ref_name))
+        fh.write('REFFA: "{0}"\n'.format(os.path.join(sub_args.output, os.path.basename(sub_args.ref_fa))))
+        fh.write('GTFFILE: "{0}"\n'.format(os.path.join(sub_args.output, os.path.basename(sub_args.ref_gtf))))
+        fh.write('GTFVER: "{0}"\n'.format(sub_args.gtf_ver))
+        fh.write('OUTDIR: "{0}"\n'.format(sub_args.output))
+        fh.write('SCRIPTSDIR: "{0}/workflow/scripts/builder"\n'.format(sub_args.output))
+        fh.write('BUILD_HOME: "{0}"\n'.format(git_repo))
+        fh.write('SMALL_GENOME: "{0}"\n'.format(sub_args.small_genome))
+        fh.write('TMP_DIR: "{0}"\n'.format(sub_args.tmp_dir))
+        fh.write('SHARED_RESOURCES: "{0}"\n'.format(sub_args.shared_resources))
         fh.write('READLENGTHS:\n')
         read_lengths = ['50', '75', '100', '125', '150']
         for rl in read_lengths:
-            fh.write('  - {}\n'.format(rl))
+            fh.write('  - {0}\n'.format(rl))
         # Add singularity images URIs or local SIFs
         # Converts a nested json file to yaml format
         for k in sif_config.keys():
-            fh.write('{}: \n'.format(k))
+            fh.write('{0}: \n'.format(k))
             for tag, uri in sif_config[k].items():
-                fh.write('  {}: "{}"\n'.format(tag, uri))
+                fh.write('  {0}: "{1}"\n'.format(tag, uri))
     print("Done!")
 
 
@@ -1454,7 +1454,7 @@ def configure_build(sub_args, git_repo, output_path):
         # Provided Path for pipeline output directory exists as file
         raise OSError("""\n\tFatal: Failed to create provided pipeline output directory!
         User provided --output PATH already exists on the filesystem as a file.
-        Please run {} again with a different --output PATH.
+        Please run {0} again with a different --output PATH.
         """.format(sys.argv[0])
         )
 
@@ -1512,7 +1512,7 @@ def build(sub_args):
         )
 
         print(
-            "\nDry-running RNA-seek Reference building pipeline:\n{}".format(
+            "\nDry-running RNA-seek Reference building pipeline:\n{0}".format(
                 dryrun_output.decode("utf-8")
             )
         )
@@ -1537,9 +1537,9 @@ def build(sub_args):
     sub_args.mode = 'slurm'
     if sub_args.mode == 'local':
         if int(masterjob.returncode) == 0:
-            print('{} pipeline has successfully completed'.format(_name))
+            print('{0} pipeline has successfully completed'.format(_name))
         else:
-            fatal('{} pipeline failed. Please see standard output for more information.')
+            fatal('{1} pipeline failed. Please see standard output for more information.'.format(_name))
     elif sub_args.mode == 'slurm':
         jobid = open(os.path.join(sub_args.output, 'logfiles', 'bjobid.log')).read().strip()
         if int(masterjob.returncode) == 0:
@@ -1572,7 +1572,7 @@ def cache(sub_args):
         # Provided Path for pipeline output directory exists as file
         raise OSError("""\n\tFatal: Failed to create provided sif cache directory!
         User provided --sif-cache PATH already exists on the filesystem as a file.
-        Please {} cache again with a different --sif-cache PATH.
+        Please {0} cache again with a different --sif-cache PATH.
         """.format(sys.argv[0])
         )
 
@@ -1582,11 +1582,11 @@ def cache(sub_args):
 
     pull = []
     for image, uri in data['images'].items():
-        sif = os.path.join(sif_cache, '{}.sif'.format(os.path.basename(uri).replace(':', '_')))
+        sif = os.path.join(sif_cache, '{0}.sif'.format(os.path.basename(uri).replace(':', '_')))
         if not exists(sif):
             # If local sif does not exist on in cache, print warning
             # and default to pulling from URI in config/containers/images.json
-            print('Image will be pulled from "{}".'.format(uri), file=sys.stderr)
+            print('Image will be pulled from "{0}".'.format(uri), file=sys.stderr)
             pull.append(uri)
 
     if not pull:
@@ -1601,13 +1601,13 @@ def cache(sub_args):
             masterjob = subprocess.Popen(
                 'sbatch --parsable -J pl:cache --time=10:00:00 --mail-type=BEGIN,END,FAIL ' +
                 str(os.path.join(repo_path, 'resources', 'cacher')) + ' slurm ' +
-                " -s '{}' ".format(sif_cache) +
-                " -i '{}' ".format(','.join(pull)) + 
+                " -s '{0}' ".format(sif_cache) +
+                " -i '{0}' ".format(','.join(pull)) + 
                 " -t '{0}/{1}/.singularity/' ".format(sif_cache, username),
                 cwd = sif_cache, shell=True, stderr = subprocess.STDOUT, stdout = subprocess.PIPE)
 
             masterjob.communicate()
-            print('RNA-seek reference cacher submitted master job with exit-code: {}'.format(masterjob.returncode))
+            print('RNA-seek reference cacher submitted master job with exit-code: {0}'.format(masterjob.returncode))
 
 
 def genome_options(parser, user_option, prebuilt):
@@ -1636,9 +1636,9 @@ def genome_options(parser, user_option, prebuilt):
     # a list of genomes (files) in config/genomes/*.json
     elif not user_option in prebuilt:
         # User did NOT provide a vaild choice
-        parser.error("""provided invalid choice, '{}', to --genome argument!\n
+        parser.error("""provided invalid choice, '{0}', to --genome argument!\n
         Choose from one of the following pre-built genome options: \n
-        \t{}\n
+        \t{1}\n
         or supply a custom reference genome JSON file generated from rna-seek build.
         """.format(user_option, prebuilt))
 
@@ -1665,10 +1665,10 @@ def parsed_arguments(name, description):
     description = "{0}{1}{2}".format(c.bold, description, c.end)
 
     # Create a top-level parser
-    parser = argparse.ArgumentParser(description = '{}: {}'.format(styled_name, description))
+    parser = argparse.ArgumentParser(description = '{0}: {1}'.format(styled_name, description))
 
     # Adding Verison information
-    parser.add_argument('--version', action = 'version', version='%(prog)s {}'.format(__version__))
+    parser.add_argument('--version', action = 'version', version='%(prog)s {0}'.format(__version__))
 
     # Create sub-command parser
     subparsers = parser.add_subparsers(help='List of available sub-commands')
@@ -2687,7 +2687,7 @@ def main():
     # Sanity check for usage
     if len(sys.argv) == 1:
         # Nothing was provided
-        fatal('Invalid usage: {} [-h] [--version] ...'.format(_name))
+        fatal('Invalid usage: {0} [-h] [--version] ...'.format(_name))
 
     # Collect args for sub-command
     args = parsed_arguments(
@@ -2696,7 +2696,7 @@ def main():
     )
 
     # Display version information
-    print('RNA-seek ({})'.format(__version__))
+    print('RNA-seek ({0})'.format(__version__))
 
     # Mediator method to call sub-command's set handler function
     args.func(args)
