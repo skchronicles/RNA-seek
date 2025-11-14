@@ -1539,7 +1539,7 @@ def build(sub_args):
         if int(masterjob.returncode) == 0:
             print('{0} pipeline has successfully completed'.format(_name))
         else:
-            fatal('{1} pipeline failed. Please see standard output for more information.'.format(_name))
+            fatal('{0} pipeline failed. Please see standard output for more information.'.format(_name))
     elif sub_args.mode == 'slurm':
         jobid = open(os.path.join(sub_args.output, 'logfiles', 'bjobid.log')).read().strip()
         if int(masterjob.returncode) == 0:
