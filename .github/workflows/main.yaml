@@ -47,6 +47,19 @@ jobs:
         --genome mm10_M25 \
         --shared-resources /opt2/.tests/ \
         --mode local --dry-run
+    - name: Dry-run pipeline hg38_48, differential expression options
+      run: |
+        docker run -v $PWD:/opt2 snakemake/snakemake:v5.24.2 \
+        python /opt2/rna-seek run --input \
+        /opt2/.tests/KO_S3.R1.fastq.gz /opt2/.tests/KO_S3.R2.fastq.gz \
+        /opt2/.tests/KO_S4.R1.fastq.gz /opt2/.tests/KO_S4.R2.fastq.gz \
+        /opt2/.tests/WT_S1.R1.fastq.gz /opt2/.tests/WT_S1.R2.fastq.gz \
+        --output /opt2/output \
+        --genome hg38_48 \
+        --shared-resources /opt2/.tests/ \
+        --groups /opt2/.tests/groups.tsv \
+        --contrasts /opt2/.tests/contrasts.tsv \
+        --mode local --dry-run
     - name: Lint workflow
       continue-on-error: true
       run: |
