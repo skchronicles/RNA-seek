@@ -677,26 +677,26 @@ def setup(sub_args, ifiles, repo_path, output_path):
         group2samples = groups(sub_args.groups, delim='\t')
         # Adding some basic validation to ensure
         # all the samples in the groups.tsv are
-        # have bam files (checking for typos)
+        # have fastq files (checking for typos)
         groups_samples = []
         for samplelist in group2samples.values():
             for sample in samplelist:
                 if sample not in groups_samples:
                     groups_samples.append(sample)
         # Check for things in the groups file
-        # that don't have input bams
+        # that don't have input fastq
         missing_inputs = []
         for s in groups_samples:
             if s not in config["project"]["groups"]["rsamps"]:
                 # Collect all samples list in the groups
-                # file that do not have input bam files
+                # file that do not have input fastq files
                 missing_inputs.append(s)
         # Check what's missing and report the problem
         if missing_inputs:
-            # Report missing BAM files that
+            # Report missing FastQ files that
             # were not provided and display a
             # helpful message to fix problem
-            err("{0}{1}Error: --groups file contains the following samples with missing BAM files! {2}".format(
+            err("{0}{1}Error: --groups file contains the following samples with missing FastQ files! {2}".format(
                 c.bg_red, c.white, c.end
             ))
             fatal("  └── {0}".format(missing_inputs))
@@ -1022,7 +1022,8 @@ def index(file, delim='\t', required = ['Sample', 'Group']):
             # Fatal: Detected improperly formatted groups file!
             # Here example of a groups file where:
             #  • 1st column = Sample (required): Base name of a
-            #                 sample's BAM file without ".bam"
+            #                 sample's fastq file without the
+            #                 ".R1.fastq.gz" or ".R2.fastq.gz"
             #                 file extension.
             #  • 2nd column = Group (required): A sample's group
             #                 information, any group listed here
