@@ -1,4 +1,5 @@
 # Common helper functions shared across the entire workflow
+import os, sys
 def check_existence(filename):
     """Checks if file exists on filesystem
     :param filename <str>: Name of file to check
