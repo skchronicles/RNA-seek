@@ -1693,7 +1693,7 @@ def parsed_arguments(name, description):
     # still use hg38_30 or mm10_M25. This is to
     # ensure backwards compatiability. We have
     # just hidden it from the help section.
-    genomes_supported = [g for g in genomes_supported if g not in hidden_genomes]
+    latest_genomes_supported = [g for g in genomes_supported if g not in hidden_genomes]
 
     required_run_options = textwrap.dedent("""
         {1}{0} {3}run{4}: {1} Runs the data-processing and quality-control pipeline.{4}
@@ -1965,7 +1965,7 @@ def parsed_arguments(name, description):
         {1}{2}Misc Options:{4}
           -h, --help            Show usage information, help message, and exit.
                                   Example: --help
-        """.format(name, c.bold, c.url, c.italic, c.end, ', '.join(genomes_supported))
+        """.format(name, c.bold, c.url, c.italic, c.end, ', '.join(latest_genomes_supported))
     )
 
     # Display example usage in epilog
