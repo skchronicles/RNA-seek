@@ -205,6 +205,38 @@ def check_cache(parser, cache, *args, **kwargs):
     return cache
 
 
+def valid_batchid(parser, batch_id):
+    """Checks if the value provided to '--batch-id' option is valid.
+    Check if the string consists of only alphanumeric characters, 
+    hypens, and underscores.
+    @param parser <argparse.ArgumentParser() object>:
+        Argparse parser object
+    @param batch_id <str>:
+        Value provided to '--batch-id' option
+    @return path <str>:
+        Returns batch_id if it is valid, else error is raised
+    """
+    # Check for default argparser value, if so return
+    # default --batch-id value is set to ''.
+    if batch_id == '':
+        # --batch-id is not provided, 
+        # return default value back
+        return batch_id
+    # Check if the batch id is a single hypen or underscore
+    # i.e --batch-id '-' or --batch-id '_' was given
+    if batch_id == '-' or batch_id == '_':
+        parser.error(
+            "Error: --batch-id '{}' is invalid! A batch identifer cannot be a single hypen or underscore.".format(batch_id)
+        )
+    # Check if the batch id is valid, enforce only alphanumeric 
+    # characters, hypens, and underscores
+    if not re.match(r'^[A-Za-z0-9\-_]+$', batch_id):
+        parser.error(
+            "Error: --batch-id '{}' is invalid! A batch identifer must consist of only alphanumeric characters, hypens, and underscores.".format(batch_id)
+        )
+    return batch_id
+
+
 def _cp_r_safe_(source, target, resources = []):
     """Private function: Given a list paths it will recursively copy each to the
     target location. If a target path already exists, it will NOT over-write the
@@ -663,6 +695,7 @@ def setup(sub_args, ifiles, repo_path, output_path):
     config['options']['groups'] = sub_args.groups
     config['options']['contrasts'] = sub_args.contrasts
     config['options']['covariates'] = sub_args.covariates
+    config['options']['batch_id'] = sub_args.batch_id
 
     # Add groups.tsv and contrast.tsv file
     # information, groups.tsv file defines
@@ -1700,6 +1733,7 @@ def parsed_arguments(name, description):
 
         {1}{2}Synopsis:{4}
           $ {0} run [--help] \\
+                              [--batch-id BATCH_ID] \\
                               [--groups GROUPS] [--contrasts CONTRASTS] \\
                               [--covariates COVARIATE [COVARIATE ...]] \\
                               [--call-gene-fusions] [--prokaryote] \\
@@ -1759,6 +1793,19 @@ def parsed_arguments(name, description):
                                   Example: --genome hg38_48
 
         {1}{2}Analysis options:{4}
+          --batch-id BATCH_ID
+                                Unique identifer to associate with a batch of samples.
+                                This option can be provided to ensure that differential
+                                expression output files are not over-written between 
+                                different runs of the pipeline after updating the group
+                                file with additional covariates or dropping samples. 
+                                An identifer provided to this option will be used to
+                                create a sub-directory in the differential expression
+                                folder. This batch id should be composed of alpha-
+                                numeric characters, and it should not contain tabs or
+                                white space characters. Here is a list of valid or
+                                acceptable characters: "aA-Zz", "0-9", "-", "_".
+                                  Example: --batch-id "2025-11-20"
           --groups GROUPS
                                 Groups file. Path to a sample sheet in TSV format with
                                 important information for differential expression. This
@@ -2054,6 +2101,15 @@ def parsed_arguments(name, description):
     )
 
     # Analysis options
+    # Batch Identifer
+    subparser_run.add_argument(
+        '--batch-id',
+        type = lambda option: valid_batchid(parser, option.replace(' ', '_')),
+        required = False,
+        default = '',
+        help = argparse.SUPPRESS
+    )
+
     # Groups TSV file to map
     # each sample to a group
     # and other metdata like
