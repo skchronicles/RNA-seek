@@ -819,7 +819,7 @@ This section contains the results of the differential gene expression analysis b
     If a gene has a positive fold-change (FC) value, it indicates that the gene is <span style="color:darkgreen">**up-regulated** (i.e its expression is higher)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group. Conversely, a negative FC value indicates that the gene is <span style="color:darkred">**down-regulated** (i.e its expression is lower)</span> in the `{{grp1}}` group compared to the `{{grp2}}` group.
 </details> 
 
-\`\`\`{r compare-{{grp1}}-{{grp2}}, out.width="100%"} 
+\`\`\`{r compare-{{grp1}}_vs_{{grp2}}, out.width="100%"} 
 # Creating a contrast matrix
 timestamp("Running differential expression comparison: {{grp1}} vs. {{grp2}}")
 contrast <- limma::makeContrasts(
@@ -832,7 +832,7 @@ contrast <- limma::makeContrasts(
 ofh_grp1 <- gsub("\\\\(([^()]+)\\\\)\\\\s*/\\\\s*\\\\d+", "avg(\\\\1)", "{{grp1}}")
 ofh_grp2 <- gsub("\\\\(([^()]+)\\\\)\\\\s*/\\\\s*\\\\d+", "avg(\\\\1)", "{{grp2}}")
 # Create sub-directory for each comparisons results
-cmp_name <- paste(ofh_grp1, ofh_grp2, sep="-")
+cmp_name <- paste(ofh_grp1, ofh_grp2, sep="_vs_")
 cmp_subdir <- file.path(wd, cmp_name)
 if (!dir.exists(cmp_subdir)) {
   dir.create(cmp_subdir, recursive = TRUE)
@@ -953,7 +953,7 @@ DT::datatable(
             # output filename
             filename = paste(
               "limma_voom_deg_",
-              paste(ofh_grp1, ofh_grp2, sep = "-"),
+              paste(ofh_grp1, ofh_grp2, sep = "_vs_"),
               sep = ""
           )
         ),
@@ -963,7 +963,7 @@ DT::datatable(
             # Output filename
             filename = paste(
               "limma_voom_deg_",
-              paste(ofh_grp1, ofh_grp2, sep = "-"),
+              paste(ofh_grp1, ofh_grp2, sep = "_vs_"),
               sep = ""
           )
         )
@@ -979,7 +979,7 @@ write.table(
     cmp_subdir,
     paste(
       "limma_voom_deg_",
-      paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"),
+      paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "_vs_"),
       sep = ""
     )
   ),
@@ -999,7 +999,7 @@ write.table(
     cmp_subdir,
     paste(
       "limma_voom_linear_model_coefficients_",
-      paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"),
+      paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "_vs_"),
       sep = ""
     )
   ),
@@ -1020,7 +1020,7 @@ write.table(
 > The table has been filtered to highlight significant differentially expressed genes that meet the following thresholds: **FDR-adjusted p-value ≤ \`r fdr.threshold\`** and **|fold-change| ≥ \`r fc.threshold\`**. In total, **\`r up.regulated + down.regulated\` gene(s)** meet these filtering criteria, of which <span style="color:darkgreen"> **\`r up.regulated\` gene(s)**</span> are up-regulated and <span style="color:darkred"> **\`r down.regulated\` gene(s)**</span> are down-regulated genes. 
 > 
 > The **complete, unfiltered** differential gene expression results are available in the file:  
-> \`r file.path(cmp_name, paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "-"), sep = ""))\`.
+> \`r file.path(cmp_name, paste("limma_voom_deg_", paste(ofh_grp1, paste(ofh_grp2, ".tsv", sep=""), sep = "_vs_"), sep = ""))\`.
  
 ##### Volcano Plot
 
@@ -1098,7 +1098,7 @@ ggplot2::ggsave(
     cmp_subdir,
     paste(
       "limma_voom_volcano_plot_",
-      paste(ofh_grp1, ofh_grp2, sep = "-"),
+      paste(ofh_grp1, ofh_grp2, sep = "_vs_"),
       ".jpeg",
       sep = ""
     )
@@ -1114,7 +1114,7 @@ ggplot2::ggsave(
     cmp_subdir,
     paste(
       "limma_voom_volcano_plot_",
-      paste(ofh_grp1, ofh_grp2, sep = "-"),
+      paste(ofh_grp1, ofh_grp2, sep = "_vs_"),
       ".pdf",
       sep = ""
     )
@@ -1151,7 +1151,7 @@ htmlwidgets::saveWidget(
   interactive_volcano_plot,
   file = paste(
       "glimma_interactive_volcano_plot_",
-      paste(ofh_grp1, ofh_grp2, sep = "-"),
+      paste(ofh_grp1, ofh_grp2, sep = "_vs_"),
       ".html",
       sep = ""
     ),
@@ -1166,7 +1166,7 @@ htmlwidgets::saveWidget(
 status <- file.rename(
   from = paste(
     "glimma_interactive_volcano_plot_",
-    paste(ofh_grp1, ofh_grp2, sep = "-"),
+    paste(ofh_grp1, ofh_grp2, sep = "_vs_"),
     ".html",
     sep = ""
   ),
@@ -1174,7 +1174,7 @@ status <- file.rename(
     cmp_subdir,
     paste(
       "glimma_interactive_volcano_plot_",
-      paste(ofh_grp1, ofh_grp2, sep = "-"),
+      paste(ofh_grp1, ofh_grp2, sep = "_vs_"),
       ".html",
       sep = ""
     )
