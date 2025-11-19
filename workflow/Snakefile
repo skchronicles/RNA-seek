@@ -25,9 +25,10 @@ call_gene_fusions = str_bool(                    # Default: False, must
     config['options']['call_gene_fusions']       # also have arriba refs
 )
 # Differential expression options
-grps_file = config['options'].get('groups','')               # Groups file
+batch_id = config['options'].get('batch_id','')   # Batch ID
+grps_file = config['options'].get('groups','')    # Groups file
 grps_file = grps_file if grps_file else ''
-cmps_file = config['options'].get('contrasts','')            # Contrasts file
+cmps_file = config['options'].get('contrasts','') # Contrasts file
 cmps_file = cmps_file if cmps_file else ''
 # Optional covariates for correction
 covariates = ','.join(config['options'].get('covariates','')).strip()
@@ -36,6 +37,10 @@ covariates = ','.join(config['options'].get('covariates','')).strip()
 # differential expression analysis
 run_de = (len(config['project'].get('contrast', [])) > 0) and \
 (len(config['project'].get('group2samples', {})) > 1)
+comparisons = []
+if run_de:
+    for case,control in config['project'].get('contrast', []):
+        pass
 
 # Read in resource information,
 # containing information about 
@@ -148,7 +153,7 @@ if paired_end:
             join(workpath,"Reports","RNA_Report.html"),
 
             # Differential gene expression analysis
-            provided([join(workpath,"differential_gene_expression","limma","Limma_DGE_Report.html")], run_de),
+            provided([join(workpath,"differential_gene_expression",batch_id,"limma","Limma_DGE_Report.html")], run_de),
 
 elif not paired_end:
     # Single-end Target files
@@ -207,7 +212,7 @@ elif not paired_end:
             join(workpath,"Reports","multiqc_report.html"),
 
             # Differential gene expression analysis
-            provided([join(workpath,"differential_gene_expression","limma","Limma_DGE_Report.html")], run_de),
+            provided([join(workpath,"differential_gene_expression",batch_id,"limma","Limma_DGE_Report.html")], run_de),
 
 
 # Rules common to single-end or paired-end data

@@ -37,12 +37,12 @@ rule limma_diff_gene_expression:
         contrasts=cmps_file,
         counts=join(workpath,degall_dir,"RSEM_genes_expected_counts.tsv"),
     output:
-        render_script=join(workpath,"differential_gene_expression", "limma", "render.R"),
-        html_report=join(workpath,"differential_gene_expression", "limma", "Limma_DGE_Report.html"),
+        render_script=join(workpath,"differential_gene_expression",batch_id,"limma","render.R"),
+        html_report=join(workpath,"differential_gene_expression",batch_id,"limma","Limma_DGE_Report.html"),
     params:
         rname='pl:limma_genes',
         rmd=join(workpath,"workflow","scripts","limma_dge_report.Rmd"),
-        outdir=join(workpath,"differential_gene_expression", "limma"),
+        outdir=join(workpath,"differential_gene_expression","limma",batch_id),
         # Optional covariates to correct for,
         # either a comma delimited list of
         # columns in the groups file or
