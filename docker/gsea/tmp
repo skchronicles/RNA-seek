@@ -1,0 +1,26 @@
+python3
+libx11-dev
+git
+libcurl4-openssl-dev, libssl-dev
+make
+libgit2-dev
+git
+make, zlib1g-dev
+make, zlib1g-dev
+libglpk-dev, libxml2-dev
+pandoc
+make
+cmake
+libssl-dev
+pandoc
+pandoc
+libpng-dev
+libfreetype6-dev, libjpeg-dev, libpng-dev, libtiff-dev, libwebp-dev
+git
+pandoc
+pandoc
+make
+libicu-dev
+libfontconfig1-dev, libfreetype6-dev
+libfreetype6-dev, libfribidi-dev, libharfbuzz-dev
+libxml2-dev
