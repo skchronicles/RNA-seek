@@ -39,6 +39,11 @@ rule limma_diff_gene_expression:
     output:
         render_script=join(workpath,"differential_gene_expression",batch_id,"limma","render.R"),
         html_report=join(workpath,"differential_gene_expression",batch_id,"limma","Limma_DGE_Report.html"),
+        # Per-comparison deg results
+        deg_results=expand(
+            join(workpath,"differential_gene_expression",batch_id,"limma","{case}_vs_{control}","limma_voom_deg_{case}_vs_{control}.tsv"),
+            zip, case=case_groups, control=ctrl_groups
+        ),
     params:
         rname='pl:limma_genes',
         rmd=join(workpath,"workflow","scripts","limma_dge_report.Rmd"),

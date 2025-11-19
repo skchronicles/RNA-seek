@@ -1,7 +1,7 @@
 # Python standard library
 from os.path import join
 from os import listdir
-import os, sys, json
+import os, sys, json, re
 
 # 3rd party imports from pypi
 from snakemake.workflow import workflow as wf_api
@@ -37,10 +37,18 @@ covariates = ','.join(config['options'].get('covariates','')).strip()
 # differential expression analysis
 run_de = (len(config['project'].get('contrast', [])) > 0) and \
 (len(config['project'].get('group2samples', {})) > 1)
-comparisons = []
+case_groups = []
+control_groups = []
 if run_de:
     for case,control in config['project'].get('contrast', []):
-        pass
+        # Replace any instances of 
+        # (A+B+C)/n with avg(A+B+C),
+        # avoids creatiing files with
+        # a "/" char in its name as
+        # that is a reserved char to
+        # seperate paths on posix systems.
+        case_groups.append(re.sub(r"\(([^()]+)\)\s*/\s*\d+", r"avg(\1)", case))
+        control_groups.append(re.sub(r"\(([^()]+)\)\s*/\s*\d+", r"avg(\1)", control))
 
 # Read in resource information,
 # containing information about 
@@ -152,8 +160,13 @@ if paired_end:
             # RNA QC Report
             join(workpath,"Reports","RNA_Report.html"),
 
-            # Differential gene expression analysis
+            # Differential gene expression analysis report
             provided([join(workpath,"differential_gene_expression",batch_id,"limma","Limma_DGE_Report.html")], run_de),
+            # DEG results for each comparison
+            expand(
+                join(workpath,"differential_gene_expression",batch_id,"limma","{case}_vs_{control}","limma_voom_deg_{case}_vs_{control}.tsv"),
+                zip, case=case_groups, control=ctrl_groups
+            ),
 
 elif not paired_end:
     # Single-end Target files
@@ -211,9 +224,13 @@ elif not paired_end:
             # MultiQC
             join(workpath,"Reports","multiqc_report.html"),
 
-            # Differential gene expression analysis
+            # Differential gene expression analysis report
             provided([join(workpath,"differential_gene_expression",batch_id,"limma","Limma_DGE_Report.html")], run_de),
-
+            # DEG results for each comparison
+            expand(
+                join(workpath,"differential_gene_expression",batch_id,"limma","{case}_vs_{control}","limma_voom_deg_{case}_vs_{control}.tsv"),
+                zip, case=case_groups, control=ctrl_groups
+            ),
 
 # Rules common to single-end or paired-end data
 include: "rules/common.smk"
