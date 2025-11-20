@@ -10,6 +10,9 @@ Setting up the RNA-seek pipeline is fast and easy! In its most basic form, <code
 ## 2. Synopsis
 ```text
 $ rna-seek run [--help] \
+            [--batch-id BATCH_ID] \
+            [--groups GROUPS] [--contrasts CONTRASTS] \
+            [--covariates COVARIATE [COVARIATE ...]] \
             [--call-gene-fusions] [--prokaryote] \
             [--small-rna] [--star-2-pass-basic] \
             [--dry-run] [--mode {slurm, local}] \
@@ -26,6 +29,8 @@ $ rna-seek run [--help] \
 The synopsis for each command shows its parameters and their usage. Optional parameters are shown in square brackets.
 
 A user **must** provide a list of FastQ files (globbing is supported) to analyze via `--input` argument, an output directory to store results via `--output` argument and select reference genome for alignment and annotation via the `--genome` argument. If you are running the pipeline outside of Biowulf, you will need to additionally provide the the following options: `--shared-resources`, `--tmp-dir`. More information about each of these options can be found below.
+
+To run differential expression analyses, a groups and contrasts file must be provided. Please see the downstream analysis section below for more information about how to create these files.
 
 Use you can always use the `-h` option for information on a specific sub command.  
 
@@ -106,7 +111,94 @@ Each of the following arguments are required. Failure to provide a required argu
 > 
 > ***Example:*** `--star-2-pass-basic`
 
-### 2.3 Orchestration Options
+### 2.3 Downstream analysis options
+
+Each of the following options can optionally be provided to run differential expression and pathway (coming soon) analyses. Please note that if these options are not provided, the pipeline will still run all pre-processing and QC steps.
+
+  `--batch-id BATCH_ID`
+> **Batch ID for downstream analysis.**  
+> *type: string*  
+> *default: none*  
+>
+> This option can be provided to ensure that downstream analyses output files are not over-written between different runs of the pipeline. This can occur after updating the group file with additional covariates or dropping samples. By default, project-level files in differential expression and pathway analysis folder could get over-written between pipeline runs if this option is not provided. The output directory name for a given contrast will resolve to `{group1}_vs_{group2}` within the **differential_gene_expression** folder. As so, if the groups file is updated to remove samples or add additional covariates without updating the group names, it could over write the previous analyses output files. Any identifer provided to this option will be used to create a sub directory in the differential expression folder. This ensures project-level files (which are unique) will not get over written. With that being said, it is always a good idea to provide this option. A unique batch id should be provided between runs. This batch id should be composed of alphanumeric characters and it should not contain a white space or tab characters. Here is a list of valid or acceptable characters: `aA-Zz`, `0-9`, `-`, `_`.
+> 
+> ***Example:*** `--batch-id 2025_04_08`
+
+---  
+  `--groups GROUPS`
+> **Groups file containing sample metadata.**   
+> *type: TSV file*  
+> *default: none*  
+>   
+> Path to a sample sheet in TSV format with important information for differential expression. This file is used to map the sample names to groups and other metadata such as covariates (optional). At a minimum, this file contains two columns containing the basename of the sample along with its group label. Additional columns can be optionally added to define covariates. To run differential expression analyses, a groups and contrasts file must be provided together. Please see the example below for more information about how to create this file.
+>
+> Here is a more detailed description of the sample sheet:  
+> • **Sample**: This is the basename and prefix of a sample's R1 FastQ file, e.g `/path/WT_S4.R1.fastq.gz` becomes `WT_S4` in this file. Please note a sample should only be listed once in the groups file, and that there should only be a 1:1 relationship between samples and groups. This is a required column.  
+> • **Group**: This is the group label for a given sample. A group can represent anything from an experimental condition, a treatment, timepoint, or disease state, etc. Group names must start with a letter and should then only be composed of alphanumeric characters (`Aa-Za,0-9`), periods (`.`), or underscores (`_`). Hyphens (`-`) are not allowed in group names! This is a required column.  
+> • **Additional Columns** (optional): Any additional columns to define covariates. The column names here must be unique and follow the same naming rules as group names. These additional column names can then be provided to the --covariates option. If an additional column is provided and its is not supplied to the --covariates option, then it will only be used for exploratory plots. Please see that option for more information.  
+>
+> *Contents of example groups file:*
+> ```
+> Sample	Group	Batch
+> WT_S1	LPS_WT	B1
+> WT_S2	LPS_WT	B2
+> WT_S3	LPS_WT	B1
+> WT_S4	LPS_WT	B2
+> WT_S5	Veh_WT	B1
+> WT_S6	Veh_WT	B2
+> WT_S7	Veh_WT	B1
+> WT_S8	Veh_WT	B2
+> KO_S9	LPS_KO	B1
+> KO_S10	LPS_KO	B2
+> KO_S11	LPS_KO	B1
+> KO_S12	LPS_KO	B2
+> KO_S13	Veh_KO	B1
+> KO_S14	Veh_KO	B2
+> KO_S15	Veh_KO	B1
+> KO_S16	Veh_KO	B2
+> ```
+> 
+> **where:**   
+> • `Sample` is the base name of each sample's input R1 fastq file without _.R1.fastq.gz_  file extension.  
+> • `Group` represents each sample's group name(s).  
+> • Any additional columns are optional covariates. Only the `Sample` and `Group` columns are required. 
+>
+> ***Example:*** `--groups .tests/groups.tsv`
+
+---  
+  `--contrasts CONTRASTS`
+> **Contrasts file containing comparisons to make.**   
+> *type: TSV file*  
+> *default: none*  
+>   
+> This tab-delimited file is used to setup comparisons within different groups of samples. Please see the --groups option above for more information about how to define groups for a set of samples. In its most basic form, this file consists of two columns containing the names of two group to compare. The names defined in this file must also exist in the groups file. The second column represents the baseline group. Complex comparisons can be made. The last line in the example contrasts file below contains a difference of differences (diff-diff) comparison. For diff-diff comparisons, please wrap each diff in parentheses. To perform differential expression analysis, a groups and contrast file must be provided. Please note that unlike the groups file, the contrasts file does not contain a header line.
+>
+> *Contents of example contrasts file:*
+> ```
+> LPS_KO	Veh_KO
+> LPS_WT	Veh_WT
+> LPS_KO	LPS_WT
+> Veh_KO	Veh_WT
+> (LPS_KO-Veh_KO)	(LPS_WT-Veh_WT)
+> ```
+> 
+> **where:**  
+> • Any groups listed in this file must exist in the `--groups` file.  
+> • 2nd column represents the baseline of the comparison, i.e _Veh_KO_ on the first line in the example above. 
+>  
+> ***Example:*** `--contrasts .tests/contrasts.tsv`
+
+---  
+  `--covariates COVARIATE [COVARIATE ...]`
+> **Covariates for differential analyses.**  
+> *type: string*  
+> *default: none*  
+>
+> This option allows the user to define and adjust for any covariates that may be present. Covariates are known biological (i.e sex, disease stage, high-/low-BMI) or technical sources (i.e. batch, high-/low-RIN) of variation that can confound the results of differential expression analysis. If you have more than one covariate, please provide a *space seperated list* of covariates (i.e `--covariates Batch Site`) to this option. Covariates must match the header names of any **Additional Columns** in the groups file. Covariate values should be encoded as categorical variables. Numerical covariates are currently not supported.
+> 
+> ***Example:*** `--covariates Batch`
+
+### 2.4 Orchestration Options
 
 Each of the following arguments are optional and do not need to be provided. 
   
@@ -182,7 +274,7 @@ Each of the following arguments are optional and do not need to be provided.
 > 
 > ***Example:*** `--threads 12`
 
-### 2.4 Misc Options
+### 2.5 Misc Options
 
 Each of the following arguments are optional and do not need to be provided. 
 
