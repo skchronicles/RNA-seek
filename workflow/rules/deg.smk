@@ -47,18 +47,18 @@ rule limma_diff_gene_expression:
     params:
         rname='pl:limma_genes',
         rmd=join(workpath,"workflow","scripts","limma_dge_report.Rmd"),
-        outdir=join(workpath,"differential_gene_expression","limma",batch_id),
+        outdir=join(workpath,"differential_gene_expression",batch_id,"limma"),
         # Optional covariates to correct for,
         # either a comma delimited list of
         # columns in the groups file or
         # NULL if no covariates
         covariates_option_value = lambda _: "'{0}'".format(
             covariates,
-        ) if covariates else 'NULL', 
+        ) if covariates else 'NULL',
     container: config['images']['dge']
     shell: textwrap.dedent("""
     # Create wrapper script to render
-    # the Rmd into a HTML report 
+    # the Rmd into a HTML report
     cat << EOF > {output.render_script}
     #!/usr/bin/env Rscript
     library(rmarkdown)
