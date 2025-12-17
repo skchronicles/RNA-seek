@@ -478,8 +478,13 @@ def get_nends(ifiles):
             Please do not run the pipeline with a mixture of single-end and paired-end
             samples. This feature is currently not supported within {1}, and it is
             not recommended either. If this is a priority for your project, please run
-            paired-end samples and single-end samples separately (in two separate output directories).
-            If you feel like this functionality should exist, feel free to open an issue on Github.
+            paired-end samples and single-end samples separately (in two separate output
+            directories). If you feel like this functionality should exist, feel free to
+            open an issue on Github.
+
+            If you are running the pipeline with single-end data, please ensure your fastq
+            files contain the following extension: ".R1.fastq.gz". This error can occur if
+            you are running the pipeline with a set of R2 fastq files.
             """.format(missing_mates, sys.argv[0])
             )
 
