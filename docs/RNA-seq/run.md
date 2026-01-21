@@ -319,7 +319,48 @@ module load singularity snakemake
                --star-2-pass-basic
 ```
 
-### 3.2 Generic SLURM Cluster
+### 3.2 Skyline or BigSky
+
+The RNA-seek pipeline is also available on NIH's Skyline and BigSky clusters. Running the pipeline on these systems follows the same general workflow as on Biowulf, but there are a few key differences! In the example below, we dry-run the pipeline using the provided test dataset and a pre-built human reference genome available on Skyline. Because the pipeline is already installed on both systems, you do not need to clone the GitHub repository, pull Docker images, build any reference files, or download any shared resources. This makes running the pipeline fast and easy! Both clusters also provide several pre-built reference genomes for human and mouse. Please take note of the following options below: `--sif-cache`, `--shared-resources`, `--genome`, and `--tmp-dir`. These options are required and different when running the pipeline on Skyline or BigSky.
+
+```bash
+# Step 0.) Grab an interactive node (do not run on head node)
+srun -N 1 -n 1 --time=8:00:00 --mem=8gb  --cpus-per-task=4 --pty bash
+# Load dependencies, singularity will
+# already be in your $PATH if you are
+# on an interactive/compute node.
+module purge
+module load snakemake/7.22.0-ufanewz
+# Create temporary directory
+mkdir -p /data/scratch/${USER}/tmpdir
+
+# Step 1.) Dry run pipeline with provided test data
+/data/openomics/prod/rna-seek/latest/rna-seek run \
+    --input .tests/*.R?.fastq.gz \
+    --output RNA_hg38_45 \
+    --genome /data/openomics/references/rna-seek/hg38_45/hg38_45.json \
+    --star-2-pass-basic \
+    --mode slurm \
+    --sif-cache /data/openomics/SIFs/ \
+    --shared-resources /data/openomics/references/rna-seek/shared \
+    --tmp-dir /data/scratch/${USER}/tmpdir \
+    --dry-run
+
+# Step 2.) Run RNA-seek pipeline
+# The slurm mode will submit jobs to the cluster.
+# It is recommended running rna-seek in this mode.
+/data/openomics/prod/rna-seek/latest/rna-seek run \
+    --input .tests/*.R?.fastq.gz \
+    --output RNA_hg38_45 \
+    --genome /data/openomics/references/rna-seek/hg38_45/hg38_45.json \
+    --star-2-pass-basic \
+    --mode slurm \
+    --sif-cache /data/openomics/SIFs/ \
+    --shared-resources /data/openomics/references/rna-seek/shared \
+    --tmp-dir /data/scratch/${USER}/tmpdir
+```
+
+### 3.3 Generic SLURM Cluster
 
 Running the pipeline outside of Biowulf is easy; however, there are a few extra steps you must first take. Before getting started, you will need to [build](../TLDR-RNA-seq/#3-building-reference-files) reference files for the pipeline. Please note when running the build sub command for the first time, you will also need to provide the `--shared-resources` option. This option will download our kraken2 database and bowtie2 indices for FastQ Screen. The path provided to this option should be provided to the `--shared-resources` option of the run sub command. Next, you will also need to provide a path to write temporary output files via the `--tmp-dir` option. We also recommend providing a path to a SIF cache. You can cache software containers locally with the [cache](./RNA-seq/cache/) sub command. 
 
