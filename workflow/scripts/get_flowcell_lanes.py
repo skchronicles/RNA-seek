@@ -66,12 +66,13 @@ def get_flowcell_lane(sequence_identifer):
     if len(id_list) < 7:
         # No Flowcell IDs in this format
         # Return next instrument id instead (next best thing)
-        if sequence_identifer.startswith('@SRR'):
+        if sequence_identifer.startswith('@SRR') or sequence_identifer.startswith('@ERR'):
             # SRA format or downloaded SRA FastQ file
             # SRA format 1: contains machine and lane information
             # @SRR001666.1 071112_SLXA-EAS1_s_7:5:1:817:345 length=36
             # SRA format 2: contains nothing, grab SRR ID
             # @SRR6755966.1 1 length=101
+            # @ERR4242866.1 1 length 151
             try:
                 # SRA format 1
                 id1 = id_list[0].split()[1]

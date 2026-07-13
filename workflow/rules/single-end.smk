@@ -27,7 +27,7 @@ rule validator:
     container: config['images']['fastqvalidator']
     shell: """
     mkdir -p {params.outdir}
-    fastQValidator --noeof --file {input.R1} > {output.out1}
+    fastQValidator --noeof --file {input.R1} | tee {output.out1}
     """
 
 
