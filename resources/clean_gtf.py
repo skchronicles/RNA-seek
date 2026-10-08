@@ -10,12 +10,13 @@ import argparse, gzip, os, re, sys
 
 
 # Constants
-_VERSION = '1.0.0'
+_VERSION = '1.1.0'
 _NAME    = os.path.basename(sys.argv[0])
 _HELP    = dedent("""
 @Usage:
     $ ./{0} [-h] [--version] \\
             [--gene-name-attribute GENE_NAME] \\
+            [--biotype-attribute BIOTYPE_NAME] \\
             --input-gtf INPUT_GTF_FILE \\
             --output-gtf OUTPUT_GTF_FILE
 @About:
@@ -82,6 +83,18 @@ _HELP    = dedent("""
         In that case, you can use set this
         option to 'gene'.
           • Default: 'gene_name'
+    -b, --biotype-attribute BIOTYPE_NAME
+        Use this exact attribute in the 9th
+        column as the source for gene_biotype
+        and missing transcript_type values.
+        For some annotations, the biotype field
+        may be named differently, i.e 'gene_type'.
+        If that is the case, please specify the
+        name of the attribute using this option.
+        If omitted, the first attribute whose
+        name contains 'biotype' is used, as
+        before. Genes without the selected
+        attribute are assigned 'unknown'.
     -h, --help
         Shows help message and exits.
     -v, --version
@@ -232,6 +245,14 @@ def parse_cli_arguments():
         type=str,
         required=False,
         default='gene_name',
+        help=argparse.SUPPRESS
+    )
+    # Optional exact attribute for biotype lookup;
+    # None keeps the original substring search.
+    parser.add_argument(
+        '-b', '--biotype-attribute',
+        type=str,
+        default=None,
         help=argparse.SUPPRESS
     )
     # Get version information
@@ -478,13 +499,16 @@ def default(v, d):
     return v
 
 
-def biotypes(gtf):
+def biotypes(gtf, biotype_attribute=None):
     """Creates dictionary to map each gene to its biotype. Biotype features
     listed as mRNA will be converted to protein_coding.
     @param gtf <str>:
         The path to the GTF file to parse for gene biotypes. This should be a
         GTF file that has been pre-processed by AGAT or another tool to ensure
         that it is in the correct format and contains the necessary metadata.
+    @param biotype_attribute <str or None>:
+        Exact metadata key to use for biotypes. When None, use the first
+        attribute whose key contains 'biotype' for backward compatibility.
     @return gene2type <dict>:
         Returns a dictionary mapping gene IDs to their biotypes where the keys
         are gene IDs and the values are the biotypes. If a gene does not have a
@@ -510,7 +534,8 @@ def biotypes(gtf):
             # set it to whatever is in the gtf file
             if gene not in gene2type:
                 gene2type[gene] = "unknown"
-            biotype = contains('biotype', metadata)
+            biotype = (lookup(biotype_attribute, metadata)
+                       if biotype_attribute else contains('biotype', metadata))
             if default(biotype, 'unknown') != 'unknown':
                 if biotype.lower() == 'mrna':
                     # agat_convert_sp_gff2gtf.pl does
@@ -549,9 +574,23 @@ def main():
     input_gtf = args.input_gtf
     output_gtf = args.output_gtf
     gene_name_attribute = args.gene_name_attribute
+    biotype_attribute = args.biotype_attribute
     log("Running {0} script with the following options: ".format(_NAME), args)
     log("Parsing biotypes from input GTF file: ", input_gtf)
-    g2b = biotypes(input_gtf)
+    g2b = biotypes(input_gtf, biotype_attribute)
+    # Sanity check before assigning biotypes,
+    # if all the biotypes are unknown, then we
+    # are probably using the wrong attribute to
+    # parse the biotype information correctly.
+    if g2b and all(biotype == 'unknown' for biotype in g2b.values()):
+        err(
+            "\nWARNING: All gene biotypes were set to 'unknown'! "
+            "Use the --biotype-attribute option to specify the attribute "
+            "containing biotype values. Please review the 9th column of "
+            "your GTF file to determine the correct attribute name for "
+            "parsing biotype values! Failure to assign correct biotypes "
+            "to genes and transcripts will result build failures later.\n"
+        )
 
     # Create output directory if
     # it does not exist
@@ -589,14 +628,16 @@ def main():
                 # May not be in GTF, add as needed
                 gene_name = default(lookup(gene_name_attribute, metadata) , gene_id)
                 metadata['gene_name'] = gene_name
-                gene_biotype = default(lookup('gene_biotype', metadata) , g2b[gene_id])
+                gene_biotype = (g2b[gene_id] if biotype_attribute else
+                                default(lookup('gene_biotype', metadata), g2b[gene_id]))
                 metadata['gene_biotype'] = gene_biotype
             elif feature in ['transcript', 'exon']:
                 # May not be in GTF, add as needed
                 # assumes transcript_id is in gtf
                 gene_name = default(lookup(gene_name_attribute, metadata) , gene_id)
                 metadata['gene_name'] = gene_name
-                gene_biotype = default(lookup('gene_biotype', metadata) , g2b[gene_id])
+                gene_biotype = (g2b[gene_id] if biotype_attribute else
+                                default(lookup('gene_biotype', metadata), g2b[gene_id]))
                 metadata['gene_biotype'] = gene_biotype
                 transcript_id = lookup('transcript_id', metadata)
                 transcript_name = default(lookup('transcript_name', metadata) , transcript_id)
