@@ -258,10 +258,55 @@ module load singularity snakemake
               --ref-gtf gencode.vM26.annotation.gtf \
               --gtf-ver M26 \
               --output /data/$USER/refs/mm39_M26 \
-              --sif-cache /data/OpenOmics/SIFs/ 
+              --sif-cache /data/OpenOmics/SIFs/
 ```
 
-### 5.2 Generic SLURM Cluster
+### 5.2 Skyline or BigSky
+
+Running the pipeline on skyline is easy; however, there are a few extra options you must provide. On skyline we have already downloaded the pipeline's shared resouces, so you do not need to do this again! When running the pipeline on skyline, you will also need to provide a path to write temporary output files via the `--tmp-dir` option. Please also provide a path to a SIF cache folder via the `--sif-cache` option. On skyline, we have cached all the pipeline's SIFs here: `/data/openomics/SIFs/`. Please use this SIF cache path when running the pipeline.
+
+```bash
+# Step 0.) Grab an interactive node (do not run on head node)
+srun -N 1 -n 1 --time=8:00:00 --mem=8gb  --cpus-per-task=4 --pty bash
+# Load dependencies, singularity will
+# already be in your $PATH if you are
+# on an interactive/compute node.
+module purge
+module load snakemake/7.22.0-ufanewz
+# Create temporary directory
+mkdir -p /data/scratch/${USER}/rna_tmpdir
+
+# Step 1.) Dry run build pipeline, this example
+# show build some reference files for GRCm39.
+# If you are build reference files from a non-GENCODE
+# GTF file, we highly recommend you first patch the
+# GTF file before running the build pipeline using
+# the methods described in the section 4. above
+/data/openomics/prod/rna-seek/latest/rna-seek build \
+    --ref-fa GRCm39.primary_assembly.genome.fa \
+    --ref-name mm39 \
+    --ref-gtf gencode.vM26.annotation.gtf \
+    --gtf-ver M26 \
+    --output rna-seek/references/mm39_M26 \
+    --tmp-dir /data/scratch/${USER}/rna_tmpdir \
+    --sif-cache /data/openomics/SIFs/ \
+    --dry-run
+
+# Step 2.) Run rna-seek build pipeline
+# The slurm mode will submit jobs to the cluster.
+# It is recommended running rna-seek in this mode.
+/data/openomics/prod/rna-seek/latest/rna-seek build \
+    --ref-fa GRCm39.primary_assembly.genome.fa \
+    --ref-name mm39 \
+    --ref-gtf gencode.vM26.annotation.gtf \
+    --gtf-ver M26 \
+    --output rna-seek/references/mm39_M26 \
+    --tmp-dir /data/scratch/${USER}/rna_tmpdir \
+    --sif-cache /data/openomics/SIFs/
+```
+
+
+### 5.3 Generic SLURM Cluster
 
 Running the pipeline outside of Biowulf is easy; however, there are a few extra options you must provide. Please note when running the build sub command for the first time, you will also need to provide the `--shared-resources` option. This option will download our kraken2 database and bowtie2 indices for FastQ Screen. The path provided to this option should be provided to the `--shared-resources` option of the [run](./RNA-seq/cache/) sub command. Next, you will also need to provide a path to write temporary output files via the `--tmp-dir` option. We also recommend providing a path to a SIF cache. You can cache software containers locally with the [cache](./RNA-seq/cache/) sub command. 
 

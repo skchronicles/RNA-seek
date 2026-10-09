@@ -54,11 +54,38 @@ Each of the following arguments are optional and do not need to be provided.
 > ***Example:*** `--dry-run`
 
 ## 3. Example
+
+### 3.1 Biowulf or Generic SLURM cluster
+
 ```bash 
 # Step 0.) Grab an interactive node (do not run on head node)
 srun -N 1 -n 1 --time=12:00:00 -p interactive --mem=8gb  --cpus-per-task=4 --pty bash
 module purge
 module load singularity snakemake
+
+# Step 1.) Dry run cache to see what will be pulled
+./rna-seek cache --sif-cache /data/$USER/cache \
+                 --dry-run  
+
+# Step 2.) Cache remote resources locally 
+./rna-seek cache --sif-cache /data/$USER/cache  
+```
+
+### 3.2 Skyline or BigSky
+
+On Skyline and BigSky, /tmp is mounted with no exec which will cause singularity pulls to fail by default. To avoid this issue, please export the `PROOT_TMP_DIR` environment variable, and set it to a location in the cluster's scratch directory.
+
+```bash 
+# Step 0.) Grab an interactive node (do not run on head node)
+srun -N 1 -n 1 --time=8:00:00 --mem=8gb  --cpus-per-task=4 --pty bash
+module purge
+module load snakemake/7.22.0-ufanewz
+
+# Export and create PROOT_TMP_DIR environment
+# variable path before running the cache sub-command.
+PROOT_TMP_DIR="${TMPDIR:-"/data/scratch/$USER"}/${SLURM_JOBID}/proot_tmdir"
+mkdir -p ${PROOT_TMP_DIR}
+export PROOT_TMP_DIR
 
 # Step 1.) Dry run cache to see what will be pulled
 ./rna-seek cache --sif-cache /data/$USER/cache \
