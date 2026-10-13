@@ -4,11 +4,11 @@
 
   **_A comprehensive bulk RNA-seq pipeline_**
 
-  [![DOI](https://zenodo.org/badge/305525443.svg)](https://zenodo.org/badge/latestdoi/305525443) [![GitHub release](https://img.shields.io/github/v/release/skchronicles/RNA-seek?color=blue&include_prereleases)](https://github.com/skchronicles/RNA-seek/releases)<br>
+  [![DOI](https://zenodo.org/badge/305525443.svg)](https://zenodo.org/badge/latestdoi/305525443) [![GitHub release](https://img.shields.io/github/v/release/skchronicles/RNA-seek?color=blue&include_prereleases)](https://github.com/skchronicles/RNA-seek/releases) ![Docker Pulls](https://img.shields.io/docker/pulls/nciccbr/ccbr_arriba_2.0.0)<br>
   [![Tests](https://github.com/skchronicles/RNA-seek/actions/workflows/main.yaml/badge.svg)](https://github.com/skchronicles/RNA-seek/actions/workflows/main.yaml) [![Docs](https://github.com/skchronicles/RNA-seek/actions/workflows/docs.yml/badge.svg)](https://github.com/skchronicles/RNA-seek/actions/workflows/docs.yml) [![GitHub issues](https://img.shields.io/github/issues/skchronicles/RNA-seek?color=brightgreen)](https://github.com/skchronicles/RNA-seek/issues) [![GitHub license](https://img.shields.io/github/license/skchronicles/RNA-seek)](https://github.com/skchronicles/RNA-seek/blob/main/LICENSE)
 
   <i>
-    Its long-term goals: to assess data quality, quantify gene & isoform expression, and support reproducible RNA-seq analyses.
+    Its long-term goals: to assess data quality, quantify gene/isoform expression, and perform differential analyses.
   </i>
 
 </div>
